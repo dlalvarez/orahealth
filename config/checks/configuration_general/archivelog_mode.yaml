@@ -1,0 +1,23 @@
+check_id: archivelog_mode
+group_id: configuration_general
+title: Database runs in ARCHIVELOG mode
+severity: FAIL
+collector:
+  type: inventory
+  source: database
+  field: archivelog_mode
+evaluator:
+  type: expected_value
+  expected: ARCHIVELOG
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Enable ARCHIVELOG mode if recoverability requirements demand it.
+  actions: ["Schedule downtime if required and enable ARCHIVELOG mode."]
+  owner: DBA
+  requires_window: true
+  outage_risk: high
+tags: [oracle, backup]

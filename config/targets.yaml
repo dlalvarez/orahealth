@@ -1,0 +1,26 @@
+targets:
+  - target_id: example_standalone
+    name: Example Standalone Database
+    environment: development
+    expected_architecture: standalone
+    profile: standalone_basic
+    database:
+      primary_connection: example_oracle
+      mock_inventory:
+        status: OPEN
+        open_mode: READ WRITE
+        role: PRIMARY
+        version: "19.0"
+        archivelog_mode: ARCHIVELOG
+        tablespace_min_free_pct: 18
+        fra_used_pct: 42
+        invalid_objects_count: 0
+        alert_log_excerpt: "No critical internal errors found"
+    operating_system:
+      platform: linux
+      connections:
+        - local_oracle
+    features:
+      diagnostic_pack: false
+      awr: false
+      sysdba: false

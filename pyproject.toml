@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orahealthcheck"
+version = "0.1.0"
+description = "Modular Oracle health check framework"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "PyYAML>=6.0",
+  "Jinja2>=3.1"
+]
+
+[project.optional-dependencies]
+oracle = ["oracledb>=2.0"]
+ssh = ["paramiko>=3.0"]
+test = ["pytest>=8.0"]
+
+[project.scripts]
+orahealthcheck = "orahealthcheck.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+orahealthcheck = ["py.typed"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

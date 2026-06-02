@@ -1,0 +1,7 @@
+standard_id: oracle_19c
+policies:
+  expected_open_mode: READ WRITE
+  expected_archivelog_mode: ARCHIVELOG
+  min_tablespace_free_pct: 10
+  max_fra_used_pct_warning: 80
+  max_fra_used_pct_critical: 95

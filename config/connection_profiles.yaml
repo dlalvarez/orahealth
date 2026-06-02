@@ -1,0 +1,15 @@
+db_connections:
+  example_oracle:
+    type: oracle
+    host: localhost
+    port: 1521
+    service_name: XEPDB1
+    username: system
+    auth_method: password
+    password: example_password_not_used
+    mode: normal
+os_connections:
+  local_oracle:
+    type: local
+    username: oracle
+    auth_method: local

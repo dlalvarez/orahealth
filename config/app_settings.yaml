@@ -1,0 +1,20 @@
+app:
+  name: OraHealthCheck
+  default_output_dir: output
+  timezone: America/Bogota
+  log_level: INFO
+  mask_secrets_in_logs: true
+  max_parallel_checks: 5
+  default_command_timeout_seconds: 60
+  default_sql_timeout_seconds: 60
+reports:
+  generate_executive: true
+  generate_technical: true
+  generate_corrective_actions: true
+  include_sql_text: false
+  include_command_text: true
+  include_raw_evidence: true
+  theme: light
+security:
+  allow_passwords_in_files: true
+  mask_passwords_in_output: true

@@ -1,0 +1,25 @@
+check_id: tablespace_free_pct
+group_id: storage
+title: Minimum tablespace free percentage
+severity: WARNING
+collector:
+  type: inventory
+  source: database
+  field: tablespace_min_free_pct
+evaluator:
+  type: threshold
+  operator: <=
+  warning: 10
+  critical: 5
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Add or resize datafiles for tablespaces with low free space.
+  actions: ["Review growth trend.", "Resize datafiles or add storage."]
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, storage]
