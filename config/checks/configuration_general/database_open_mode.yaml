@@ -1,0 +1,24 @@
+check_id: database_open_mode
+group_id: configuration_general
+title: Database open mode is READ WRITE
+severity: WARNING
+collector:
+  type: inventory
+  source: database
+  field: open_mode
+evaluator:
+  type: expected_value
+  expected: READ WRITE
+  failure_status: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  database_roles: [PRIMARY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Confirm the expected open mode for this database role.
+  actions: ["Open the database READ WRITE when appropriate."]
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, configuration]

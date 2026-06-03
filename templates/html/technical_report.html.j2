@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Technical Report</title><style>body{font-family:Arial,sans-serif;margin:2rem}pre{background:#f7fafc;padding:1rem;white-space:pre-wrap}.PASS{color:green}.WARNING{color:#b7791f}.FAIL,.CRITICAL,.ERROR{color:#c53030}.SKIPPED{color:#718096}</style></head><body>
+<h1>OraHealthCheck Technical Report</h1>
+<h2>Inventory</h2><pre>{{ inventory | tojson(indent=2) }}</pre>
+<h2>Check Results</h2>
+{% for result in results %}
+<section><h3>{{ result.check_id }} - <span class="{{ result.status.value }}">{{ result.status.value }}</span></h3>
+<p>{{ result.title }}</p>
+{% if result.skipped_reason %}<p><strong>Skipped reason:</strong> {{ result.skipped_reason }}</p>{% endif %}
+{% if result.error %}<p><strong>Execution error:</strong> {{ result.error }}</p>{% endif %}
+<p>{{ result.message }}</p>
+<pre>{{ result.evidence | tojson(indent=2) }}</pre></section>
+{% endfor %}</body></html>

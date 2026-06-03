@@ -1,0 +1,25 @@
+check_id: os_filesystem_usage
+group_id: os
+title: OS filesystem usage below critical thresholds
+severity: WARNING
+collector:
+  type: os_adapter
+  method: get_filesystem_usage
+evaluator:
+  type: threshold
+  field: used_pct
+  aggregate: max
+  operator: ">="
+  warning: 85
+  critical: 95
+applies_to:
+  platforms: [linux, aix]
+  requires:
+    os_connection: true
+remediation:
+  summary: Review filesystems reported by the OS adapter.
+  actions: ["Clean temporary files or expand filesystem capacity."]
+  owner: OS
+  requires_window: false
+  outage_risk: low
+tags: [os, storage]

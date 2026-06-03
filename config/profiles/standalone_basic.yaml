@@ -1,0 +1,11 @@
+profile_id: standalone_basic
+description: Minimal standalone profile for Phase 1 architecture validation.
+enabled_groups:
+  - configuration_general
+  - storage
+  - schema_objects
+  - os
+  - alert_log
+standards:
+  - oracle_19c
+  - development

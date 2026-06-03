@@ -1,0 +1,6 @@
+group_id: storage
+name: Storage
+description: Basic database and recovery storage checks.
+checks:
+  - tablespace_free_pct
+  - fra_usage

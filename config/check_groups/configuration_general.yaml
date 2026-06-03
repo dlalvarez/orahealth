@@ -1,0 +1,7 @@
+group_id: configuration_general
+name: Configuration General
+description: Basic database configuration and status checks.
+checks:
+  - database_status
+  - database_open_mode
+  - archivelog_mode

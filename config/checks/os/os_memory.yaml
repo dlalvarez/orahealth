@@ -1,0 +1,23 @@
+check_id: os_memory
+group_id: os
+title: OS memory information can be collected
+severity: INFO
+collector:
+  type: os_adapter
+  method: get_memory_info
+evaluator:
+  type: regex
+  pattern: .+
+  mode: must_match
+  failure_status: ERROR
+applies_to:
+  platforms: [linux, aix]
+  requires:
+    os_connection: true
+remediation:
+  summary: Confirm OS memory commands are available for the platform.
+  actions: ["Review adapter command permissions."]
+  owner: OS
+  requires_window: false
+  outage_risk: low
+tags: [os, memory]

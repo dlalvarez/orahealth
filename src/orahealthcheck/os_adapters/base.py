@@ -1,0 +1,29 @@
+from abc import ABC, abstractmethod
+from typing import Any
+
+
+class BaseOSAdapter(ABC):
+    def __init__(self, connector: Any) -> None:
+        self.connector = connector
+
+    def _run(self, command: str) -> dict[str, Any]:
+        return self.connector.run_command(command)
+
+    @abstractmethod
+    def get_os_info(self) -> dict[str, Any]: ...
+    @abstractmethod
+    def get_cpu_info(self) -> dict[str, Any]: ...
+    @abstractmethod
+    def get_memory_info(self) -> dict[str, Any]: ...
+    @abstractmethod
+    def get_swap_info(self) -> dict[str, Any]: ...
+    @abstractmethod
+    def get_filesystem_usage(self) -> list[dict[str, Any]]: ...
+    @abstractmethod
+    def get_ulimits(self) -> dict[str, Any]: ...
+    @abstractmethod
+    def get_processes(self) -> list[dict[str, Any]]: ...
+    @abstractmethod
+    def get_oracle_processes(self) -> list[dict[str, Any]]: ...
+    @abstractmethod
+    def get_time_sync_status(self) -> dict[str, Any]: ...
