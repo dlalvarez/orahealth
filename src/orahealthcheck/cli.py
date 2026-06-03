@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from orahealthcheck.config_loader import ConfigLoader, ConfigValidationError, ConfigValidator
+from orahealthcheck.config_loader import ConfigLoader, ConfigSyntaxError, ConfigValidationError, ConfigValidator
 from orahealthcheck.engine import CheckRunner
 
 
@@ -50,6 +50,9 @@ def main(argv: list[str] | None = None) -> int:
             output_dir = CheckRunner(config).run_target(args.target)
             print(f"Output generated: {output_dir}")
         return 0
+    except ConfigSyntaxError as exc:
+        print(f"Configuration syntax error:\n{exc}", file=sys.stderr)
+        return 1
     except ConfigValidationError as exc:
         print(f"Configuration validation failed:\n{exc}", file=sys.stderr)
         return 1

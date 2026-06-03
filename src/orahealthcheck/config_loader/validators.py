@@ -1,13 +1,32 @@
+from pathlib import Path
 from typing import Any
+import re
 
 
 class ConfigValidationError(Exception):
     pass
 
 
+class ConfigSyntaxError(ConfigValidationError):
+    def __init__(self, path: str | Path, message: str, line: int | None = None, column: int | None = None) -> None:
+        self.path = Path(path)
+        self.line = line
+        self.column = column
+        self.message = message
+        location = ""
+        if line is not None:
+            location = f":{line}"
+            if column is not None:
+                location += f":{column}"
+        super().__init__(f"Invalid YAML in {self.path}{location}: {message}")
+
+
 class ConfigValidator:
+    _UNQUOTED_OPERATOR = re.compile(r"^\s*operator:\s*(>=|<=|>|<)\s*(?:#.*)?$")
+
     def validate(self, config: dict[str, Any]) -> list[str]:
         errors: list[str] = []
+        errors.extend(self._validate_operator_quoting(Path(config.get("_config_dir", "config"))))
         targets = config["targets"]
         profiles = config["profiles"]
         groups = config["groups"]
@@ -40,4 +59,18 @@ class ConfigValidator:
 
         if errors:
             raise ConfigValidationError("\n".join(errors))
+        return errors
+
+    def _validate_operator_quoting(self, config_dir: Path) -> list[str]:
+        errors: list[str] = []
+        if not config_dir.exists():
+            return errors
+        for path in sorted(config_dir.glob("**/*.yaml")):
+            for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+                match = self._UNQUOTED_OPERATOR.match(line)
+                if match:
+                    errors.append(
+                        f'{path}:{line_number}: YAML comparison operator {match.group(1)!r} must be quoted, '
+                        f'for example operator: "{match.group(1)}"'
+                    )
         return errors

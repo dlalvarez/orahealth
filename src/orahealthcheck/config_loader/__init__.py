@@ -1,4 +1,4 @@
 from .loader import ConfigLoader
-from .validators import ConfigValidationError, ConfigValidator
+from .validators import ConfigSyntaxError, ConfigValidationError, ConfigValidator
 
-__all__ = ["ConfigLoader", "ConfigValidationError", "ConfigValidator"]
+__all__ = ["ConfigLoader", "ConfigSyntaxError", "ConfigValidationError", "ConfigValidator"]

@@ -8,7 +8,7 @@ collector:
   field: fra_used_pct
 evaluator:
   type: threshold
-  operator: >=
+  operator: ">="
   warning: 80
   critical: 95
 applies_to:

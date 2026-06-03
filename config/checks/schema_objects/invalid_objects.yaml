@@ -8,7 +8,7 @@ collector:
   field: invalid_objects_count
 evaluator:
   type: threshold
-  operator: >=
+  operator: ">="
   warning: 1
   fail: 20
 applies_to:

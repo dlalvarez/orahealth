@@ -22,20 +22,33 @@ class CheckRunner:
         self.applicability = ApplicabilityEngine()
 
     def run_target(self, target_id: str) -> Path:
+        run_start = time.monotonic()
         target: Target = self.config["targets"][target_id]
         profile = self.config["profiles"][target.profile]
         base_output = self.config["settings"].get("app", {}).get("default_output_dir", "output")
         output_dir = ensure_dir(Path(base_output) / f"{target_id}_{timestamp()}")
         self._configure_logging(output_dir)
-        logging.info("Starting OraHealthCheck execution for target %s", target_id)
+        logging.info("Starting OraHealthCheck execution")
+        logging.info("Target: %s (%s)", target.target_id, target.name)
+        logging.info("Profile: %s", profile.profile_id)
+        logging.info("Enabled groups: %s", ", ".join(profile.enabled_groups) or "none")
         inventory = self._discover_inventory(target)
         checks = self._resolve_checks(profile)
+        logging.info("Loaded checks (%s): %s", len(checks), ", ".join(check.check_id for check in checks) or "none")
         results = [self._run_check(check, target, inventory) for check in checks]
         summary = summarize(results)
+        executed = [result.check_id for result in results if result.status != ResultStatus.SKIPPED]
+        skipped = [result.check_id for result in results if result.status == ResultStatus.SKIPPED]
+        logging.info("Executed checks (%s): %s", len(executed), ", ".join(executed) or "none")
+        logging.info("Skipped checks (%s): %s", len(skipped), ", ".join(skipped) or "none")
+        logging.info("Status summary: %s", json.dumps(summary, sort_keys=True))
         self._write_json(output_dir / "inventory.json", inventory.to_dict())
         self._write_json(output_dir / "evidence.json", {"summary": summary, "results": [r.to_dict() for r in results]})
         HTMLReporter(Path("templates/html")).generate(output_dir, target, inventory, results, summary)
-        logging.info("Finished OraHealthCheck execution for target %s", target_id)
+        total_duration_ms = int((time.monotonic() - run_start) * 1000)
+        logging.info("Output directory: %s", output_dir)
+        logging.info("Total duration_ms: %s", total_duration_ms)
+        logging.info("Finished OraHealthCheck execution")
         return output_dir
 
     def _configure_logging(self, output_dir: Path) -> None:
@@ -71,17 +84,50 @@ class CheckRunner:
 
     def _run_check(self, check: Check, target: Target, inventory: Inventory) -> Result:
         start = time.monotonic()
+        logging.info("Check %s started", check.check_id)
         applicable, reason = self.applicability.evaluate(check, target, inventory)
         if not applicable:
-            return Result(check.check_id, check.group_id, ResultStatus.SKIPPED, check.title, check.severity, skipped_reason=reason)
+            duration_ms = int((time.monotonic() - start) * 1000)
+            logging.info("Check %s skipped: %s duration_ms=%s", check.check_id, reason, duration_ms)
+            return Result(
+                check_id=check.check_id,
+                group_id=check.group_id,
+                status=ResultStatus.SKIPPED,
+                title=check.title,
+                failure_severity=check.failure_severity,
+                skipped_reason=reason,
+                duration_ms=duration_ms,
+            )
         try:
             evidence = self._collect(check, inventory)
             evaluator_type = check.evaluator.get("type", "expected_value")
             status, message = EVALUATORS[evaluator_type].evaluate(evidence, check.evaluator)
-            return Result(check.check_id, check.group_id, status, check.title, check.severity, message, mask_secrets(evidence), check.remediation, duration_ms=int((time.monotonic() - start) * 1000))
+            duration_ms = int((time.monotonic() - start) * 1000)
+            logging.info("Check %s finished with status=%s duration_ms=%s", check.check_id, status.value, duration_ms)
+            return Result(
+                check_id=check.check_id,
+                group_id=check.group_id,
+                status=status,
+                title=check.title,
+                failure_severity=check.failure_severity,
+                message=message,
+                evidence=mask_secrets(evidence),
+                remediation=check.remediation,
+                duration_ms=duration_ms,
+            )
         except Exception as exc:  # technical execution errors become ERROR by design
-            logging.exception("Technical error running check %s", check.check_id)
-            return Result(check.check_id, check.group_id, ResultStatus.ERROR, check.title, check.severity, "Technical execution error", error=str(exc), duration_ms=int((time.monotonic() - start) * 1000))
+            duration_ms = int((time.monotonic() - start) * 1000)
+            logging.exception("Technical error running check %s duration_ms=%s", check.check_id, duration_ms)
+            return Result(
+                check_id=check.check_id,
+                group_id=check.group_id,
+                status=ResultStatus.ERROR,
+                title=check.title,
+                failure_severity=check.failure_severity,
+                message="Technical execution error",
+                error=str(exc),
+                duration_ms=duration_ms,
+            )
 
     def _collect(self, check: Check, inventory: Inventory) -> Any:
         collector = check.collector

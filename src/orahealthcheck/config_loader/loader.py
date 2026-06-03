@@ -6,6 +6,7 @@ try:
 except ImportError:  # pragma: no cover - fallback for minimal environments
     from orahealthcheck.utils import simple_yaml as yaml
 
+from orahealthcheck.config_loader.validators import ConfigSyntaxError
 from orahealthcheck.models import Check, CheckGroup, ConnectionProfile, Profile, Standard, Target
 
 
@@ -16,8 +17,23 @@ class ConfigLoader:
     def _read_yaml(self, path: Path) -> dict[str, Any]:
         if not path.exists():
             return {}
-        with path.open("r", encoding="utf-8") as handle:
-            return yaml.safe_load(handle) or {}
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                loaded = yaml.safe_load(handle) or {}
+        except Exception as exc:
+            raise self._syntax_error(path, exc) from None
+        if not isinstance(loaded, dict):
+            raise ConfigSyntaxError(path, "Top-level YAML document must be a mapping")
+        return loaded
+
+    def _syntax_error(self, path: Path, exc: Exception) -> ConfigSyntaxError:
+        mark = getattr(exc, "problem_mark", None) or getattr(exc, "context_mark", None)
+        line = getattr(mark, "line", None)
+        column = getattr(mark, "column", None)
+        line = line + 1 if line is not None else getattr(exc, "line", None)
+        column = column + 1 if column is not None else getattr(exc, "column", None)
+        problem = getattr(exc, "problem", None) or str(exc) or exc.__class__.__name__
+        return ConfigSyntaxError(path, problem, line=line, column=column)
 
     def load_app_settings(self) -> dict[str, Any]:
         return self._read_yaml(self.config_dir / "app_settings.yaml")
@@ -67,6 +83,7 @@ class ConfigLoader:
 
     def load_all(self) -> dict[str, Any]:
         return {
+            "_config_dir": str(self.config_dir),
             "settings": self.load_app_settings(),
             "connections": self.load_connections(),
             "targets": self.load_targets(),

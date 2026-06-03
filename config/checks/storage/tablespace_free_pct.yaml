@@ -8,7 +8,7 @@ collector:
   field: tablespace_min_free_pct
 evaluator:
   type: threshold
-  operator: <=
+  operator: "<="
   warning: 10
   critical: 5
 applies_to:

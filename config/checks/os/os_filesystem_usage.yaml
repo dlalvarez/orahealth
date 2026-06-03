@@ -9,7 +9,7 @@ evaluator:
   type: threshold
   field: used_pct
   aggregate: max
-  operator: >=
+  operator: ">="
   warning: 85
   critical: 95
 applies_to:

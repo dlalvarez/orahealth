@@ -16,6 +16,12 @@ class Check:
     tags: list[str] = field(default_factory=list)
     references: list[str] = field(default_factory=list)
 
+
+    @property
+    def failure_severity(self) -> str:
+        """Severity to apply if this check produces a non-compliant finding."""
+        return self.severity
+
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> "Check":
         return cls(
