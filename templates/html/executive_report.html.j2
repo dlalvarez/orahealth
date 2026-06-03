@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Executive Report</title><style>body{font-family:Arial,sans-serif;margin:2rem}.PASS{color:green}.WARNING{color:#b7791f}.FAIL,.CRITICAL,.ERROR{color:#c53030}.SKIPPED{color:#718096}</style></head><body>
+<h1>OraHealthCheck Executive Report</h1>
+<h2>{{ target.name }} ({{ target.target_id }})</h2>
+<p><strong>Global status:</strong> <span class="{{ summary.global_status }}">{{ summary.global_status }}</span></p>
+<p><strong>Score:</strong> {{ summary.score }}</p>
+<h3>Summary</h3>
+<ul>{% for key, value in summary.items() %}<li>{{ key }}: {{ value }}</li>{% endfor %}</ul>
+<h3>Key findings</h3>
+<table border="1" cellspacing="0" cellpadding="6"><tr><th>Check</th><th>Status</th><th>Message</th></tr>
+{% for result in findings %}<tr><td>{{ result.title }}</td><td class="{{ result.status.value }}">{{ result.status.value }}</td><td>{{ result.message or result.error }}</td></tr>{% endfor %}
+</table></body></html>

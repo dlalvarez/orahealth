@@ -1,0 +1,24 @@
+check_id: alert_log_ora_errors_basic
+group_id: alert_log
+title: Alert log has no critical ORA errors in sample
+severity: CRITICAL
+collector:
+  type: inventory
+  source: database
+  field: alert_log_excerpt
+evaluator:
+  type: regex
+  pattern: "ORA-(00600|07445)"
+  mode: must_not_match
+  failure_status: CRITICAL
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Investigate critical ORA errors from the alert log.
+  actions: ["Open an Oracle Support SR if ORA-00600 or ORA-07445 appears.", "Review incident trace files."]
+  owner: DBA
+  requires_window: false
+  outage_risk: high
+tags: [oracle, alert_log]

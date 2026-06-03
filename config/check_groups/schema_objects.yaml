@@ -1,0 +1,5 @@
+group_id: schema_objects
+name: Schema Objects
+description: Basic object health checks.
+checks:
+  - invalid_objects

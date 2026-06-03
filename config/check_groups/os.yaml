@@ -1,0 +1,7 @@
+group_id: os
+name: Operating System
+description: Basic OS checks through OS adapters.
+checks:
+  - os_filesystem_usage
+  - os_memory
+  - os_cpu

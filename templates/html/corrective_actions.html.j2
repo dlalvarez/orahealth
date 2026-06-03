@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Corrective Actions</title><style>body{font-family:Arial,sans-serif;margin:2rem}</style></head><body>
+<h1>OraHealthCheck Corrective Actions</h1>
+{% for result in findings %}
+<section><h2>{{ result.check_id }} - {{ result.status.value }}</h2>
+<p>{{ result.remediation.summary or result.message or result.error }}</p>
+<ul>{% for action in result.remediation.actions or [] %}<li>{{ action }}</li>{% endfor %}</ul>
+<p><strong>Owner:</strong> {{ result.remediation.owner or 'DBA' }}</p>
+<p><strong>Requires window:</strong> {{ result.remediation.requires_window or false }}</p>
+</section>
+{% else %}<p>No corrective actions are required.</p>{% endfor %}
+</body></html>

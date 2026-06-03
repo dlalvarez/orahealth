@@ -1,0 +1,24 @@
+check_id: fra_usage
+group_id: storage
+title: FRA usage percentage
+severity: CRITICAL
+collector:
+  type: inventory
+  source: database
+  field: fra_used_pct
+evaluator:
+  type: threshold
+  operator: ">="
+  warning: 80
+  critical: 95
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Free or expand Fast Recovery Area capacity.
+  actions: ["Review obsolete backups and archive logs.", "Increase FRA size if needed."]
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, storage, fra]

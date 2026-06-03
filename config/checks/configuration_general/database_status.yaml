@@ -1,0 +1,22 @@
+check_id: database_status
+group_id: configuration_general
+title: Database status is OPEN
+severity: FAIL
+collector:
+  type: inventory
+  source: database
+  field: status
+evaluator:
+  type: expected_value
+  expected: OPEN
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Review database instance status.
+  actions: ["Start or recover the database instance if it should be available."]
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, configuration]
