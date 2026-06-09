@@ -220,3 +220,7 @@ __marimo__/
 # OraHealthCheck outputs
 output/
 *.egg-info/
+
+# Local OraHealthCheck configuration overrides
+config/*.local.yaml
+config/*.bak

@@ -1,0 +1,22 @@
+# Copy this file to config/connection_profiles.local.yaml and keep the .local.yaml file out of Git.
+# Prefer auth_method: env for real credentials so passwords stay in environment variables.
+
+db_connections:
+  lab_oracle:
+    type: oracle
+    host: lab-db.example.com
+    port: 1521
+    service_name: LABPDB1
+    username: system
+    auth_method: env
+    password_env: ORAHEALTHCHECK_LAB_DB_PASSWORD
+    mode: normal
+
+os_connections:
+  lab_oracle_host:
+    type: ssh
+    host: lab-db.example.com
+    port: 22
+    username: oracle
+    auth_method: private_key
+    private_key_path: /home/user/.ssh/id_rsa
