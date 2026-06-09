@@ -1,10 +1,12 @@
 import json
 import logging
 import time
+from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from orahealthcheck.connectors import LocalConnector
+from orahealthcheck.connectors import LocalConnector, OracleConnector
 from orahealthcheck.engine.applicability import ApplicabilityEngine
 from orahealthcheck.engine.scoring import summarize
 from orahealthcheck.evaluators import EVALUATORS
@@ -17,9 +19,10 @@ from orahealthcheck.utils.time import timestamp
 
 
 class CheckRunner:
-    def __init__(self, config: dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any], oracle_connector_factory: Any = OracleConnector) -> None:
         self.config = config
         self.applicability = ApplicabilityEngine()
+        self.oracle_connector_factory = oracle_connector_factory
 
     def run_target(self, target_id: str) -> Path:
         run_start = time.monotonic()
@@ -60,7 +63,12 @@ class CheckRunner:
         root.addHandler(handler)
 
     def _discover_inventory(self, target: Target) -> Inventory:
-        db = dict(target.database.get("mock_inventory", {}))
+        if "mock_inventory" in target.database:
+            logging.info("Using mock database inventory for target %s", target.target_id)
+            db = dict(target.database.get("mock_inventory", {}))
+        else:
+            logging.info("Using OracleConnector for database inventory on target %s", target.target_id)
+            db = self._discover_oracle_inventory(target)
         db.setdefault("status", "OPEN")
         db.setdefault("open_mode", "READ WRITE")
         db.setdefault("role", "PRIMARY")
@@ -70,6 +78,81 @@ class CheckRunner:
             adapter = LinuxAdapter(LocalConnector()) if os_data["platform"] == "linux" else AIXAdapter(LocalConnector())
             os_data.update({"os_info": adapter.get_os_info(), "cpu": adapter.get_cpu_info(), "memory": adapter.get_memory_info()})
         return Inventory(target.target_id, target.expected_architecture, target.environment, db, os_data, target.features)
+
+    def _discover_oracle_inventory(self, target: Target) -> dict[str, Any]:
+        connection_id = target.database.get("primary_connection")
+        if not connection_id:
+            return {}
+        profile = self.config["connections"]["db_connections"].get(connection_id)
+        connector = self.oracle_connector_factory(profile)
+        try:
+            connector.connect()
+            inventory: dict[str, Any] = {}
+            inventory.update(self._query_one(connector, "database status", """
+                select
+                  open_mode,
+                  database_role as role,
+                  log_mode as archivelog_mode
+                from v$database
+            """))
+            inventory.update(self._query_one(connector, "instance status", """
+                select status from v$instance
+            """))
+            inventory.update(self._query_one(connector, "database version", """
+                select version from v$instance
+            """))
+            inventory.update(self._query_one(connector, "invalid objects", """
+                select count(*) as invalid_objects_count
+                from dba_objects
+                where status = 'INVALID'
+            """))
+            inventory.update(self._query_one(connector, "tablespace free percentage", """
+                select min(round((nvl(f.free_bytes, 0) / df.bytes) * 100, 2)) as tablespace_min_free_pct
+                from (
+                  select tablespace_name, sum(bytes) as bytes
+                  from dba_data_files
+                  group by tablespace_name
+                ) df
+                left join (
+                  select tablespace_name, sum(bytes) as free_bytes
+                  from dba_free_space
+                  group by tablespace_name
+                ) f on f.tablespace_name = df.tablespace_name
+            """))
+            fra = self._query_one(connector, "FRA usage", """
+                select
+                  space_limit,
+                  space_used,
+                  case
+                    when nvl(space_limit, 0) > 0 then round((space_used / space_limit) * 100, 2)
+                    else null
+                  end as fra_used_pct
+                from v$recovery_file_dest
+            """)
+            if fra and fra.get("space_limit") not in (None, 0):
+                inventory.update(fra)
+                inventory["fra_configured"] = True
+            else:
+                inventory["fra_configured"] = False
+                inventory["fra_message"] = "FRA is not configured or space_limit is 0"
+            return inventory
+        finally:
+            connector.close()
+
+    def _query_one(self, connector: Any, label: str, sql: str) -> dict[str, Any]:
+        try:
+            rows = connector.query(sql)
+        except Exception as exc:
+            logging.warning("Oracle inventory query failed for %s: %s", label, exc)
+            return {}
+        return {key: self._normalize_inventory_value(value) for key, value in dict(rows[0]).items()} if rows else {}
+
+    def _normalize_inventory_value(self, value: Any) -> Any:
+        if isinstance(value, Decimal):
+            return int(value) if value == value.to_integral_value() else float(value)
+        if isinstance(value, (datetime, date)):
+            return value.isoformat()
+        return value
 
     def _resolve_checks(self, profile: Any) -> list[Check]:
         checks: list[Check] = []
@@ -86,6 +169,22 @@ class CheckRunner:
         start = time.monotonic()
         logging.info("Check %s started", check.check_id)
         applicable, reason = self.applicability.evaluate(check, target, inventory)
+        if check.check_id == "fra_usage" and inventory.database.get("fra_configured") is False:
+            duration_ms = int((time.monotonic() - start) * 1000)
+            message = inventory.database.get("fra_message", "FRA is not configured")
+            logging.info("Check %s skipped: %s duration_ms=%s", check.check_id, message, duration_ms)
+            return Result(
+                check_id=check.check_id,
+                group_id=check.group_id,
+                status=ResultStatus.SKIPPED,
+                title=check.title,
+                failure_severity=check.failure_severity,
+                message=message,
+                evidence={"fra_configured": False},
+                remediation=check.remediation,
+                skipped_reason=message,
+                duration_ms=duration_ms,
+            )
         if not applicable:
             duration_ms = int((time.monotonic() - start) * 1000)
             logging.info("Check %s skipped: %s duration_ms=%s", check.check_id, reason, duration_ms)
@@ -101,7 +200,11 @@ class CheckRunner:
         try:
             evidence = self._collect(check, inventory)
             evaluator_type = check.evaluator.get("type", "expected_value")
-            status, message = EVALUATORS[evaluator_type].evaluate(evidence, check.evaluator)
+            evaluator_config = dict(check.evaluator)
+            if evaluator_type == "threshold" and "field" not in evaluator_config and check.collector.get("field"):
+                evaluator_config["field"] = check.collector["field"]
+                evidence = {check.collector["field"]: evidence}
+            status, message = EVALUATORS[evaluator_type].evaluate(evidence, evaluator_config)
             duration_ms = int((time.monotonic() - start) * 1000)
             logging.info("Check %s finished with status=%s duration_ms=%s", check.check_id, status.value, duration_ms)
             return Result(
@@ -117,7 +220,7 @@ class CheckRunner:
             )
         except Exception as exc:  # technical execution errors become ERROR by design
             duration_ms = int((time.monotonic() - start) * 1000)
-            logging.exception("Technical error running check %s duration_ms=%s", check.check_id, duration_ms)
+            logging.error("Technical error running check %s duration_ms=%s error=%s", check.check_id, duration_ms, exc)
             return Result(
                 check_id=check.check_id,
                 group_id=check.group_id,
