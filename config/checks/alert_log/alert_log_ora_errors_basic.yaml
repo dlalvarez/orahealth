@@ -16,8 +16,13 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Investigate critical ORA errors from the alert log.
-  actions: ["Open an Oracle Support SR if ORA-00600 or ORA-07445 appears.", "Review incident trace files."]
+  summary: Se detectaron errores ORA relevantes en el alert log; estos eventos pueden indicar fallas internas, problemas de disponibilidad o condiciones que requieren diagnóstico especializado.
+  actions:
+    - Identificar código ORA, timestamp, frecuencia y componente afectado en alert log y trazas asociadas.
+    - Priorizar errores críticos como ORA-00600, ORA-07445, ORA-04031, ORA-01578 u otros relacionados con corrupción, memoria o caída de procesos.
+    - Revisar incidentes ADR y archivos de traza antes de reiniciar o limpiar evidencias.
+    - Aplicar runbook interno para el error específico y abrir SR con Oracle Support si el código o la recurrencia lo ameritan.
+    - Validar si el error impactó sesiones, jobs, backups o procesos de aplicación y documentar la causa raíz.
   owner: DBA
   requires_window: false
   outage_risk: high

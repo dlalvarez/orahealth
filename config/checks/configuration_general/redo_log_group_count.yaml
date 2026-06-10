@@ -18,9 +18,15 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: Una cantidad insuficiente de grupos redo puede afectar la continuidad operacional, provocar switches frecuentes y reducir el margen de recuperación ante problemas de escritura o archivado.
+  actions:
+    - Revisar frecuencia de log switches, tamaño de redo logs y eventos de espera relacionados con redo.
+    - Confirmar el mínimo estándar de grupos redo para el ambiente y la carga esperada.
+    - Agregar grupos redo adicionales si el conteo está por debajo del mínimo aprobado.
+    - No eliminar grupos existentes sin validar estado CURRENT, ACTIVE o INACTIVE y sin un plan seguro de operación.
+    - Validar v$log después del cambio para confirmar cantidad, tamaño y estado de los grupos.
+    - Monitorear log switches posteriormente para verificar que la configuración es suficiente.
   owner: DBA
-  requires_window: true
-  outage_risk: medium
+  requires_window: false
+  outage_risk: low
 tags: [oracle, configuration]

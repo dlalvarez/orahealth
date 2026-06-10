@@ -14,8 +14,13 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Review database instance status.
-  actions: ["Start or recover the database instance if it should be available."]
+  summary: La instancia de base de datos no reporta un estado operativo esperado; esto puede indicar indisponibilidad, recuperación pendiente o un arranque incompleto.
+  actions:
+    - Confirmar con operación si la base debería estar disponible en este momento o si existe una ventana planificada.
+    - Revisar alert log, estado de la instancia y eventos recientes de arranque, parada o recuperación.
+    - Si la base debe estar disponible, completar el arranque o recuperación siguiendo el runbook aprobado.
+    - No forzar apertura ni recuperación sin validar consistencia, backups y causa raíz del estado anómalo.
+    - Validar nuevamente el estado de instancia y servicios de aplicación después de la corrección.
   owner: DBA
   requires_window: false
   outage_risk: medium

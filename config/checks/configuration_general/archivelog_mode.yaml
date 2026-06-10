@@ -15,8 +15,14 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Habilitar ARCHIVELOG si los requisitos de recuperabilidad lo demandan.
-  actions: ["Planificar una ventana si aplica y habilitar el modo ARCHIVELOG."]
+  summary: La base de datos no está operando en modo ARCHIVELOG; esto limita la recuperación punto en el tiempo y debilita la estrategia de backup/recovery ante fallas o pérdida de datos.
+  actions:
+    - Confirmar con el negocio y el equipo DBA los requerimientos de recuperación, RPO y RTO antes de cambiar el modo de log.
+    - Validar espacio disponible para archived logs o FRA y definir retención antes de habilitar ARCHIVELOG.
+    - Programar una ventana de mantenimiento para cambiar la base de NOARCHIVELOG a ARCHIVELOG siguiendo el procedimiento estándar de la organización.
+    - Habilitar ARCHIVELOG de forma controlada y registrar la evidencia del cambio.
+    - Ejecutar un backup completo inmediatamente después de habilitar ARCHIVELOG para establecer una nueva línea base recuperable.
+    - Validar posteriormente v$database.log_mode y monitorear la generación de archived logs.
   owner: DBA
   requires_window: true
   outage_risk: high

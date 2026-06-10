@@ -17,8 +17,13 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Add or resize datafiles for tablespaces with low free space.
-  actions: ["Review growth trend.", "Resize datafiles or add storage."]
+  summary: El tablespace tiene porcentaje de espacio libre bajo; si no se corrige, puede provocar errores de asignación de segmentos y fallas de aplicación.
+  actions:
+    - Revisar consumo actual, tendencia de crecimiento y objetos principales del tablespace afectado.
+    - Validar autoextend, tamaño máximo de datafiles y capacidad disponible en ASM o filesystem antes de ampliar.
+    - Agregar o redimensionar datafiles según el estándar de almacenamiento y la proyección de crecimiento.
+    - No eliminar ni mover segmentos sin aprobación del dueño de datos y sin respaldo o plan de reversa.
+    - Monitorear el porcentaje libre después de la acción y ajustar alertas preventivas si corresponde.
   owner: DBA
   requires_window: false
   outage_risk: low

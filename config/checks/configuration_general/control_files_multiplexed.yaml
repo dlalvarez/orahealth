@@ -18,9 +18,16 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: Tener un único control file representa un riesgo de disponibilidad y recuperación, porque la pérdida de ese archivo puede impedir montar o recuperar la base.
+  actions:
+    - Validar la ubicación actual de los control files con v$controlfile y revisar si existen copias reales en storage independiente.
+    - Agregar al menos una copia adicional del control file siguiendo el procedimiento estándar de Oracle y de la organización.
+    - Ubicar copias en un diskgroup ASM, filesystem o dispositivo diferente cuando sea posible para reducir riesgo de falla común.
+    - Actualizar CONTROL_FILES en SPFILE con las rutas aprobadas y verificar permisos y disponibilidad de storage.
+    - Reiniciar la base en una ventana controlada para activar la configuración.
+    - Validar nuevamente v$controlfile después del cambio y confirmar que todas las copias están accesibles.
+    - Asegurar que los backups y documentación operativa incluyan la nueva configuración.
   owner: DBA
   requires_window: true
-  outage_risk: medium
+  outage_risk: high
 tags: [oracle, configuration]

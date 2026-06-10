@@ -16,8 +16,14 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: optimizer_features_enable controla el comportamiento del optimizador Oracle; un valor distinto al esperado puede cambiar planes de ejecución y afectar el rendimiento de SQL críticos.
+  actions:
+    - Validar si el valor fue fijado intencionalmente para preservar estabilidad de planes de ejecución.
+    - Comparar el valor configurado contra la versión real de la base de datos y el estándar certificado de la aplicación.
+    - Revisar SQL críticos, reportes y procesos batch antes de modificar el parámetro.
+    - Probar el cambio en un ambiente no productivo con carga representativa.
+    - Considerar SQL Plan Management, baselines o perfiles si existe riesgo de regresión de planes.
+    - Aplicar cualquier cambio solo bajo control de cambios y con plan de reversa validado.
   owner: DBA
   requires_window: true
   outage_risk: medium

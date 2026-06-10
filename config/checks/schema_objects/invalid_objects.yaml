@@ -17,8 +17,13 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Recompile invalid objects and investigate persistent failures.
-  actions: ["Run schema recompilation during an approved window.", "Review invalid object errors."]
+  summary: Existen objetos inválidos en esquemas de base de datos; pueden provocar errores en ejecución de paquetes, vistas, triggers o dependencias de aplicación.
+  actions:
+    - Identificar objetos inválidos por esquema, tipo y dependencia para priorizar componentes de aplicación críticos.
+    - Recompilar objetos inválidos con herramientas estándar como UTL_RECOMP o scripts aprobados, preferentemente fuera de horas pico.
+    - Revisar errores de compilación persistentes y corregir dependencias faltantes, privilegios o cambios de estructura.
+    - Coordinar con el equipo de aplicación antes de modificar código PL/SQL o dependencias funcionales.
+    - Validar que no queden objetos inválidos críticos y ejecutar pruebas básicas de la aplicación afectada.
   owner: DBA
   requires_window: false
   outage_risk: low

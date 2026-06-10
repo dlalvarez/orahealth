@@ -16,9 +16,14 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: db_block_size es una característica estructural de la base de datos; normalmente no se cambia directamente en una base existente sin rediseño o migración controlada.
+  actions:
+    - Validar que el tamaño de bloque corresponde al estándar de instalación y a los requerimientos de la aplicación.
+    - Confirmar si existen tablespaces con tamaños de bloque alternativos y si están justificados operacionalmente.
+    - No intentar cambiar db_block_size en una base existente sin diseño, respaldo, pruebas y plan de migración aprobado.
+    - Si el valor no cumple el estándar, evaluar recreación o migración controlada de la base, o rediseño de tablespaces específicos cuando aplique.
+    - Documentar la excepción si la aplicación, el proveedor o una decisión de arquitectura requiere ese tamaño de bloque.
   owner: DBA
   requires_window: true
-  outage_risk: medium
+  outage_risk: high
 tags: [oracle, configuration]

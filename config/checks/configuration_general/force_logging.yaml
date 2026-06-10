@@ -19,9 +19,15 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: FORCE LOGGING ayuda a garantizar recuperabilidad y consistencia para Data Guard, replicación y operaciones que podrían usar NOLOGGING.
+  actions:
+    - Confirmar si la base participa o participará en Data Guard, replicación o una estrategia estricta de recuperación.
+    - Revisar procesos de carga masiva, mantenimiento o ETL que usan NOLOGGING y coordinar el impacto operativo.
+    - Evaluar el incremento esperado en generación de redo y capacidad de archive/FRA.
+    - Habilitar FORCE LOGGING si el estándar de recuperabilidad lo exige, coordinando con los equipos afectados.
+    - Validar el estado con v$database.force_logging después del cambio.
+    - Monitorear generación de redo y desempeño de cargas después de habilitarlo.
   owner: DBA
-  requires_window: true
+  requires_window: false
   outage_risk: medium
 tags: [oracle, configuration]

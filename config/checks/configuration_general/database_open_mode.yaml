@@ -16,8 +16,13 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Confirm the expected open mode for this database role.
-  actions: ["Open the database READ WRITE when appropriate."]
+  summary: El modo de apertura de la base no coincide con el esperado para su rol; esto puede afectar escritura de aplicaciones, recuperación o operación de standby.
+  actions:
+    - Confirmar el rol de la base de datos y el modo esperado para el ambiente, por ejemplo PRIMARY, STANDBY, READ WRITE o READ ONLY.
+    - Revisar si existe una actividad planificada de mantenimiento, switchover, failover o recuperación que justifique el modo actual.
+    - Abrir la base en el modo correcto solo después de validar consistencia, rol y dependencias de aplicación.
+    - En entornos Data Guard, validar broker, apply/transport lag y procedimientos antes de cambiar el modo de apertura.
+    - Confirmar servicios, conectividad y v$database.open_mode después de la acción.
   owner: DBA
   requires_window: true
   outage_risk: medium
