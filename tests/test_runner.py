@@ -56,6 +56,39 @@ def test_technical_report_contains_inventory_grouped_checks_and_evidence(tmp_pat
     assert "Filesystems</span><strong>N/D" not in html
 
 
+def test_technical_report_hides_long_remediation_for_pass_and_info(tmp_path):
+    output = _run_example(tmp_path)
+    html = (output / "technical_report.html").read_text(encoding="utf-8")
+
+    assert "No requiere remediación." in html
+    assert "Validación informativa." in html
+    assert "La instancia de base de datos no reporta un estado operativo esperado" not in html
+    assert "No forzar apertura ni recuperación sin validar consistencia" not in html
+    assert "El parámetro compatible define el nivel de compatibilidad funcional" not in html
+    assert "No incrementar compatible sin confirmar que no se requiere rollback" not in html
+
+
+def test_technical_report_shows_remediation_for_warning_and_fail(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    mock_inventory = config["targets"]["example_standalone"].database["mock_inventory"]
+    mock_inventory["archivelog_mode"] = "NOARCHIVELOG"
+    mock_inventory["parameters"]["open_cursors"]["value"] = 100
+    mock_inventory["parameters"]["open_cursors"]["display_value"] = 100
+
+    output = CheckRunner(config).run_target("example_standalone")
+    technical_html = (output / "technical_report.html").read_text(encoding="utf-8")
+    corrective_html = (output / "corrective_actions.html").read_text(encoding="utf-8")
+
+    assert "Un valor bajo de open_cursors puede provocar errores ORA-01000" in technical_html
+    assert "Revisar alert log, trazas y monitoreo de aplicación" in technical_html
+    assert "La base de datos no está operando en modo ARCHIVELOG" in technical_html
+    assert "Confirmar con el negocio y el equipo DBA" in technical_html
+    assert "Revisar alert log, trazas y monitoreo de aplicación" in corrective_html
+    assert "Confirmar con el negocio y el equipo DBA" in corrective_html
+
+
 def test_corrective_actions_report_shows_positive_message_when_clean(tmp_path):
     output = _run_example(tmp_path)
     html = (output / "corrective_actions.html").read_text(encoding="utf-8")

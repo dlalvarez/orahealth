@@ -324,10 +324,30 @@ class HTMLReporter:
                     body.append(f"<tr><td>{esc(fs.get('filesystem'))}</td><td>{esc(fs.get('mount'))}</td><td>{esc(fs.get('used_pct'))}</td></tr>")
                 body.append("</table></div>")
             body.append("</section><section><h2>Detalle de validaciones</h2>")
+            def technical_remediation(result: Result) -> str:
+                status = result.status.value
+                if status == "PASS":
+                    return "<span class='muted'>No requiere remediación.</span>"
+                if status == "INFO":
+                    return "<span class='muted'>Validación informativa.</span>"
+                if status == "SKIPPED":
+                    reason = self._friendly_message(result.skipped_reason or result.message or "Validación omitida.")
+                    return f"<span class='muted'>{esc(reason)}</span>"
+                if status in ACTION_STATUSES:
+                    parts = [esc(result.remediation.get("summary") or "Revisar evidencia.")]
+                    actions = result.remediation.get("actions") or []
+                    if actions:
+                        parts.append("<ul>")
+                        for action in actions:
+                            parts.append(f"<li>{esc(action)}</li>")
+                        parts.append("</ul>")
+                    return "".join(parts)
+                return "<span class='muted'>No requiere acción correctiva.</span>"
+
             for group_id, group_results in grouped_results.items():
-                body.append(f"<h3>{esc(self._group_label(group_id))} <small>{esc(group_id)}</small></h3><div class='table-wrap'><table><tr><th>check_id</th><th>Título</th><th>Grupo</th><th>Estado</th><th>failure_severity</th><th>Mensaje</th><th>Evidencia</th><th>duration_ms</th></tr>")
+                body.append(f"<h3>{esc(self._group_label(group_id))} <small>{esc(group_id)}</small></h3><div class='table-wrap'><table><tr><th>check_id</th><th>Título</th><th>Grupo</th><th>Estado</th><th>failure_severity</th><th>Mensaje</th><th>Evidencia</th><th>Remediación</th><th>duration_ms</th></tr>")
                 for result in group_results:
-                    body.append(f"<tr><td>{esc(result.check_id)}</td><td>{esc(self._check_title(result.title))}</td><td>{esc(self._group_label(result.group_id))}</td><td>{badge(result.status.value)}</td><td>{esc(result.failure_severity)}</td><td>{esc(self._friendly_message(result.message))}</td><td><pre>{esc(self._pretty_json(result.evidence))}</pre></td><td>{esc(result.duration_ms)}</td></tr>")
+                    body.append(f"<tr><td>{esc(result.check_id)}</td><td>{esc(self._check_title(result.title))}</td><td>{esc(self._group_label(result.group_id))}</td><td>{badge(result.status.value)}</td><td>{esc(result.failure_severity)}</td><td>{esc(self._friendly_message(result.message))}</td><td><pre>{esc(self._pretty_json(result.evidence))}</pre></td><td>{technical_remediation(result)}</td><td>{esc(result.duration_ms)}</td></tr>")
                 body.append("</table></div>")
             body.append("</section>")
         else:
