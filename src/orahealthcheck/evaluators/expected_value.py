@@ -11,5 +11,5 @@ class ExpectedValueEvaluator:
         actual = evidence.get(field) if isinstance(evidence, dict) and field else evidence
         expected = config.get("expected")
         if actual == expected:
-            return ResultStatus.PASS, f"Actual value matches expected value {expected}"
-        return ResultStatus(config.get("failure_status", "FAIL")), f"Actual value {actual!r} differs from expected {expected!r}"
+            return ResultStatus.PASS, f"Valor actual coincide con el esperado {expected}"
+        return ResultStatus(config.get("failure_status", "FAIL")), f"Valor actual {actual!r} difiere del esperado {expected!r}"

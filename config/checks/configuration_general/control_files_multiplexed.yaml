@@ -1,0 +1,26 @@
+check_id: control_files_multiplexed
+group_id: configuration_general
+title: Control files multiplexados
+severity: FAIL
+collector:
+  type: oracle_metric
+  field: control_file_count
+  label: control_file_count
+  source_view: v$controlfile
+evaluator:
+  type: oracle_config
+  label: control_file_count
+  minimum_policy: min_control_files
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
+  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, configuration]

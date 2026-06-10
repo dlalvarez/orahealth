@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import time
@@ -92,7 +93,8 @@ class CheckRunner:
                 select
                   open_mode,
                   database_role as role,
-                  log_mode as archivelog_mode
+                  log_mode as archivelog_mode,
+                  force_logging
                 from v$database
             """))
             inventory.update(self._query_one(connector, "instance status", """
@@ -101,6 +103,44 @@ class CheckRunner:
             inventory.update(self._query_one(connector, "database version", """
                 select version from v$instance
             """))
+            parameter_rows = self._query_rows(connector, "Oracle parameters", """
+                select name, value, display_value, isdefault
+                from v$parameter
+                where name in (
+                  'compatible',
+                  'optimizer_features_enable',
+                  'db_block_size',
+                  'open_cursors',
+                  'processes',
+                  'sessions',
+                  'audit_trail',
+                  'remote_login_passwordfile',
+                  'recyclebin',
+                  'filesystemio_options',
+                  'control_files'
+                )
+            """)
+            if parameter_rows:
+                inventory["parameters"] = {str(row.get("name", "")).lower(): row for row in parameter_rows if row.get("name")}
+            inventory.update(self._query_one(connector, "control file count", """
+                select count(*) as control_file_count
+                from v$controlfile
+            """))
+            inventory.update(self._query_one(connector, "redo log group count", """
+                select count(*) as redo_log_group_count
+                from v$log
+            """))
+            redo_members = self._query_rows(connector, "redo log member counts", """
+                select group# as group_number, count(*) as member_count
+                from v$logfile
+                group by group#
+                order by group#
+            """)
+            if redo_members:
+                inventory["redo_log_members"] = redo_members
+                member_counts = [row.get("member_count") for row in redo_members if row.get("member_count") is not None]
+                if member_counts:
+                    inventory["min_redo_log_members_per_group"] = min(member_counts)
             inventory.update(self._query_one(connector, "invalid objects", """
                 select count(*) as invalid_objects_count
                 from dba_objects
@@ -140,12 +180,19 @@ class CheckRunner:
             connector.close()
 
     def _query_one(self, connector: Any, label: str, sql: str) -> dict[str, Any]:
+        rows = self._query_rows(connector, label, sql)
+        return rows[0] if rows else {}
+
+    def _query_rows(self, connector: Any, label: str, sql: str) -> list[dict[str, Any]]:
         try:
             rows = connector.query(sql)
         except Exception as exc:
             logging.warning("Oracle inventory query failed for %s: %s", label, exc)
-            return {}
-        return {key: self._normalize_inventory_value(value) for key, value in dict(rows[0]).items()} if rows else {}
+            return []
+        return [
+            {key: self._normalize_inventory_value(value) for key, value in dict(row).items()}
+            for row in rows
+        ]
 
     def _normalize_inventory_value(self, value: Any) -> Any:
         if isinstance(value, Decimal):
@@ -155,6 +202,7 @@ class CheckRunner:
         return value
 
     def _resolve_checks(self, profile: Any) -> list[Check]:
+        policies = self._resolve_policies(profile)
         checks: list[Check] = []
         for group_id in profile.enabled_groups:
             if group_id in profile.disabled_groups:
@@ -162,8 +210,26 @@ class CheckRunner:
             group = self.config["groups"][group_id]
             for check_id in group.checks:
                 if check_id not in profile.disabled_checks:
-                    checks.append(self.config["checks"][check_id])
+                    check = copy.deepcopy(self.config["checks"][check_id])
+                    self._apply_policy_values(check, policies)
+                    checks.append(check)
         return checks
+
+    def _resolve_policies(self, profile: Any) -> dict[str, Any]:
+        policies: dict[str, Any] = {}
+        for standard_id in profile.standards:
+            standard = self.config.get("standards", {}).get(standard_id)
+            if standard:
+                policies.update(standard.policies)
+        policies.update(profile.overrides.get("policies", {}))
+        return policies
+
+    def _apply_policy_values(self, check: Check, policies: dict[str, Any]) -> None:
+        for section_name in ("collector", "evaluator"):
+            section = getattr(check, section_name)
+            for field_name, policy_name in list(section.items()):
+                if field_name.endswith("_policy") and policy_name in policies:
+                    section[field_name.removesuffix("_policy")] = policies[policy_name]
 
     def _run_check(self, check: Check, target: Target, inventory: Inventory) -> Result:
         start = time.monotonic()
@@ -240,12 +306,53 @@ class CheckRunner:
             field = collector.get("field")
             data = inventory.database if source == "database" else inventory.operating_system if source == "operating_system" else inventory.features
             return data.get(field) if field else data
+        if ctype == "oracle_parameter":
+            parameter = collector["parameter"].lower()
+            parameters = inventory.database.get("parameters", {})
+            parameter_data = parameters.get(parameter, {}) if isinstance(parameters, dict) else {}
+            actual = parameter_data.get("display_value", parameter_data.get("value")) if isinstance(parameter_data, dict) else None
+            return self._build_oracle_config_evidence(check, parameter, actual, "v$parameter", exists=bool(parameter_data))
+        if ctype == "oracle_metric":
+            field = collector["field"]
+            return self._build_oracle_config_evidence(
+                check,
+                collector.get("label", field),
+                inventory.database.get(field),
+                collector.get("source_view", "inventory"),
+                extra={key: inventory.database.get(key) for key in collector.get("include_fields", [])},
+            )
         if ctype == "static":
             return collector.get("value")
         if ctype == "os_adapter":
             adapter = LinuxAdapter(LocalConnector()) if inventory.operating_system.get("platform") == "linux" else AIXAdapter(LocalConnector())
             return getattr(adapter, collector["method"])()
         raise ValueError(f"Unsupported collector type {ctype}")
+
+    def _build_oracle_config_evidence(
+        self,
+        check: Check,
+        name: str,
+        actual: Any,
+        source: str,
+        exists: bool = True,
+        extra: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        evidence = {
+            "metric": name,
+            "parameter": name if check.collector.get("type") == "oracle_parameter" else None,
+            "actual_value": actual,
+            "source": source,
+            "exists": exists and actual is not None,
+        }
+        if check.evaluator.get("expected") is not None:
+            evidence["expected_value"] = check.evaluator.get("expected")
+        if check.evaluator.get("minimum") is not None:
+            evidence["minimum"] = check.evaluator.get("minimum")
+        if check.evaluator.get("disallowed_values") is not None:
+            evidence["disallowed_values"] = check.evaluator.get("disallowed_values")
+        if extra:
+            evidence.update({key: value for key, value in extra.items() if value is not None})
+        return evidence
 
     def _write_json(self, path: Path, data: Any) -> None:
         path.write_text(json.dumps(mask_secrets(data), indent=2, ensure_ascii=False), encoding="utf-8")

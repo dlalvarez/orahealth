@@ -1,0 +1,24 @@
+check_id: optimizer_features_enable
+group_id: configuration_general
+title: Optimizer features enable según estándar
+severity: WARNING
+collector:
+  type: oracle_parameter
+  parameter: optimizer_features_enable
+evaluator:
+  type: oracle_config
+  expected_policy: expected_optimizer_features_enable
+  report_status: INFO
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
+  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, configuration]

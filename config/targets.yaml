@@ -16,6 +16,62 @@ targets:
         fra_used_pct: 42
         invalid_objects_count: 0
         alert_log_excerpt: "No critical internal errors found"
+        parameters:
+          compatible:
+            name: compatible
+            value: "19.0.0"
+            display_value: "19.0.0"
+          optimizer_features_enable:
+            name: optimizer_features_enable
+            value: "19.1.0"
+            display_value: "19.1.0"
+          db_block_size:
+            name: db_block_size
+            value: 8192
+            display_value: 8192
+          open_cursors:
+            name: open_cursors
+            value: 500
+            display_value: 500
+          processes:
+            name: processes
+            value: 500
+            display_value: 500
+          sessions:
+            name: sessions
+            value: 776
+            display_value: 776
+          audit_trail:
+            name: audit_trail
+            value: DB
+            display_value: DB
+          remote_login_passwordfile:
+            name: remote_login_passwordfile
+            value: EXCLUSIVE
+            display_value: EXCLUSIVE
+          recyclebin:
+            name: recyclebin
+            value: ON
+            display_value: ON
+          filesystemio_options:
+            name: filesystemio_options
+            value: SETALL
+            display_value: SETALL
+          control_files:
+            name: control_files
+            value: /u01/control01.ctl, /u02/control02.ctl
+            display_value: /u01/control01.ctl, /u02/control02.ctl
+        force_logging: YES
+        control_file_count: 2
+        redo_log_group_count: 3
+        min_redo_log_members_per_group: 2
+        redo_log_members:
+          - group_number: 1
+            member_count: 2
+          - group_number: 2
+            member_count: 2
+          - group_number: 3
+            member_count: 2
     operating_system:
       platform: linux
       connections:

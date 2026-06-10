@@ -1,0 +1,27 @@
+check_id: force_logging
+group_id: configuration_general
+title: Force logging según estándar
+severity: WARNING
+collector:
+  type: oracle_metric
+  field: force_logging
+  label: force_logging
+  source_view: v$database
+evaluator:
+  type: oracle_config
+  label: force_logging
+  expected_policy: expected_force_logging
+  report_status: INFO
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
+  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, configuration]

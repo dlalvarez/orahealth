@@ -5,3 +5,17 @@ policies:
   min_tablespace_free_pct: 10
   max_fra_used_pct_warning: 80
   max_fra_used_pct_critical: 95
+  compatible_report_status: INFO
+  expected_optimizer_features_enable: "19.1.0"
+  expected_db_block_size: 8192
+  min_open_cursors: 300
+  min_processes: 300
+  min_sessions: 450
+  expected_audit_trail: DB
+  expected_remote_login_passwordfile: EXCLUSIVE
+  expected_recyclebin: ON
+  expected_filesystemio_options: SETALL
+  min_control_files: 2
+  min_redo_log_groups: 3
+  min_redo_log_members_per_group: 2
+  expected_force_logging: YES

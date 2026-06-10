@@ -1,6 +1,6 @@
 check_id: archivelog_mode
 group_id: configuration_general
-title: Database runs in ARCHIVELOG mode
+title: Base de datos en modo ARCHIVELOG
 severity: FAIL
 collector:
   type: inventory
@@ -15,8 +15,8 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Enable ARCHIVELOG mode if recoverability requirements demand it.
-  actions: ["Schedule downtime if required and enable ARCHIVELOG mode."]
+  summary: Habilitar ARCHIVELOG si los requisitos de recuperabilidad lo demandan.
+  actions: ["Planificar una ventana si aplica y habilitar el modo ARCHIVELOG."]
   owner: DBA
   requires_window: true
   outage_risk: high

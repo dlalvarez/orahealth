@@ -1,0 +1,27 @@
+check_id: redo_log_members_multiplexed
+group_id: configuration_general
+title: Miembros redo log multiplexados por grupo
+severity: WARNING
+collector:
+  type: oracle_metric
+  field: min_redo_log_members_per_group
+  label: min_redo_log_members_per_group
+  source_view: v$logfile
+  include_fields: [redo_log_members]
+evaluator:
+  type: oracle_config
+  label: min_redo_log_members_per_group
+  minimum_policy: min_redo_log_members_per_group
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
+  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, configuration]
