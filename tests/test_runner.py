@@ -56,19 +56,7 @@ def test_technical_report_contains_inventory_grouped_checks_and_evidence(tmp_pat
     assert "Filesystems</span><strong>N/D" not in html
 
 
-def test_technical_report_hides_long_remediation_for_pass_and_info(tmp_path):
-    output = _run_example(tmp_path)
-    html = (output / "technical_report.html").read_text(encoding="utf-8")
-
-    assert "No requiere remediación." in html
-    assert "Validación informativa." in html
-    assert "La instancia de base de datos no reporta un estado operativo esperado" not in html
-    assert "No forzar apertura ni recuperación sin validar consistencia" not in html
-    assert "El parámetro compatible define el nivel de compatibilidad funcional" not in html
-    assert "No incrementar compatible sin confirmar que no se requiere rollback" not in html
-
-
-def test_technical_report_shows_remediation_for_warning_and_fail(tmp_path):
+def test_technical_report_omits_remediation_column_and_text(tmp_path):
     config = ConfigLoader("config").load_all()
     ConfigValidator().validate(config)
     config["settings"]["app"]["default_output_dir"] = str(tmp_path)
@@ -81,12 +69,45 @@ def test_technical_report_shows_remediation_for_warning_and_fail(tmp_path):
     technical_html = (output / "technical_report.html").read_text(encoding="utf-8")
     corrective_html = (output / "corrective_actions.html").read_text(encoding="utf-8")
 
-    assert "Un valor bajo de open_cursors puede provocar errores ORA-01000" in technical_html
-    assert "Revisar alert log, trazas y monitoreo de aplicación" in technical_html
-    assert "La base de datos no está operando en modo ARCHIVELOG" in technical_html
-    assert "Confirmar con el negocio y el equipo DBA" in technical_html
+    assert "<th>Remediación</th>" not in technical_html
+    assert "No requiere remediación." not in technical_html
+    assert "Validación informativa." not in technical_html
+    assert "Un valor bajo de open_cursors puede provocar errores ORA-01000" not in technical_html
+    assert "Revisar alert log, trazas y monitoreo de aplicación" not in technical_html
+    assert "La base de datos no está operando en modo ARCHIVELOG" not in technical_html
+    assert "Confirmar con el negocio y el equipo DBA" not in technical_html
+    assert "<pre" in technical_html
+    assert "duration_ms" in technical_html
+    assert "skipped_reason" in technical_html
+    assert "error" in technical_html
     assert "Revisar alert log, trazas y monitoreo de aplicación" in corrective_html
     assert "Confirmar con el negocio y el equipo DBA" in corrective_html
+
+
+def test_technical_report_keeps_skipped_reason_and_error_without_remediation(tmp_path):
+    skipped_config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(skipped_config)
+    skipped_config["settings"]["app"]["default_output_dir"] = str(tmp_path / "skipped")
+    skipped_config["targets"]["example_standalone"].expected_architecture = "unsupported"
+
+    skipped_output = CheckRunner(skipped_config).run_target("example_standalone")
+    skipped_html = (skipped_output / "technical_report.html").read_text(encoding="utf-8")
+
+    assert "Architecture unsupported is not applicable" in skipped_html
+    assert "<th>Remediación</th>" not in skipped_html
+    assert "La instancia de base de datos no reporta un estado operativo esperado" not in skipped_html
+
+    error_config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(error_config)
+    error_config["settings"]["app"]["default_output_dir"] = str(tmp_path / "error")
+    error_config["checks"]["open_cursors"].collector["type"] = "unsupported"
+
+    error_output = CheckRunner(error_config).run_target("example_standalone")
+    error_html = (error_output / "technical_report.html").read_text(encoding="utf-8")
+
+    assert "Unsupported collector type unsupported" in error_html
+    assert "<th>Remediación</th>" not in error_html
+    assert "Un valor bajo de open_cursors puede provocar errores ORA-01000" not in error_html
 
 
 def test_corrective_actions_report_shows_positive_message_when_clean(tmp_path):
