@@ -38,16 +38,35 @@ class ConfigLoader:
     def load_app_settings(self) -> dict[str, Any]:
         return self._read_yaml(self.config_dir / "app_settings.yaml")
 
+    def _read_layered_yaml(self, base_name: str, local_name: str) -> tuple[dict[str, Any], dict[str, Any]]:
+        return (
+            self._read_yaml(self.config_dir / base_name),
+            self._read_yaml(self.config_dir / local_name),
+        )
+
     def load_connections(self) -> dict[str, dict[str, ConnectionProfile]]:
-        data = self._read_yaml(self.config_dir / "connection_profiles.yaml")
+        base_data, local_data = self._read_layered_yaml(
+            "connection_profiles.yaml", "connection_profiles.local.yaml"
+        )
+        db_connections = {
+            **base_data.get("db_connections", {}),
+            **local_data.get("db_connections", {}),
+        }
+        os_connections = {
+            **base_data.get("os_connections", {}),
+            **local_data.get("os_connections", {}),
+        }
         return {
-            "db_connections": {k: ConnectionProfile.from_mapping(k, v) for k, v in data.get("db_connections", {}).items()},
-            "os_connections": {k: ConnectionProfile.from_mapping(k, v) for k, v in data.get("os_connections", {}).items()},
+            "db_connections": {k: ConnectionProfile.from_mapping(k, v) for k, v in db_connections.items()},
+            "os_connections": {k: ConnectionProfile.from_mapping(k, v) for k, v in os_connections.items()},
         }
 
     def load_targets(self) -> dict[str, Target]:
-        data = self._read_yaml(self.config_dir / "targets.yaml")
-        return {item["target_id"]: Target.from_mapping(item) for item in data.get("targets", [])}
+        base_data, local_data = self._read_layered_yaml("targets.yaml", "targets.local.yaml")
+        targets: dict[str, Target] = {}
+        for item in [*base_data.get("targets", []), *local_data.get("targets", [])]:
+            targets[item["target_id"]] = Target.from_mapping(item)
+        return targets
 
     def load_profiles(self) -> dict[str, Profile]:
         profiles: dict[str, Profile] = {}

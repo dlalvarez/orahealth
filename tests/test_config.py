@@ -70,3 +70,304 @@ def test_validate_config_rejects_unquoted_yaml_comparison_operator(tmp_path):
         ConfigValidator().validate(config)
 
     assert "must be quoted" in str(excinfo.value)
+
+
+def test_loads_only_base_connection_and_target_files(tmp_path):
+    (tmp_path / "connection_profiles.yaml").write_text(
+        """
+db_connections:
+  base_db:
+    type: oracle
+    auth_method: password
+os_connections:
+  base_os:
+    type: local
+    auth_method: local
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "targets.yaml").write_text(
+        """
+targets:
+  - target_id: base_target
+    profile: standalone_basic
+    database:
+      primary_connection: base_db
+    operating_system:
+      connections:
+        - base_os
+""",
+        encoding="utf-8",
+    )
+
+    loader = ConfigLoader(tmp_path)
+
+    assert set(loader.load_connections()["db_connections"]) == {"base_db"}
+    assert set(loader.load_connections()["os_connections"]) == {"base_os"}
+    assert set(loader.load_targets()) == {"base_target"}
+
+
+def test_loads_base_plus_local_connection_and_target_files(tmp_path):
+    (tmp_path / "connection_profiles.yaml").write_text(
+        """
+db_connections:
+  base_db:
+    type: oracle
+    auth_method: password
+os_connections:
+  base_os:
+    type: local
+    auth_method: local
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "connection_profiles.local.yaml").write_text(
+        """
+db_connections:
+  local_db:
+    type: oracle
+    auth_method: env
+    password_env: LOCAL_DB_PASSWORD
+os_connections:
+  local_os:
+    type: ssh
+    auth_method: private_key
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "targets.yaml").write_text(
+        """
+targets:
+  - target_id: base_target
+    profile: standalone_basic
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "targets.local.yaml").write_text(
+        """
+targets:
+  - target_id: local_target
+    profile: standalone_basic
+""",
+        encoding="utf-8",
+    )
+
+    loader = ConfigLoader(tmp_path)
+
+    assert set(loader.load_connections()["db_connections"]) == {"base_db", "local_db"}
+    assert set(loader.load_connections()["os_connections"]) == {"base_os", "local_os"}
+    assert set(loader.load_targets()) == {"base_target", "local_target"}
+
+
+def test_local_file_adds_connections(tmp_path):
+    (tmp_path / "connection_profiles.yaml").write_text(
+        """
+db_connections:
+  base_db:
+    type: oracle
+    auth_method: password
+os_connections:
+  base_os:
+    type: local
+    auth_method: local
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "connection_profiles.local.yaml").write_text(
+        """
+db_connections:
+  added_db:
+    type: oracle
+    auth_method: env
+os_connections:
+  added_os:
+    type: ssh
+    auth_method: private_key
+""",
+        encoding="utf-8",
+    )
+
+    connections = ConfigLoader(tmp_path).load_connections()
+
+    assert "added_db" in connections["db_connections"]
+    assert "added_os" in connections["os_connections"]
+
+
+def test_local_file_overwrites_connections_with_same_name(tmp_path):
+    (tmp_path / "connection_profiles.yaml").write_text(
+        """
+db_connections:
+  shared_db:
+    type: oracle
+    host: base.example.com
+    auth_method: password
+os_connections:
+  shared_os:
+    type: local
+    username: base
+    auth_method: local
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "connection_profiles.local.yaml").write_text(
+        """
+db_connections:
+  shared_db:
+    type: oracle
+    host: local.example.com
+    auth_method: env
+os_connections:
+  shared_os:
+    type: ssh
+    username: local
+    auth_method: private_key
+""",
+        encoding="utf-8",
+    )
+
+    connections = ConfigLoader(tmp_path).load_connections()
+
+    assert connections["db_connections"]["shared_db"].settings["host"] == "local.example.com"
+    assert connections["db_connections"]["shared_db"].auth_method == "env"
+    assert connections["os_connections"]["shared_os"].type == "ssh"
+    assert connections["os_connections"]["shared_os"].settings["username"] == "local"
+
+
+def test_local_file_adds_targets(tmp_path):
+    (tmp_path / "targets.yaml").write_text(
+        """
+targets:
+  - target_id: base_target
+    profile: standalone_basic
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "targets.local.yaml").write_text(
+        """
+targets:
+  - target_id: added_target
+    name: Added Target
+    profile: standalone_basic
+""",
+        encoding="utf-8",
+    )
+
+    targets = ConfigLoader(tmp_path).load_targets()
+
+    assert set(targets) == {"base_target", "added_target"}
+    assert targets["added_target"].name == "Added Target"
+
+
+def test_local_file_overwrites_target_with_same_target_id(tmp_path):
+    (tmp_path / "targets.yaml").write_text(
+        """
+targets:
+  - target_id: shared_target
+    name: Base Target
+    environment: development
+    profile: standalone_basic
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "targets.local.yaml").write_text(
+        """
+targets:
+  - target_id: shared_target
+    name: Local Target
+    environment: production
+    profile: standalone_basic
+""",
+        encoding="utf-8",
+    )
+
+    target = ConfigLoader(tmp_path).load_targets()["shared_target"]
+
+    assert target.name == "Local Target"
+    assert target.environment == "production"
+
+
+def test_validate_config_fails_when_local_yaml_is_invalid(tmp_path, capsys):
+    from shutil import copytree
+
+    copytree("config", tmp_path, dirs_exist_ok=True)
+    (tmp_path / "targets.local.yaml").write_text("targets: [unclosed\n", encoding="utf-8")
+
+    exit_code = main(["--config-dir", str(tmp_path), "validate-config"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Configuration syntax error" in captured.err
+    assert "targets.local.yaml" in captured.err
+
+
+def test_validate_config_fails_when_local_target_references_missing_connection(tmp_path, capsys):
+    from shutil import copytree
+
+    copytree("config", tmp_path, dirs_exist_ok=True)
+    (tmp_path / "targets.local.yaml").write_text(
+        """
+targets:
+  - target_id: real_lab
+    name: Real Lab
+    environment: lab
+    expected_architecture: standalone
+    profile: standalone_basic
+    database:
+      primary_connection: missing_real_db
+    operating_system:
+      platform: linux
+      connections:
+        - local_oracle
+""",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["--config-dir", str(tmp_path), "validate-config"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Configuration validation failed" in captured.err
+    assert "Target real_lab references missing DB connection missing_real_db" in captured.err
+
+
+def test_list_targets_includes_local_targets(tmp_path, capsys):
+    from shutil import copytree
+
+    copytree("config", tmp_path, dirs_exist_ok=True)
+    (tmp_path / "connection_profiles.local.yaml").write_text(
+        """
+db_connections:
+  lab_oracle:
+    type: oracle
+    auth_method: env
+os_connections:
+  lab_os:
+    type: local
+    auth_method: local
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "targets.local.yaml").write_text(
+        """
+targets:
+  - target_id: lab_standalone
+    name: Lab Standalone
+    environment: lab
+    expected_architecture: standalone
+    profile: standalone_basic
+    database:
+      primary_connection: lab_oracle
+    operating_system:
+      platform: linux
+      connections:
+        - lab_os
+""",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["--config-dir", str(tmp_path), "list-targets"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "example_standalone\tExample Standalone Database\tstandalone_basic" in captured.out
+    assert "lab_standalone\tLab Standalone\tstandalone_basic" in captured.out
