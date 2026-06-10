@@ -15,8 +15,14 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: processes limita la cantidad de procesos Oracle y conexiones concurrentes; un valor insuficiente puede rechazar conexiones y afectar servicios de base de datos.
+  actions:
+    - Revisar uso actual y máximo histórico de procesos en la base de datos.
+    - Validar presencia de errores ORA-00020 o rechazos de conexión en alert log, listener y monitoreo de aplicación.
+    - Confirmar crecimiento esperado de conexiones, jobs, procesos batch y background processes.
+    - Aumentar processes en SPFILE si el valor está por debajo del estándar aprobado.
+    - Programar reinicio de instancia en ventana de mantenimiento, porque normalmente el cambio requiere reinicio.
+    - Validar el impacto en sessions, memoria y límites del sistema operativo antes y después del cambio.
   owner: DBA
   requires_window: true
   outage_risk: medium

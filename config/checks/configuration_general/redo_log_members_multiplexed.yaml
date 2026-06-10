@@ -19,9 +19,15 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: Tener un solo member por grupo redo aumenta el riesgo ante pérdida o corrupción de un archivo redo, con impacto potencial en disponibilidad y recuperación.
+  actions:
+    - Revisar miembros actuales con v$logfile y confirmar el estado de cada grupo redo.
+    - Agregar al menos un miembro adicional por cada grupo redo que no cumpla el mínimo definido.
+    - Distribuir miembros en storage, diskgroup o filesystem diferente cuando sea posible.
+    - No borrar members existentes sin validar estado del grupo redo y sin confirmar que la nueva multiplexación funciona correctamente.
+    - Validar v$logfile después del cambio para confirmar rutas, grupos y estados.
+    - Confirmar que todos los grupos cumplen el mínimo definido y documentar cualquier excepción.
   owner: DBA
-  requires_window: true
+  requires_window: false
   outage_risk: medium
 tags: [oracle, configuration]

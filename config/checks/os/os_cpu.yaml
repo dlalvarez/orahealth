@@ -15,9 +15,14 @@ applies_to:
   requires:
     os_connection: true
 remediation:
-  summary: Confirm OS CPU commands are available for the platform.
-  actions: ["Review adapter command permissions."]
+  summary: El servidor no cumple la validación de CPU o no se pudo confirmar correctamente; saturación de CPU puede degradar tiempos de respuesta de Oracle y aplicaciones.
+  actions:
+    - Revisar utilización actual, promedio histórico, load average y procesos principales consumidores de CPU.
+    - Correlacionar picos de CPU con jobs Oracle, consultas costosas, backups, ETL o procesos externos.
+    - Validar que los comandos del adaptador OS tengan permisos suficientes para reportar CPU de forma confiable.
+    - Optimizar consultas, jobs o procesos consumidores antes de ampliar capacidad cuando sea posible.
+    - Escalar capacidad de CPU o redistribuir carga si la tendencia confirma insuficiencia de recursos.
   owner: OS
   requires_window: false
-  outage_risk: low
+  outage_risk: medium
 tags: [os, cpu]

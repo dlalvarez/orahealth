@@ -16,8 +16,14 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: audit_trail controla la auditoría tradicional de Oracle; una configuración no alineada impacta seguridad, cumplimiento, trazabilidad y consumo de almacenamiento.
+  actions:
+    - Confirmar la política de auditoría de la organización y los requisitos regulatorios aplicables.
+    - Validar si la base usa auditoría tradicional, Unified Auditing o una combinación durante transición.
+    - Evitar deshabilitar auditoría sin aprobación explícita de seguridad, cumplimiento y dueños de la aplicación.
+    - Revisar crecimiento, retención y limpieza de tablas o vistas de auditoría para prevenir consumo excesivo de almacenamiento.
+    - Ajustar audit_trail conforme al estándar aprobado y documentar el motivo del valor elegido.
+    - Programar reinicio de instancia si el cambio lo requiere y validar generación de registros de auditoría después del cambio.
   owner: DBA
   requires_window: true
   outage_risk: medium

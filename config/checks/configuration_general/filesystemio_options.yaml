@@ -16,8 +16,15 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: filesystemio_options influye en el uso de direct I/O y asynchronous I/O sobre filesystems; un valor no adecuado puede afectar rendimiento o comportamiento de I/O.
+  actions:
+    - Confirmar si los datafiles están sobre filesystem, ASM u otra capa de almacenamiento.
+    - Validar recomendaciones del sistema operativo, versión Oracle y tipo de almacenamiento utilizado.
+    - Confirmar soporte y configuración de asynchronous I/O y direct I/O antes de cambiar el parámetro.
+    - Evaluar SETALL solamente si aplica al entorno y está soportado por la plataforma.
+    - Probar el impacto de I/O en ambiente no productivo o durante una prueba controlada.
+    - Cambiar el valor en SPFILE y reiniciar la instancia si corresponde.
+    - Validar rendimiento, esperas y errores de I/O después del cambio.
   owner: DBA
   requires_window: true
   outage_risk: medium

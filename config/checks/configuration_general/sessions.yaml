@@ -15,8 +15,14 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: sessions define el límite de sesiones concurrentes y debe mantenerse coherente con processes para soportar la concurrencia esperada sin rechazos de conexión.
+  actions:
+    - Revisar consumo actual y máximo histórico de sesiones por servicio, usuario y aplicación.
+    - Validar errores ORA-00018 o rechazos de conexión asociados al límite de sesiones.
+    - Confirmar la relación esperada con processes y los parámetros derivados de concurrencia.
+    - Ajustar sessions si el valor es insuficiente para la concurrencia esperada y el estándar del ambiente.
+    - Validar parámetros relacionados y capacidad de memoria antes de aplicar el cambio.
+    - Reiniciar la instancia en ventana de mantenimiento si el cambio lo requiere según el tipo de parámetro y el método de configuración usado.
   owner: DBA
   requires_window: true
   outage_risk: medium

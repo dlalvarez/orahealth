@@ -15,9 +15,14 @@ applies_to:
   requires:
     os_connection: true
 remediation:
-  summary: Confirm OS memory commands are available for the platform.
-  actions: ["Review adapter command permissions."]
+  summary: El servidor no cumple la validación de memoria o no se pudo confirmar correctamente; la presión de memoria puede afectar procesos Oracle y estabilidad del sistema.
+  actions:
+    - Revisar memoria total, memoria disponible, swap y eventos recientes de OOM o presión de memoria en el sistema operativo.
+    - Correlacionar consumo de memoria con SGA, PGA, procesos Oracle y cargas de aplicación.
+    - Validar que los comandos del adaptador OS tengan permisos suficientes para reportar memoria de forma confiable.
+    - Ajustar parámetros de memoria o capacidad del host solo después de analizar tendencia y requerimientos de workload.
+    - Monitorear memoria y swap después de cualquier cambio para confirmar estabilidad.
   owner: OS
   requires_window: false
-  outage_risk: low
+  outage_risk: medium
 tags: [os, memory]

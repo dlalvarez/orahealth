@@ -14,9 +14,14 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: El parámetro compatible define el nivel de compatibilidad funcional de la base; un valor no alineado puede limitar características disponibles o habilitar comportamientos de versión con impacto operativo.
+  actions:
+    - Confirmar el valor esperado de compatible según la versión Oracle certificada para la aplicación.
+    - Validar la matriz de compatibilidad de aplicación, drivers, clientes, herramientas de respaldo y componentes de integración.
+    - No incrementar compatible sin confirmar que no se requiere rollback o downgrade hacia una versión anterior.
+    - Si se requiere modificarlo, planificar el cambio bajo control formal porque puede requerir reinicio y tener implicaciones irreversibles.
+    - Documentar el valor aprobado como estándar del ambiente y conservar evidencia de la aprobación técnica.
   owner: DBA
   requires_window: true
-  outage_risk: medium
+  outage_risk: high
 tags: [oracle, configuration]

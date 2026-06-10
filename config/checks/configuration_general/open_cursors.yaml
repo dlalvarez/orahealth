@@ -15,9 +15,14 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: Un valor bajo de open_cursors puede provocar errores ORA-01000 y afectar sesiones de aplicación que requieren múltiples cursores abiertos.
+  actions:
+    - Revisar alert log, trazas y monitoreo de aplicación para identificar errores ORA-01000 o síntomas de agotamiento de cursores.
+    - Validar consumo real y máximo por usuario/sesión antes de aumentar el parámetro.
+    - Corregir fugas de cursores en la aplicación si el consumo crece de forma anómala.
+    - Ajustar open_cursors en SPFILE o memoria según el método aprobado si el valor está por debajo del estándar.
+    - Monitorear sesiones de aplicación después del cambio para confirmar que el consumo queda dentro de rango.
   owner: DBA
-  requires_window: true
-  outage_risk: medium
+  requires_window: false
+  outage_risk: low
 tags: [oracle, configuration]

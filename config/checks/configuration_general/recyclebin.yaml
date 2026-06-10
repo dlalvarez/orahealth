@@ -16,9 +16,15 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
-  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  summary: La papelera de reciclaje puede conservar objetos eliminados y consumir espacio, pero también permite recuperación lógica rápida ante borrados accidentales.
+  actions:
+    - Confirmar el estándar de la organización para recyclebin en ambientes productivos y no productivos.
+    - Revisar uso actual de recyclebin y objetos acumulados por esquema antes de decidir una acción.
+    - Si se decide deshabilitar recyclebin, validar impacto en procedimientos de recuperación lógica y soporte operativo.
+    - Purgar objetos solo con aprobación del dueño de datos y después de confirmar que no se requiere recuperación.
+    - Ajustar el parámetro según el estándar aprobado, preferentemente mediante control de cambios.
+    - Documentar la excepción si la aplicación o el equipo DBA requiere recyclebin activo.
   owner: DBA
-  requires_window: true
-  outage_risk: medium
+  requires_window: false
+  outage_risk: low
 tags: [oracle, configuration]

@@ -17,8 +17,13 @@ applies_to:
   requires:
     os_connection: true
 remediation:
-  summary: Review filesystems reported by the OS adapter.
-  actions: ["Clean temporary files or expand filesystem capacity."]
+  summary: Un filesystem del servidor presenta uso elevado; esto puede afectar datafiles, archived logs, trazas, backups o componentes del sistema operativo.
+  actions:
+    - Identificar el punto de montaje afectado, porcentaje de uso, tendencia y archivos o directorios de mayor consumo.
+    - Confirmar si el filesystem contiene componentes Oracle críticos como ORACLE_HOME, diag, FRA, backups, datafiles o archived logs.
+    - Liberar espacio únicamente con procedimientos aprobados, evitando borrar trazas, backups o archived logs requeridos para soporte o recuperación.
+    - Ampliar capacidad del filesystem o mover cargas no críticas si el crecimiento esperado lo requiere.
+    - Validar permisos, alertas y monitoreo después de la corrección.
   owner: OS
   requires_window: false
   outage_risk: low
