@@ -39,6 +39,22 @@ def test_executive_report_contains_dashboard_sections(tmp_path):
     assert "Hallazgos Principales" in html
 
 
+def test_reports_use_compact_professional_css(tmp_path):
+    output = _run_example(tmp_path)
+
+    for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html"]:
+        html = (output / report_name).read_text(encoding="utf-8")
+        assert 'font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif' in html
+        assert "font-size:13px" in html
+        assert "line-height:1.35" in html
+        assert "max-width:1440px" in html
+        assert "padding:4px 8px" in html
+        assert "font-size:11px" in html
+
+    technical_html = (output / "technical_report.html").read_text(encoding="utf-8")
+    assert "max-height:190px" in technical_html
+
+
 def test_technical_report_contains_inventory_grouped_checks_and_evidence(tmp_path):
     output = _run_example(tmp_path)
     html = (output / "technical_report.html").read_text(encoding="utf-8")
