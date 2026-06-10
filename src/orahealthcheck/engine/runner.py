@@ -47,7 +47,7 @@ class CheckRunner:
         logging.info("Status summary: %s", json.dumps(summary, sort_keys=True))
         self._write_json(output_dir / "inventory.json", inventory.to_dict())
         self._write_json(output_dir / "evidence.json", {"summary": summary, "results": [r.to_dict() for r in results]})
-        HTMLReporter(Path("templates/html")).generate(output_dir, target, inventory, results, summary)
+        HTMLReporter(Path("templates/html")).generate(output_dir, target, inventory, results, summary, self.config)
         total_duration_ms = int((time.monotonic() - run_start) * 1000)
         logging.info("Output directory: %s", output_dir)
         logging.info("Total duration_ms: %s", total_duration_ms)

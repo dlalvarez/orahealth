@@ -25,6 +25,63 @@ def test_runner_generates_required_files(tmp_path):
     assert expected.issubset({path.name for path in Path(output).iterdir()})
 
 
+def test_executive_report_contains_dashboard_sections(tmp_path):
+    output = _run_example(tmp_path)
+    html = (output / "executive_report.html").read_text(encoding="utf-8")
+
+    assert "example_standalone" in html
+    assert "Reporte Ejecutivo" in html
+    assert "Información del target" in html
+    assert "Puntaje de Salud" in html
+    assert "Estado Global" in html
+    assert "🟢 PASS / Correcto" in html
+    assert "Resumen Ejecutivo" in html
+    assert "Hallazgos Principales" in html
+
+
+def test_technical_report_contains_inventory_grouped_checks_and_evidence(tmp_path):
+    output = _run_example(tmp_path)
+    html = (output / "technical_report.html").read_text(encoding="utf-8")
+
+    assert "Reporte Técnico" in html
+    assert "Información del target" in html
+    assert "Inventario de Base de Datos" in html
+    assert "Inventario del Sistema Operativo" in html
+    assert "Configuración general" in html
+    assert "<pre" in html
+    assert "duration_ms" in html
+    assert "Mínimo porcentaje libre en tablespaces" in html
+    assert "CPU</span><strong>N/D" not in html
+    assert "Memoria</span><strong>N/D" not in html
+    assert "Filesystems</span><strong>N/D" not in html
+
+
+def test_corrective_actions_report_shows_positive_message_when_clean(tmp_path):
+    output = _run_example(tmp_path)
+    html = (output / "corrective_actions.html").read_text(encoding="utf-8")
+
+    assert "Acciones Correctivas" in html
+    assert "Información del target" in html
+    assert "No se requieren acciones correctivas." in html
+
+
+def test_reports_show_password_env_but_never_real_password(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    profile = config["connections"]["db_connections"]["example_oracle"]
+    profile.settings["password"] = "super_secret_password"
+    profile.settings["password_env"] = "ORA_EXAMPLE_PASSWORD"
+
+    output = CheckRunner(config).run_target("example_standalone")
+
+    for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html"]:
+        html = (output / report_name).read_text(encoding="utf-8")
+        assert "ORA_EXAMPLE_PASSWORD" in html
+        assert "super_secret_password" not in html
+
+
+
 def test_evidence_json_has_minimum_structure(tmp_path):
     output = _run_example(tmp_path)
     evidence = json.loads((output / "evidence.json").read_text(encoding="utf-8"))
@@ -162,3 +219,11 @@ def test_real_metrics_drive_tablespace_fra_and_invalid_object_results(tmp_path):
     assert results["tablespace_free_pct"]["status"] == "CRITICAL"
     assert results["fra_usage"]["status"] == "CRITICAL"
     assert results["invalid_objects"]["status"] == "FAIL"
+
+    corrective_html = (output / "corrective_actions.html").read_text(encoding="utf-8")
+    assert "🛑 CRITICAL" in corrective_html
+    assert "🔴 FAIL" in corrective_html
+    assert "Responsable: DBA" in corrective_html
+    assert "Requiere ventana" in corrective_html
+    assert "Riesgo de indisponibilidad" in corrective_html
+    assert "Acciones recomendadas" in corrective_html

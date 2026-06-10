@@ -1,11 +1,71 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Executive Report</title><style>body{font-family:Arial,sans-serif;margin:2rem}.PASS{color:green}.WARNING{color:#b7791f}.FAIL,.CRITICAL,.ERROR{color:#c53030}.SKIPPED{color:#718096}</style></head><body>
-<h1>OraHealthCheck Executive Report</h1>
-<h2>{{ target.name }} ({{ target.target_id }})</h2>
-<p><strong>Global status:</strong> <span class="{{ summary.global_status }}">{{ summary.global_status }}</span></p>
-<p><strong>Score:</strong> {{ summary.score }}</p>
-<h3>Summary</h3>
-<ul>{% for key, value in summary.items() %}<li>{{ key }}: {{ value }}</li>{% endfor %}</ul>
-<h3>Key findings</h3>
-<table border="1" cellspacing="0" cellpadding="6"><tr><th>Check</th><th>Status</th><th>Message</th></tr>
-{% for result in findings %}<tr><td>{{ result.title }}</td><td class="{{ result.status.value }}">{{ result.status.value }}</td><td>{{ result.message or result.error }}</td></tr>{% endfor %}
-</table></body></html>
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OraHealthCheck Reporte Ejecutivo - {{ target.target_id }}</title>
+  <style>
+    :root{--bg:#f4f7fb;--surface:#fff;--text:#172033;--muted:#637083;--line:#dfe7f1;--shadow:0 10px 30px rgba(23,32,51,.08);--pass:#15803d;--pass-bg:#dcfce7;--info:#1d4ed8;--info-bg:#dbeafe;--warning:#b45309;--warning-bg:#fef3c7;--fail:#dc2626;--fail-bg:#fee2e2;--critical:#7f1d1d;--critical-bg:#fecaca;--error:#581c87;--error-bg:#f3e8ff;--skipped:#64748b;--skipped-bg:#f1f5f9}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.5}.page{max-width:1180px;margin:0 auto;padding:32px 20px}.hero{background:linear-gradient(135deg,#13213a,#234876);color:#fff;border-radius:24px;padding:30px;box-shadow:var(--shadow)}.eyebrow{font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;opacity:.78}.hero h1{margin:.25rem 0;font-size:2.1rem}.hero-grid,.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:22px}.hero-item,.info-item{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:12px}.info-item{background:#fff;border-color:var(--line)}.hero-item span,.info-item span{display:block;font-size:.76rem;opacity:.72}.hero-item strong,.info-item strong{display:block;margin-top:3px;word-break:break-word}.section{background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:24px;margin-top:22px}.section h2{margin:0 0 8px}.section h3{margin:18px 0 0}.hint{color:var(--muted);font-size:.94rem;margin-top:0}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:16px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 4px 16px rgba(23,32,51,.04)}.card .label{color:var(--muted);font-size:.84rem}.card .value{font-size:2rem;font-weight:800;margin-top:4px}.score-card{background:linear-gradient(180deg,#fff,#f8fbff)}.score-card .value{font-size:3.2rem}.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 11px;font-weight:700;font-size:.78rem;white-space:nowrap;border:1px solid transparent}.badge.PASS{color:var(--pass);background:var(--pass-bg);border-color:#bbf7d0}.badge.INFO{color:var(--info);background:var(--info-bg);border-color:#bfdbfe}.badge.WARNING{color:var(--warning);background:var(--warning-bg);border-color:#fde68a}.badge.FAIL{color:var(--fail);background:var(--fail-bg);border-color:#fecaca}.badge.CRITICAL{color:var(--critical);background:var(--critical-bg);border-color:#fca5a5}.badge.ERROR{color:var(--error);background:var(--error-bg);border-color:#e9d5ff}.badge.SKIPPED{color:var(--skipped);background:var(--skipped-bg);border-color:#e2e8f0}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:13px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f8fafc;color:#475569;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}tr:last-child td{border-bottom:0}.finding-title{font-weight:800}.severity{font-weight:700;color:#334155}.positive{border-left:6px solid var(--pass);background:#f0fdf4;padding:16px;border-radius:14px}@media(max-width:700px){.page{padding:18px 12px}.hero{padding:22px}.score-card .value{font-size:2.4rem}th,td{padding:10px}}
+  </style>
+</head>
+<body>
+{% macro badge(status) -%}
+  <span class="badge {{ status }}">{% if status == 'PASS' %}🟢{% elif status == 'INFO' %}🔵{% elif status == 'WARNING' %}🟡{% elif status == 'FAIL' %}🔴{% elif status == 'CRITICAL' %}🛑{% elif status == 'ERROR' %}🟣{% else %}⚪{% endif %} {{ status }} / {{ status | status_label }}</span>
+{%- endmacro %}
+<div class="page">
+  <header class="hero">
+    <div class="eyebrow">OraHealthCheck</div>
+    <h1>Reporte Ejecutivo</h1>
+    <p>Resumen ejecutivo para {{ target.name }} con interpretación rápida del puntaje de salud, estado global y hallazgos prioritarios.</p>
+    <div class="hero-grid">
+      <div class="hero-item"><span>ID del target</span><strong>{{ target.target_id }}</strong></div>
+      <div class="hero-item"><span>Nombre del target</span><strong>{{ target.name }}</strong></div>
+      <div class="hero-item"><span>Ambiente</span><strong>{{ target.environment }}</strong></div>
+      <div class="hero-item"><span>Arquitectura esperada</span><strong>{{ target.expected_architecture }}</strong></div>
+      <div class="hero-item"><span>Perfil</span><strong>{{ target.profile }}</strong></div>
+      <div class="hero-item"><span>Fecha/hora de ejecución</span><strong>{{ generated_at }}</strong></div>
+    </div>
+  </header>
+
+  <section class="section">
+    <h2>Información del target</h2>
+    <h3>Datos generales</h3><div class="info-grid">{% for item in target_info.general %}<div class="info-item"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>{% endfor %}</div>
+    {% if target_info.database %}<h3>Datos de base de datos</h3><div class="info-grid">{% for item in target_info.database %}<div class="info-item"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>{% endfor %}</div>{% endif %}
+    {% if target_info.operating_system %}<h3>Datos del servidor / sistema operativo</h3><div class="info-grid">{% for item in target_info.operating_system %}<div class="info-item"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>{% endfor %}</div>{% endif %}
+  </section>
+
+  <section class="section">
+    <h2>Resumen Ejecutivo</h2>
+    <p class="hint">El puntaje inicia en 100 y disminuye cuando se encuentran WARNING, FAIL, CRITICAL o ERROR. El estado global resalta el mayor riesgo operativo observado.</p>
+    <div class="cards">
+      <div class="card score-card"><div class="label">Puntaje de Salud</div><div class="value">{{ summary.score }}</div></div>
+      <div class="card"><div class="label">Estado Global</div><div class="value" style="font-size:1.2rem">{{ badge(summary.global_status) }}</div></div>
+      <div class="card"><div class="label">Total de validaciones</div><div class="value">{{ summary.total_checks }}</div></div>
+      <div class="card"><div class="label">PASS</div><div class="value">{{ summary.PASS }}</div></div>
+      <div class="card"><div class="label">INFO</div><div class="value">{{ summary.INFO }}</div></div>
+      <div class="card"><div class="label">FAIL</div><div class="value">{{ summary.FAIL }}</div></div>
+      <div class="card"><div class="label">CRITICAL</div><div class="value">{{ summary.CRITICAL }}</div></div>
+      <div class="card"><div class="label">WARNING</div><div class="value">{{ summary.WARNING }}</div></div>
+      <div class="card"><div class="label">ERROR</div><div class="value">{{ summary.ERROR }}</div></div>
+      <div class="card"><div class="label">SKIPPED</div><div class="value">{{ summary.SKIPPED }}</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Resumen Ejecutivo</h2>
+    {% if findings %}<p>{{ findings|length }} hallazgo(s) prioritario(s) requieren revisión. Los elementos CRITICAL, ERROR, FAIL y WARNING se muestran primero para facilitar la priorización.</p>{% else %}<div class="positive"><strong>Todas las validaciones evaluadas están saludables.</strong> No se detectaron hallazgos ejecutivos críticos para este target.</div>{% endif %}
+  </section>
+
+  <section class="section">
+    <h2>Hallazgos Principales</h2>
+    {% if findings %}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Estado</th><th>Grupo</th><th>Validación</th><th>Mensaje</th><th>Impacto / Severidad</th><th>Acción recomendada</th></tr></thead>
+      <tbody>{% for result in findings %}<tr><td>{{ badge(result.status.value) }}</td><td>{{ result.group_id | group_label }}<br><small>{{ result.group_id }}</small></td><td><div class="finding-title">{{ result.title | check_title }}</div><small>{{ result.check_id }}</small></td><td>{{ (result.message or result.error or result.skipped_reason) | friendly_message }}</td><td class="severity">{{ result.failure_severity }}</td><td>{{ result.remediation.summary or 'Revisar la evidencia de la validación y confirmar el impacto operativo.' }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<div class="positive">No hay hallazgos principales para reportar. El target está en estado saludable según el perfil ejecutado.</div>{% endif %}
+  </section>
+</div>
+</body>
+</html>
