@@ -155,6 +155,30 @@ Many configuration checks are policy-based. Do not hardcode one universal recomm
 - AWR snapshot interval.
 - AWR retention.
 
+### Implemented in Phase 2A
+
+The current `configuration_general` group includes these implemented checks:
+
+- `database_status` — instance status from inventory/Oracle discovery.
+- `database_open_mode` — open mode from `v$database`.
+- `archivelog_mode` — archive log mode from `v$database`.
+- `compatible` — parameter value from `v$parameter`.
+- `optimizer_features_enable` — parameter value compared with policy when configured.
+- `db_block_size` — parameter value compared with policy when configured.
+- `open_cursors` — parameter value compared with a minimum policy.
+- `processes` — parameter value compared with a minimum policy.
+- `sessions` — parameter value compared with a minimum policy.
+- `audit_trail` — parameter value checked against disabled/non-compliant values or policy.
+- `remote_login_passwordfile` — parameter value compared with policy.
+- `recyclebin` — parameter value reported and compared with policy when configured.
+- `filesystemio_options` — parameter value reported and compared with policy when configured.
+- `control_files_multiplexed` — control file count from `v$controlfile`.
+- `redo_log_group_count` — redo group count from `v$log`.
+- `redo_log_members_multiplexed` — minimum member count per redo group from `v$logfile`.
+- `force_logging` — database force logging flag from `v$database`.
+
+These checks use regular dynamic performance views and do not require Diagnostic Pack, AWR, or additional Oracle licensing. Missing views/privileges result in controlled `ERROR` evidence for the affected check.
+
 ### Typical collectors
 
 ```text

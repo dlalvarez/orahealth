@@ -259,6 +259,27 @@ Implement checks for:
 
 Important: values must be policy-driven. Do not hardcode one universal recommendation for all versions and architectures.
 
+#### Phase 2A - Implemented: configuration_general real Oracle checks
+
+Implemented an initial expanded set of real, license-safe Oracle configuration checks for `configuration_general`:
+
+- `compatible` from `v$parameter`.
+- `optimizer_features_enable` from `v$parameter`.
+- `db_block_size` from `v$parameter`.
+- `open_cursors` from `v$parameter`.
+- `processes` from `v$parameter`.
+- `sessions` from `v$parameter`.
+- `audit_trail` from `v$parameter`.
+- `remote_login_passwordfile` from `v$parameter`.
+- `recyclebin` from `v$parameter`.
+- `filesystemio_options` from `v$parameter`.
+- `control_files_multiplexed` from `v$controlfile`.
+- `redo_log_group_count` from `v$log`.
+- `redo_log_members_multiplexed` from `v$logfile`.
+- `force_logging` from `v$database`.
+
+The implementation keeps mock target compatibility, stores expected values and thresholds in standards/profile policies, avoids Diagnostic Pack/AWR sources, and handles missing metrics as controlled `ERROR` results instead of tracebacks.
+
 ### storage checks
 
 Implement checks for:

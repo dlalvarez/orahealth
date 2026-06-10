@@ -1,0 +1,24 @@
+check_id: db_block_size
+group_id: configuration_general
+title: Tamaño de bloque de base de datos según estándar
+severity: WARNING
+collector:
+  type: oracle_parameter
+  parameter: db_block_size
+evaluator:
+  type: oracle_config
+  expected_policy: expected_db_block_size
+  report_status: INFO
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar el estándar de configuración Oracle y ajustar el parámetro si corresponde.
+  actions: ["Validar el valor con el equipo DBA y la matriz de compatibilidad de la aplicación."]
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, configuration]

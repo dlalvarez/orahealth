@@ -1,7 +1,21 @@
 group_id: configuration_general
-name: Configuration General
-description: Basic database configuration and status checks.
+name: Configuración general
+description: Checks de estado y configuración general de Oracle sin Diagnostic Pack ni AWR.
 checks:
   - database_status
   - database_open_mode
   - archivelog_mode
+  - compatible
+  - optimizer_features_enable
+  - db_block_size
+  - open_cursors
+  - processes
+  - sessions
+  - audit_trail
+  - remote_login_passwordfile
+  - recyclebin
+  - filesystemio_options
+  - control_files_multiplexed
+  - redo_log_group_count
+  - redo_log_members_multiplexed
+  - force_logging

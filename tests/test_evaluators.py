@@ -27,3 +27,19 @@ def test_threshold_returns_controlled_error_for_missing_field():
     status, message = EVALUATORS["threshold"].evaluate({}, {"field": "fra_used_pct", "operator": ">=", "warning": 80})
     assert status == ResultStatus.ERROR
     assert message == "Metric fra_used_pct was not found in evidence"
+
+
+def test_oracle_config_expected_value_uses_policy_evidence():
+    evidence = {"parameter": "remote_login_passwordfile", "actual_value": "exclusive", "expected_value": "EXCLUSIVE", "source": "v$parameter", "exists": True}
+    status, message = EVALUATORS["oracle_config"].evaluate(evidence, {"expected": "EXCLUSIVE"})
+
+    assert status == ResultStatus.PASS
+    assert "Coincide con el esperado" in message
+
+
+def test_oracle_config_missing_metric_returns_controlled_error():
+    evidence = {"parameter": "open_cursors", "actual_value": None, "source": "v$parameter", "exists": False}
+    status, message = EVALUATORS["oracle_config"].evaluate(evidence, {"minimum": 300})
+
+    assert status == ResultStatus.ERROR
+    assert "No se encontró evidencia" in message
