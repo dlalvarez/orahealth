@@ -481,6 +481,24 @@ Validate tablespaces, datafiles, tempfiles, segments, FRA, ASM diskgroups, files
 - Archive destination usage.
 - Backup/stage filesystem usage if configured.
 
+
+### Implemented in Phase 2B
+
+The current `storage` group includes these implemented checks:
+
+- `tablespace_free_pct` — minimum free percentage per permanent tablespace, with total/used/free MB, free/used percentage, autoextend indication, worst tablespace, and policy thresholds.
+- `tablespace_used_pct` — maximum used percentage per tablespace, with worst tablespace and configurable warning/fail thresholds.
+- `datafiles_autoextend_disabled` — datafiles with `AUTOEXTENSIBLE = NO`; defaults to `WARNING` because fixed datafiles can be intentional.
+- `datafiles_near_maxsize` — autoextensible datafiles approaching configured `MAXSIZE`.
+- `datafiles_status` — datafiles with anomalous `STATUS` or `ONLINE_STATUS`, such as offline/recover/unavailable states.
+- `tempfiles_status` — verifies tempfiles exist and are in acceptable state.
+- `temp_usage_pct` — temporary tablespace usage percentage using standard tempfile/temp-space-header evidence.
+- `undo_tablespace_status` — validates current UNDO tablespace metadata, retention, status, and size/usage evidence when available.
+- `fra_configured` — reports whether FRA is configured; missing FRA is `SKIPPED` by default unless a standard changes the policy.
+- `fra_usage` — FRA used and reclaimable percentages, with clear `SKIPPED` behavior when FRA is not configured.
+
+These checks reuse a `database.storage` inventory structure containing tablespaces, datafiles, tempfiles, temporary usage, FRA, and UNDO details. The implementation avoids AWR and Diagnostic Pack views, keeps compatibility with `example_standalone`, and keeps remediations only in `corrective_actions.html`.
+
 ### Typical collectors
 
 ```text

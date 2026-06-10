@@ -1,6 +1,14 @@
 group_id: storage
 name: Storage
-description: Basic database and recovery storage checks.
+description: Oracle database storage, datafile, tempfile, UNDO and FRA checks.
 checks:
   - tablespace_free_pct
+  - tablespace_used_pct
+  - datafiles_autoextend_disabled
+  - datafiles_near_maxsize
+  - datafiles_status
+  - tempfiles_status
+  - temp_usage_pct
+  - undo_tablespace_status
+  - fra_configured
   - fra_usage

@@ -1,0 +1,26 @@
+check_id: undo_tablespace_status
+group_id: storage
+title: UNDO tablespace status and configuration
+severity: WARNING
+collector:
+  type: oracle_storage
+  source_view: v$parameter+dba_tablespaces+dba_data_files+dba_free_space
+evaluator:
+  type: storage
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: No se pudo validar completamente el tablespace UNDO o su estado requiere atención.
+  actions:
+    - Verificar el parámetro undo_tablespace y undo_retention.
+    - Confirmar que el tablespace UNDO esté ONLINE.
+    - Revisar espacio disponible y crecimiento de segmentos UNDO.
+    - Ajustar tamaño o retención si hay errores ORA-01555 o presión de UNDO.
+    - Documentar cualquier configuración especial de retención garantizada.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, storage, undo]

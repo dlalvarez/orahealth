@@ -3,12 +3,12 @@ group_id: storage
 title: FRA usage percentage
 severity: CRITICAL
 collector:
-  type: inventory
-  source: database
-  field: fra_used_pct
+  type: oracle_storage
+  source_view: v$recovery_file_dest
 evaluator:
-  type: threshold
-  operator: ">="
+  type: storage
+  warning_policy: max_fra_used_pct_warning
+  critical_policy: max_fra_used_pct_critical
   warning: 80
   critical: 95
 applies_to:
@@ -18,12 +18,11 @@ applies_to:
 remediation:
   summary: La Fast Recovery Area presenta uso elevado; esto puede bloquear archived logs, backups o recuperación si alcanza su límite.
   actions:
-    - Revisar uso por tipo de archivo en la FRA, incluyendo archived logs, flashback logs y backups.
-    - Validar políticas RMAN de retención y ejecutar limpieza de archivos obsoletos o expirados solo mediante procedimientos aprobados.
-    - No borrar archivos manualmente sin catalogar el impacto en RMAN, Data Guard y recuperación punto en el tiempo.
-    - Aumentar db_recovery_file_dest_size o ampliar storage si la retención requerida supera la capacidad actual.
-    - Confirmar que archived logs requeridos por backups o standby fueron respaldados/aplicados antes de eliminarlos.
-    - Monitorear v$recovery_file_dest y alertas de FRA después de la remediación.
+    - Revisar backups, archivelogs y flashback logs.
+    - Validar política RMAN de retención.
+    - Ejecutar limpieza controlada de backups obsoletos si aplica.
+    - Aumentar FRA si el crecimiento es legítimo.
+    - No eliminar archivos manualmente fuera de RMAN sin validación.
   owner: DBA
   requires_window: false
   outage_risk: medium

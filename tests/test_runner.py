@@ -159,7 +159,7 @@ def test_evidence_json_has_minimum_structure(tmp_path):
     assert set(evidence) == {"summary", "results"}
     assert evidence["summary"]["global_status"]
     assert isinstance(evidence["summary"]["score"], int)
-    assert len(evidence["results"]) == 24
+    assert len(evidence["results"]) == 32
     first_result = evidence["results"][0]
     assert {"check_id", "group_id", "status", "failure_severity", "evidence", "duration_ms"}.issubset(first_result)
     assert isinstance(first_result["duration_ms"], int)
@@ -172,8 +172,8 @@ def test_execution_log_contains_run_metadata(tmp_path):
     assert "Target: example_standalone" in log_text
     assert "Profile: standalone_basic" in log_text
     assert "Enabled groups:" in log_text
-    assert "Loaded checks (24):" in log_text
-    assert "Executed checks (24):" in log_text
+    assert "Loaded checks (32):" in log_text
+    assert "Executed checks (32):" in log_text
     assert "Skipped checks (0):" in log_text
     assert "Status summary:" in log_text
     assert f"Output directory: {output}" in log_text
@@ -232,6 +232,49 @@ def _oracle_configuration_markers():
     }
 
 
+
+
+def _storage_markers(tablespace_free_pct=25.5, fra_used_pct=30, fra_space_limit=100, datafile_used_of_max_pct=10, datafile_status="AVAILABLE", datafile_online_status="ONLINE"):
+    return {
+        "from ( select tablespace_name, sum(bytes) as bytes": [
+            {
+                "tablespace_name": "USERS",
+                "total_mb": 1024,
+                "used_mb": round(1024 * (100 - tablespace_free_pct) / 100, 2),
+                "free_mb": round(1024 * tablespace_free_pct / 100, 2),
+                "free_pct": tablespace_free_pct,
+                "used_pct": 100 - tablespace_free_pct,
+                "autoextensible": "YES",
+            }
+        ],
+        "from dba_data_files order by": [
+            {
+                "file_name": "/u01/oradata/ORCL/users01.dbf",
+                "tablespace_name": "USERS",
+                "bytes_mb": 1024,
+                "current_mb": 1024,
+                "autoextensible": "YES",
+                "maxbytes_mb": 10240,
+                "max_mb": 10240,
+                "used_of_max_pct": datafile_used_of_max_pct,
+                "status": datafile_status,
+                "online_status": datafile_online_status,
+            }
+        ],
+        "from dba_temp_files order by": [
+            {"tablespace_name": "TEMP", "file_name": "/u01/oradata/ORCL/temp01.dbf", "bytes_mb": 1024, "status": "AVAILABLE", "autoextensible": "YES"}
+        ],
+        "from ( select tablespace_name, sum(bytes) as total_bytes": [
+            {"tablespace_name": "TEMP", "total_mb": 1024, "used_mb": 128, "free_mb": 896, "used_pct": 12.5}
+        ],
+        "from dba_tablespaces t": [
+            {"tablespace_name": "UNDOTBS1", "status": "ONLINE", "total_mb": 2048, "used_mb": 256, "free_mb": 1792}
+        ],
+        "from v$recovery_file_dest": [
+            {"recovery_file_dest": "/u01/fra", "space_limit": fra_space_limit, "space_used": fra_space_limit * fra_used_pct / 100 if fra_space_limit else 0, "space_reclaimable": 0, "space_limit_mb": fra_space_limit, "space_used_mb": fra_space_limit * fra_used_pct / 100 if fra_space_limit else 0, "space_reclaimable_mb": 0, "used_pct": fra_used_pct if fra_space_limit else None, "reclaimable_pct": 0}
+        ],
+    }
+
 def _real_config(tmp_path):
     config = ConfigLoader("config").load_all()
     ConfigValidator().validate(config)
@@ -264,8 +307,7 @@ def test_real_target_without_mock_inventory_uses_oracle_connector(tmp_path):
         "from v$database": [{"open_mode": "READ WRITE", "role": "PRIMARY", "archivelog_mode": "ARCHIVELOG", "force_logging": "YES"}],
         "from v$instance": [{"status": "OPEN", "version": "19.20.0.0.0"}],
         "from dba_objects": [{"invalid_objects_count": 2}],
-        "from dba_data_files": [{"tablespace_min_free_pct": 25.5}],
-        "from v$recovery_file_dest": [{"space_limit": 100, "space_used": 30, "fra_used_pct": 30}],
+        **_storage_markers(tablespace_free_pct=25.5, fra_used_pct=30),
         **_oracle_configuration_markers(),
     }
     config = _real_config(tmp_path)
@@ -288,8 +330,7 @@ def test_fra_not_configured_is_skipped_not_error(tmp_path):
         "from v$database": [{"open_mode": "READ WRITE", "role": "PRIMARY", "archivelog_mode": "ARCHIVELOG", "force_logging": "YES"}],
         "from v$instance": [{"status": "OPEN", "version": "19.20.0.0.0"}],
         "from dba_objects": [{"invalid_objects_count": 0}],
-        "from dba_data_files": [{"tablespace_min_free_pct": 25.5}],
-        "from v$recovery_file_dest": [{"space_limit": 0, "space_used": 0, "fra_used_pct": None}],
+        **_storage_markers(tablespace_free_pct=25.5, fra_used_pct=None, fra_space_limit=0),
         **_oracle_configuration_markers(),
     }
     config = _real_config(tmp_path)
@@ -308,8 +349,7 @@ def test_real_metrics_drive_tablespace_fra_and_invalid_object_results(tmp_path):
         "from v$database": [{"open_mode": "READ WRITE", "role": "PRIMARY", "archivelog_mode": "ARCHIVELOG", "force_logging": "YES"}],
         "from v$instance": [{"status": "OPEN", "version": "19.20.0.0.0"}],
         "from dba_objects": [{"invalid_objects_count": 21}],
-        "from dba_data_files": [{"tablespace_min_free_pct": 4.5}],
-        "from v$recovery_file_dest": [{"space_limit": 100, "space_used": 96, "fra_used_pct": 96}],
+        **_storage_markers(tablespace_free_pct=4.5, fra_used_pct=96),
         **_oracle_configuration_markers(),
     }
     config = _real_config(tmp_path)
@@ -329,6 +369,53 @@ def test_real_metrics_drive_tablespace_fra_and_invalid_object_results(tmp_path):
     assert "Riesgo de indisponibilidad" in corrective_html
     assert "Acciones recomendadas" in corrective_html
 
+
+
+def test_storage_checks_pass_for_healthy_mock_inventory(tmp_path):
+    output = _run_example(tmp_path)
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    for check_id in ["tablespace_free_pct", "tablespace_used_pct", "datafiles_near_maxsize", "datafiles_status", "tempfiles_status", "temp_usage_pct", "undo_tablespace_status", "fra_configured", "fra_usage"]:
+        assert results[check_id]["status"] == "PASS"
+
+
+def test_storage_tablespace_datafile_warning_and_fail_paths(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    storage = config["targets"]["example_standalone"].database["mock_inventory"]["storage"]
+    storage["tablespaces"][1]["free_pct"] = 8.5
+    storage["tablespaces"][1]["used_pct"] = 91.5
+    storage["datafiles"][1]["used_of_max_pct"] = 97
+    storage["datafiles"][1]["online_status"] = "RECOVER"
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["tablespace_free_pct"]["status"] == "FAIL"
+    assert results["tablespace_free_pct"]["evidence"]["worst_tablespace"] == "USERS"
+    assert results["tablespace_used_pct"]["status"] == "FAIL"
+    assert results["datafiles_near_maxsize"]["status"] == "FAIL"
+    assert results["datafiles_status"]["status"] == "FAIL"
+    technical_html = (output / "technical_report.html").read_text(encoding="utf-8")
+    corrective_html = (output / "corrective_actions.html").read_text(encoding="utf-8")
+    assert "Aumentar maxsize si hay capacidad" not in technical_html
+    assert "Aumentar maxsize si hay capacidad" in corrective_html
+
+
+def test_fra_configured_check_can_skip_when_fra_missing(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    storage = config["targets"]["example_standalone"].database["mock_inventory"]["storage"]
+    storage["fra"] = {"fra_configured": False, "recovery_file_dest": None, "recovery_file_dest_size": None, "message": "FRA is not configured or space_limit is 0"}
+    config["targets"]["example_standalone"].database["mock_inventory"]["fra_configured"] = False
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["fra_configured"]["status"] == "SKIPPED"
+    assert results["fra_usage"]["status"] == "SKIPPED"
 
 def test_missing_oracle_configuration_metric_is_controlled_error(tmp_path):
     config = ConfigLoader("config").load_all()

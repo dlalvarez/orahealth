@@ -1,0 +1,28 @@
+check_id: datafiles_autoextend_disabled
+group_id: storage
+title: Datafiles with autoextend disabled
+severity: WARNING
+collector:
+  type: oracle_storage
+  source_view: dba_data_files
+evaluator:
+  type: storage
+  status_when_found_policy: datafiles_autoextend_disabled_status
+  status_when_found: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Existen datafiles con autoextend deshabilitado; puede ser intencional, pero requiere validación para evitar falta de espacio.
+  actions:
+    - Confirmar si la configuración es intencional.
+    - Revisar free space y crecimiento histórico.
+    - Habilitar autoextend solo si el estándar lo permite.
+    - Definir maxsize para evitar crecimiento sin control.
+    - Documentar excepción si el datafile debe permanecer fijo.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, storage, datafile]
