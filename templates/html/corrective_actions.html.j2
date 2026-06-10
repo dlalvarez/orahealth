@@ -1,11 +1,67 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Corrective Actions</title><style>body{font-family:Arial,sans-serif;margin:2rem}</style></head><body>
-<h1>OraHealthCheck Corrective Actions</h1>
-{% for result in findings %}
-<section><h2>{{ result.check_id }} - {{ result.status.value }}</h2>
-<p>{{ result.remediation.summary or result.message or result.error }}</p>
-<ul>{% for action in result.remediation.actions or [] %}<li>{{ action }}</li>{% endfor %}</ul>
-<p><strong>Owner:</strong> {{ result.remediation.owner or 'DBA' }}</p>
-<p><strong>Requires window:</strong> {{ result.remediation.requires_window or false }}</p>
-</section>
-{% else %}<p>No corrective actions are required.</p>{% endfor %}
-</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OraHealthCheck Corrective Actions - {{ target.target_id }}</title>
+  <style>
+    :root{--bg:#f4f7fb;--surface:#fff;--text:#172033;--muted:#637083;--line:#dfe7f1;--shadow:0 10px 30px rgba(23,32,51,.08);--pass:#15803d;--pass-bg:#dcfce7;--info:#1d4ed8;--info-bg:#dbeafe;--warning:#b45309;--warning-bg:#fef3c7;--fail:#dc2626;--fail-bg:#fee2e2;--critical:#7f1d1d;--critical-bg:#fecaca;--error:#581c87;--error-bg:#f3e8ff;--skipped:#64748b;--skipped-bg:#f1f5f9}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.5}.page{max-width:1180px;margin:0 auto;padding:32px 20px}.hero{background:linear-gradient(135deg,#13213a,#234876);color:#fff;border-radius:24px;padding:30px;box-shadow:var(--shadow)}.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:.78rem;opacity:.78}.hero h1{margin:.25rem 0;font-size:2rem}.hero-grid,.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}.hero-grid{margin-top:22px}.hero-item{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:12px}.hero-item span{display:block;font-size:.76rem;opacity:.72}.section{background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:24px;margin-top:22px}.section h2{margin:0 0 8px}.hint{color:var(--muted);font-size:.94rem;margin-top:0}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 4px 16px rgba(23,32,51,.04)}.card .label{color:var(--muted);font-size:.84rem}.card .value{font-size:1.8rem;font-weight:800}.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 11px;font-weight:700;font-size:.78rem;white-space:nowrap;border:1px solid transparent}.badge.PASS{color:var(--pass);background:var(--pass-bg);border-color:#bbf7d0}.badge.INFO{color:var(--info);background:var(--info-bg);border-color:#bfdbfe}.badge.WARNING{color:var(--warning);background:var(--warning-bg);border-color:#fde68a}.badge.FAIL{color:var(--fail);background:var(--fail-bg);border-color:#fecaca}.badge.CRITICAL{color:var(--critical);background:var(--critical-bg);border-color:#fca5a5}.badge.ERROR{color:var(--error);background:var(--error-bg);border-color:#e9d5ff}.badge.SKIPPED{color:var(--skipped);background:var(--skipped-bg);border-color:#e2e8f0}.owner{margin-top:22px;border:1px solid var(--line);border-radius:20px;overflow:hidden}.owner h3{margin:0;background:#eef4ff;padding:16px 18px}.action{padding:18px;border-top:1px solid var(--line);display:grid;grid-template-columns:220px 1fr;gap:18px}.meta{background:#f8fafc;border:1px solid var(--line);border-radius:16px;padding:14px}.meta div{margin:8px 0}.summary{font-size:1.05rem}.actions{margin:10px 0 0 1.2rem;padding:0}.actions li{margin:6px 0}.evidence{background:#f8fafc;border-left:4px solid #cbd5e1;padding:12px;border-radius:10px;color:#475569;word-break:break-word}.positive{border-left:6px solid var(--pass);background:#f0fdf4;padding:18px;border-radius:16px}@media(max-width:760px){.page{padding:18px 12px}.hero{padding:22px}.action{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+{% macro badge(status) -%}
+  <span class="badge {{ status }}">{% if status == 'PASS' %}🟢{% elif status == 'INFO' %}🔵{% elif status == 'WARNING' %}🟡{% elif status == 'FAIL' %}🔴{% elif status == 'CRITICAL' %}🛑{% elif status == 'ERROR' %}🟣{% else %}⚪{% endif %} {{ status }}</span>
+{%- endmacro %}
+<div class="page">
+  <header class="hero">
+    <div class="eyebrow">OraHealthCheck</div><h1>Corrective Actions</h1>
+    <p>Action-oriented report focused on FAIL, CRITICAL, WARNING, and ERROR checks.</p>
+    <div class="hero-grid">
+      <div class="hero-item"><span>Target ID</span><strong>{{ target.target_id }}</strong></div><div class="hero-item"><span>Environment</span><strong>{{ target.environment }}</strong></div><div class="hero-item"><span>Expected architecture</span><strong>{{ target.expected_architecture }}</strong></div><div class="hero-item"><span>Profile</span><strong>{{ target.profile }}</strong></div><div class="hero-item"><span>Execution time</span><strong>{{ generated_at }}</strong></div><div class="hero-item"><span>Global status</span><strong>{{ summary.global_status }}</strong></div>
+    </div>
+  </header>
+
+  <section class="section">
+    <h2>Status Summary</h2>
+    <p class="hint">Use this report to plan remediation. requires_window indicates whether an approved maintenance window is recommended; outage_risk summarizes expected operational exposure.</p>
+    <div class="cards">
+      <div class="card"><div class="label">Health Score</div><div class="value">{{ summary.score }}</div></div><div class="card"><div class="label">Global Status</div><div class="value" style="font-size:1.1rem">{{ badge(summary.global_status) }}</div></div><div class="card"><div class="label">WARNING</div><div class="value">{{ summary.WARNING }}</div></div><div class="card"><div class="label">FAIL</div><div class="value">{{ summary.FAIL }}</div></div><div class="card"><div class="label">CRITICAL</div><div class="value">{{ summary.CRITICAL }}</div></div><div class="card"><div class="label">ERROR</div><div class="value">{{ summary.ERROR }}</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Corrective Actions</h2>
+    {% if corrective_actions %}
+      {% for owner, owner_results in corrective_actions.items() %}
+      <div class="owner">
+        <h3>Owner: {{ owner }}</h3>
+        {% for result in owner_results %}
+        <article class="action">
+          <aside class="meta">
+            <div>{{ badge(result.status.value) }}</div>
+            <div><strong>Severity:</strong> {{ result.failure_severity }}</div>
+            <div><strong>Check affected:</strong> {{ result.check_id }}</div>
+            <div><strong>requires_window:</strong> {{ result.remediation.requires_window if result.remediation.requires_window is defined else false }}</div>
+            <div><strong>outage_risk:</strong> {{ result.remediation.outage_risk or 'unknown' }}</div>
+          </aside>
+          <div>
+            <h4>{{ result.title }}</h4>
+            <p class="summary"><strong>Problem summary:</strong> {{ result.remediation.summary or result.message or result.error }}</p>
+            <strong>Recommended actions:</strong>
+            <ul class="actions">
+              {% for action in result.remediation.actions or [] %}<li>{{ action }}</li>{% else %}<li>Review the evidence and define a remediation plan with the responsible owner.</li>{% endfor %}
+            </ul>
+            <p class="evidence"><strong>Summarized evidence:</strong> {{ result.message or result.error or result.skipped_reason }}{% if result.evidence is not none %} — {{ result.evidence | pretty_json | truncate(260) }}{% endif %}</p>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="positive"><strong>No corrective actions required.</strong> No FAIL, CRITICAL, WARNING, or ERROR checks were detected.</div>
+    {% endif %}
+  </section>
+</div>
+</body>
+</html>

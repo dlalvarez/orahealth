@@ -25,6 +25,38 @@ def test_runner_generates_required_files(tmp_path):
     assert expected.issubset({path.name for path in Path(output).iterdir()})
 
 
+def test_executive_report_contains_dashboard_sections(tmp_path):
+    output = _run_example(tmp_path)
+    html = (output / "executive_report.html").read_text(encoding="utf-8")
+
+    assert "example_standalone" in html
+    assert "Health Score" in html
+    assert "Global Status" in html
+    assert "🟢 PASS" in html
+    assert "Executive Summary" in html
+    assert "Main Findings" in html
+
+
+def test_technical_report_contains_inventory_grouped_checks_and_evidence(tmp_path):
+    output = _run_example(tmp_path)
+    html = (output / "technical_report.html").read_text(encoding="utf-8")
+
+    assert "Database Inventory" in html
+    assert "Operating System Inventory" in html
+    assert "group_id: configuration_general" in html
+    assert "json-block" in html
+    assert "duration_ms" in html
+    assert "tablespace_min_free_pct" in html
+
+
+def test_corrective_actions_report_shows_positive_message_when_clean(tmp_path):
+    output = _run_example(tmp_path)
+    html = (output / "corrective_actions.html").read_text(encoding="utf-8")
+
+    assert "Corrective Actions" in html
+    assert "No corrective actions required." in html
+
+
 def test_evidence_json_has_minimum_structure(tmp_path):
     output = _run_example(tmp_path)
     evidence = json.loads((output / "evidence.json").read_text(encoding="utf-8"))
@@ -162,3 +194,11 @@ def test_real_metrics_drive_tablespace_fra_and_invalid_object_results(tmp_path):
     assert results["tablespace_free_pct"]["status"] == "CRITICAL"
     assert results["fra_usage"]["status"] == "CRITICAL"
     assert results["invalid_objects"]["status"] == "FAIL"
+
+    corrective_html = (output / "corrective_actions.html").read_text(encoding="utf-8")
+    assert "🛑 CRITICAL" in corrective_html
+    assert "🔴 FAIL" in corrective_html
+    assert "Owner: DBA" in corrective_html
+    assert "requires_window" in corrective_html
+    assert "outage_risk" in corrective_html
+    assert "Recommended actions" in corrective_html

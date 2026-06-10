@@ -1,12 +1,69 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Technical Report</title><style>body{font-family:Arial,sans-serif;margin:2rem}pre{background:#f7fafc;padding:1rem;white-space:pre-wrap}.PASS{color:green}.WARNING{color:#b7791f}.FAIL,.CRITICAL,.ERROR{color:#c53030}.SKIPPED{color:#718096}</style></head><body>
-<h1>OraHealthCheck Technical Report</h1>
-<h2>Inventory</h2><pre>{{ inventory | tojson(indent=2) }}</pre>
-<h2>Check Results</h2>
-{% for result in results %}
-<section><h3>{{ result.check_id }} - <span class="{{ result.status.value }}">{{ result.status.value }}</span></h3>
-<p>{{ result.title }}</p>
-{% if result.skipped_reason %}<p><strong>Skipped reason:</strong> {{ result.skipped_reason }}</p>{% endif %}
-{% if result.error %}<p><strong>Execution error:</strong> {{ result.error }}</p>{% endif %}
-<p>{{ result.message }}</p>
-<pre>{{ result.evidence | tojson(indent=2) }}</pre></section>
-{% endfor %}</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OraHealthCheck Technical Report - {{ target.target_id }}</title>
+  <style>
+    :root{--bg:#f4f7fb;--surface:#fff;--text:#172033;--muted:#637083;--line:#dfe7f1;--shadow:0 10px 30px rgba(23,32,51,.08);--pass:#15803d;--pass-bg:#dcfce7;--info:#1d4ed8;--info-bg:#dbeafe;--warning:#b45309;--warning-bg:#fef3c7;--fail:#dc2626;--fail-bg:#fee2e2;--critical:#7f1d1d;--critical-bg:#fecaca;--error:#581c87;--error-bg:#f3e8ff;--skipped:#64748b;--skipped-bg:#f1f5f9}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}.page{max-width:1280px;margin:0 auto;padding:32px 20px}.hero{background:linear-gradient(135deg,#13213a,#234876);color:#fff;border-radius:24px;padding:30px;box-shadow:var(--shadow)}.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:.78rem;opacity:.78}.hero h1{margin:.25rem 0;font-size:2rem}.hero-grid,.cards,.inventory-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}.hero-grid{margin-top:22px}.hero-item{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:12px}.hero-item span,.metric .label{display:block;color:inherit;opacity:.72;font-size:.76rem}.section{background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:24px;margin-top:22px}.section h2{margin:0 0 8px}.hint{color:var(--muted);font-size:.94rem;margin-top:0}.card,.metric{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 4px 16px rgba(23,32,51,.04)}.card .label{color:var(--muted);font-size:.84rem}.card .value{font-size:1.8rem;font-weight:800}.metric strong{display:block;margin-top:4px;word-break:break-word}.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 11px;font-weight:700;font-size:.78rem;white-space:nowrap;border:1px solid transparent}.badge.PASS{color:var(--pass);background:var(--pass-bg);border-color:#bbf7d0}.badge.INFO{color:var(--info);background:var(--info-bg);border-color:#bfdbfe}.badge.WARNING{color:var(--warning);background:var(--warning-bg);border-color:#fde68a}.badge.FAIL{color:var(--fail);background:var(--fail-bg);border-color:#fecaca}.badge.CRITICAL{color:var(--critical);background:var(--critical-bg);border-color:#fca5a5}.badge.ERROR{color:var(--error);background:var(--error-bg);border-color:#e9d5ff}.badge.SKIPPED{color:var(--skipped);background:var(--skipped-bg);border-color:#e2e8f0}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px;margin-top:14px}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:12px 13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f8fafc;color:#475569;font-size:.76rem;text-transform:uppercase;letter-spacing:.06em}tr:last-child td{border-bottom:0}.group-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px;padding:14px 16px;border-radius:16px;background:#eef4ff;border:1px solid #d8e5ff}.group-title h3{margin:0}.evidence{max-width:520px}.json-block{background:#0f172a;color:#e2e8f0;border-radius:14px;padding:14px;max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:.82rem}.message{min-width:220px}.muted{color:var(--muted)}@media(max-width:700px){.page{padding:18px 12px}.hero{padding:22px}th,td{padding:10px}.json-block{max-width:72vw}}
+  </style>
+</head>
+<body>
+{% macro badge(status) -%}
+  <span class="badge {{ status }}">{% if status == 'PASS' %}🟢{% elif status == 'INFO' %}🔵{% elif status == 'WARNING' %}🟡{% elif status == 'FAIL' %}🔴{% elif status == 'CRITICAL' %}🛑{% elif status == 'ERROR' %}🟣{% else %}⚪{% endif %} {{ status }}</span>
+{%- endmacro %}
+<div class="page">
+  <header class="hero">
+    <div class="eyebrow">OraHealthCheck</div><h1>Technical Report</h1>
+    <p>Complete technical evidence for DBA, OS, security, and administration teams.</p>
+    <div class="hero-grid">
+      <div class="hero-item"><span>Target ID</span><strong>{{ target.target_id }}</strong></div><div class="hero-item"><span>Target name</span><strong>{{ target.name }}</strong></div><div class="hero-item"><span>Environment</span><strong>{{ target.environment }}</strong></div><div class="hero-item"><span>Expected architecture</span><strong>{{ target.expected_architecture }}</strong></div><div class="hero-item"><span>Profile</span><strong>{{ target.profile }}</strong></div><div class="hero-item"><span>Execution time</span><strong>{{ generated_at }}</strong></div>
+    </div>
+  </header>
+
+  <section class="section">
+    <h2>Global Summary</h2>
+    <p class="hint">Skipped means the check did not run because applicability, configuration, or source data requirements were not met. failure_severity is the configured severity when a check detects non-compliance.</p>
+    <div class="cards">
+      <div class="card"><div class="label">Health Score</div><div class="value">{{ summary.score }}</div></div><div class="card"><div class="label">Global Status</div><div class="value" style="font-size:1.1rem">{{ badge(summary.global_status) }}</div></div><div class="card"><div class="label">Total checks</div><div class="value">{{ summary.total_checks }}</div></div><div class="card"><div class="label">PASS</div><div class="value">{{ summary.PASS }}</div></div><div class="card"><div class="label">INFO</div><div class="value">{{ summary.INFO }}</div></div><div class="card"><div class="label">WARNING</div><div class="value">{{ summary.WARNING }}</div></div><div class="card"><div class="label">FAIL</div><div class="value">{{ summary.FAIL }}</div></div><div class="card"><div class="label">CRITICAL</div><div class="value">{{ summary.CRITICAL }}</div></div><div class="card"><div class="label">ERROR</div><div class="value">{{ summary.ERROR }}</div></div><div class="card"><div class="label">SKIPPED</div><div class="value">{{ summary.SKIPPED }}</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Technical Inventory</h2>
+    <h3>Database Inventory</h3>
+    <div class="inventory-grid">
+      {% for key in ['status','open_mode','role','archivelog_mode','version','invalid_objects_count','tablespace_min_free_pct','fra_configured','fra_used_pct'] %}
+      <div class="metric"><span class="label">{{ key }}</span><strong>{{ inventory.database.get(key, 'N/A') }}</strong></div>
+      {% endfor %}
+    </div>
+    <h3>Operating System Inventory</h3>
+    <div class="inventory-grid">
+      <div class="metric"><span class="label">platform</span><strong>{{ inventory.operating_system.get('platform', 'N/A') }}</strong></div>
+      <div class="metric"><span class="label">CPU</span><strong>{{ inventory.operating_system.get('cpu', inventory.operating_system.get('os_info', {}).get('cpu', 'N/A')) }}</strong></div>
+      <div class="metric"><span class="label">memory</span><strong>{{ inventory.operating_system.get('memory', 'N/A') }}</strong></div>
+      <div class="metric"><span class="label">filesystems</span><strong>{{ inventory.operating_system.get('filesystems', 'N/A') }}</strong></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Check Details</h2>
+    <p class="hint">Checks are grouped by group_id. Evidence is formatted as JSON and constrained to prevent long payloads from breaking the report layout.</p>
+    {% for group_id, group_results in grouped_results.items() %}
+      <div class="group-title"><h3>group_id: {{ group_id }}</h3><span>{{ group_results|length }} check(s)</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>check_id</th><th>Title</th><th>group_id</th><th>Status</th><th>failure_severity</th><th>Message</th><th>Evidence</th><th>Remediation</th><th>skipped_reason</th><th>error</th><th>duration_ms</th></tr></thead>
+        <tbody>
+        {% for result in group_results %}
+        <tr>
+          <td><strong>{{ result.check_id }}</strong></td><td>{{ result.title }}</td><td>{{ result.group_id }}</td><td>{{ badge(result.status.value) }}</td><td>{{ result.failure_severity }}</td><td class="message">{{ result.message }}</td><td class="evidence"><pre class="json-block">{{ result.evidence | pretty_json }}</pre></td><td>{{ result.remediation.summary }}{% if result.remediation.actions %}<ul>{% for action in result.remediation.actions %}<li>{{ action }}</li>{% endfor %}</ul>{% endif %}</td><td class="muted">{{ result.skipped_reason or '' }}</td><td class="muted">{{ result.error or '' }}</td><td>{{ result.duration_ms }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    {% endfor %}
+  </section>
+</div>
+</body>
+</html>
