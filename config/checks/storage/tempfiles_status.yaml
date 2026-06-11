@@ -1,6 +1,6 @@
 check_id: tempfiles_status
 group_id: storage
-title: Tempfiles exist and have valid status
+title: Tempfiles existentes y con estado válido
 severity: FAIL
 collector:
   type: oracle_storage

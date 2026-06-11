@@ -13,6 +13,27 @@ def test_example_config_is_valid():
     assert "database_status" in config["checks"]
 
 
+
+def test_visible_check_titles_are_spanish(capsys):
+    english_titles = [
+        "Datafiles with autoextend disabled",
+        "Temporary tablespace active usage percentage",
+        "Tablespace used percentage",
+        "Database status is OPEN",
+        "OS CPU information can be collected",
+    ]
+    config = ConfigLoader("config").load_all()
+    titles = "\n".join(check.title for check in config["checks"].values())
+    for title in english_titles:
+        assert title not in titles
+
+    assert main(["list-checks"]) == 0
+    output = capsys.readouterr().out
+    assert "Datafiles con autoextend deshabilitado" in output
+    assert "Porcentaje de uso activo de tablespaces temporales" in output
+    for title in english_titles:
+        assert title not in output
+
 def test_invalid_yaml_reports_file_line_column_and_cause(tmp_path):
     config_file = tmp_path / "app_settings.yaml"
     config_file.write_text("app: [unclosed\n", encoding="utf-8")

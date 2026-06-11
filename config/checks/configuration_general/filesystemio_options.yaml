@@ -1,6 +1,6 @@
 check_id: filesystemio_options
 group_id: configuration_general
-title: Filesystem I/O options según estándar
+title: Parámetro filesystemio_options según estándar
 severity: WARNING
 collector:
   type: oracle_parameter

@@ -1,5 +1,5 @@
 group_id: schema_objects
-name: Schema Objects
-description: Basic object health checks.
+name: Objetos de esquema
+description: Checks básicos de salud de objetos.
 checks:
   - invalid_objects

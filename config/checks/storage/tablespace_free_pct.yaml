@@ -1,6 +1,6 @@
 check_id: tablespace_free_pct
 group_id: storage
-title: Minimum tablespace free percentage
+title: Porcentaje mínimo libre en tablespaces
 severity: WARNING
 collector:
   type: oracle_storage

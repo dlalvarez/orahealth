@@ -1,6 +1,6 @@
 check_id: datafiles_near_maxsize
 group_id: storage
-title: Datafiles near autoextend maxsize
+title: Datafiles cercanos al maxsize de autoextend
 severity: FAIL
 collector:
   type: oracle_storage

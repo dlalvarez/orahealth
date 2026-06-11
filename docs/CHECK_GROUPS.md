@@ -482,22 +482,22 @@ Validate tablespaces, datafiles, tempfiles, segments, FRA, ASM diskgroups, files
 - Backup/stage filesystem usage if configured.
 
 
-### Implemented in Phase 2B
+### Implementado en Fase 2B
 
-The current `storage` group includes these implemented checks:
+El grupo `storage` actual incluye estos checks implementados:
 
-- `tablespace_free_pct` — minimum free percentage per permanent tablespace, with total/used/free MB, free/used percentage, autoextend indication, worst tablespace, and policy thresholds.
-- `tablespace_used_pct` — maximum used percentage per tablespace, with worst tablespace and configurable warning/fail thresholds.
-- `datafiles_autoextend_disabled` — datafiles with `AUTOEXTENSIBLE = NO`; defaults to `WARNING` because fixed datafiles can be intentional.
-- `datafiles_near_maxsize` — autoextensible datafiles approaching configured `MAXSIZE`.
-- `datafiles_status` — datafiles with anomalous `STATUS` or `ONLINE_STATUS`, such as offline/recover/unavailable states.
-- `tempfiles_status` — verifies tempfiles exist and are in acceptable state.
-- `temp_usage_pct` — active temporary tablespace usage percentage using `dba_temp_files` plus `v$tempseg_usage`; fallback evidence from `v$temp_space_header` is marked clearly and skipped for thresholding to avoid false positives.
-- `undo_tablespace_status` — validates current UNDO tablespace metadata, retention, status, and size/usage evidence when available.
-- `fra_configured` — reports whether FRA is configured; missing FRA is `SKIPPED` by default unless a standard changes the policy.
-- `fra_usage` — FRA used and reclaimable percentages, with clear `SKIPPED` behavior when FRA is not configured.
+- `tablespace_free_pct` — porcentaje libre mínimo por tablespace permanente, con MB totales/usados/libres, porcentaje libre/usado, indicador de autoextend, peor tablespace y umbrales de política.
+- `tablespace_used_pct` — porcentaje usado máximo por tablespace, con peor tablespace y umbrales configurables de advertencia/fallo.
+- `datafiles_autoextend_disabled` — datafiles con `AUTOEXTENSIBLE = NO`; por defecto genera `WARNING` porque los datafiles fijos pueden ser intencionales.
+- `datafiles_near_maxsize` — datafiles autoextensibles cercanos al `MAXSIZE` configurado.
+- `datafiles_status` — datafiles con `STATUS` u `ONLINE_STATUS` anómalo, como estados offline/recover/unavailable.
+- `tempfiles_status` — verifica que existan tempfiles y que estén en estado aceptable.
+- `temp_usage_pct` — porcentaje de uso activo de tablespaces temporales usando `dba_temp_files` más `v$tempseg_usage`; la evidencia fallback de `v$temp_space_header` se marca claramente y se omite del thresholding para evitar falsos positivos.
+- `undo_tablespace_status` — valida metadatos del tablespace UNDO actual, retención, estado y evidencia de tamaño/uso cuando está disponible.
+- `fra_configured` — informa si FRA está configurada; si falta, queda `SKIPPED` por defecto salvo que un estándar cambie la política.
+- `fra_usage` — porcentajes de uso y espacio reclaimable de FRA, con comportamiento `SKIPPED` claro cuando FRA no está configurada.
 
-These checks reuse a `database.storage` inventory structure containing tablespaces, datafiles, tempfiles, temporary usage, FRA, and UNDO details. The implementation avoids AWR and Diagnostic Pack views, keeps compatibility with `example_standalone`, and keeps remediations only in `corrective_actions.html`.
+Estos checks reutilizan una estructura de inventario `database.storage` con detalles de tablespaces, datafiles, tempfiles, uso temporal, FRA y UNDO. La implementación evita vistas AWR y Diagnostic Pack, mantiene compatibilidad con `example_standalone` y conserva las remediaciones únicamente en `corrective_actions.html`.
 
 ### Typical collectors
 

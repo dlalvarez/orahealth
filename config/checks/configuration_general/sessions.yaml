@@ -1,6 +1,6 @@
 check_id: sessions
 group_id: configuration_general
-title: Sessions cumple mínimo recomendado
+title: Parámetro sessions cumple mínimo recomendado
 severity: WARNING
 collector:
   type: oracle_parameter

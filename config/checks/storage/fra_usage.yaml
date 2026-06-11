@@ -1,6 +1,6 @@
 check_id: fra_usage
 group_id: storage
-title: FRA usage percentage
+title: Porcentaje de uso de FRA
 severity: CRITICAL
 collector:
   type: oracle_storage

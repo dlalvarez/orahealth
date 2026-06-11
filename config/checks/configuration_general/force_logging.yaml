@@ -1,6 +1,6 @@
 check_id: force_logging
 group_id: configuration_general
-title: Force logging según estándar
+title: FORCE LOGGING según estándar
 severity: WARNING
 collector:
   type: oracle_metric

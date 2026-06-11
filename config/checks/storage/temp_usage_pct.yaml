@@ -1,6 +1,6 @@
 check_id: temp_usage_pct
 group_id: storage
-title: Temporary tablespace active usage percentage
+title: Porcentaje de uso activo de tablespaces temporales
 severity: FAIL
 collector:
   type: oracle_storage

@@ -1,6 +1,6 @@
 check_id: undo_tablespace_status
 group_id: storage
-title: UNDO tablespace status and configuration
+title: Estado y configuración del tablespace UNDO
 severity: WARNING
 collector:
   type: oracle_storage

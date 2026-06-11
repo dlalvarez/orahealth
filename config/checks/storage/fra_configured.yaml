@@ -1,6 +1,6 @@
 check_id: fra_configured
 group_id: storage
-title: FRA is configured when required
+title: FRA configurada cuando el estándar lo requiere
 severity: WARNING
 collector:
   type: oracle_storage

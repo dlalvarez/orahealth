@@ -1,6 +1,6 @@
 check_id: os_filesystem_usage
 group_id: os
-title: OS filesystem usage below critical thresholds
+title: Uso de filesystems del sistema operativo bajo umbrales críticos
 severity: WARNING
 collector:
   type: os_adapter

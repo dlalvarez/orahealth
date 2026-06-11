@@ -1,6 +1,6 @@
 check_id: datafiles_autoextend_disabled
 group_id: storage
-title: Datafiles with autoextend disabled
+title: Datafiles con autoextend deshabilitado
 severity: WARNING
 collector:
   type: oracle_storage

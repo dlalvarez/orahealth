@@ -1,6 +1,6 @@
 check_id: database_status
 group_id: configuration_general
-title: Database status is OPEN
+title: Estado de base de datos OPEN
 severity: FAIL
 collector:
   type: inventory

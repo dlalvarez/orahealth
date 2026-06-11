@@ -312,7 +312,7 @@ class CheckRunner:
         if not configured:
             fra.setdefault("recovery_file_dest", self._parameter_value(parameters, "db_recovery_file_dest"))
             fra.setdefault("recovery_file_dest_size", self._parameter_value(parameters, "db_recovery_file_dest_size"))
-            fra["message"] = "FRA is not configured or space_limit is 0"
+            fra["message"] = "FRA no está configurada o space_limit es 0"
         storage["fra"] = fra
         flattened: dict[str, Any] = {"storage": storage, "fra_configured": configured}
         if "tablespace_min_free_pct" in storage:
@@ -393,7 +393,7 @@ class CheckRunner:
         applicable, reason = self.applicability.evaluate(check, target, inventory)
         if check.check_id in ("fra_usage", "fra_usage_pct") and inventory.database.get("fra_configured") is False:
             duration_ms = int((time.monotonic() - start) * 1000)
-            message = inventory.database.get("fra_message", "FRA is not configured")
+            message = inventory.database.get("fra_message", "FRA no está configurada")
             logging.info("Check %s skipped: %s duration_ms=%s", check.check_id, message, duration_ms)
             return Result(
                 check_id=check.check_id,

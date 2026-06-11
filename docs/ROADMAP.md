@@ -300,22 +300,22 @@ Implement checks for:
 - Filesystem usage where OS access is available.
 
 
-#### Phase 2B - Implemented: Oracle storage checks
+#### Fase 2B - Implementado: checks de almacenamiento Oracle
 
-Implemented an expanded, license-safe `storage` group focused on reusable Oracle inventory and DBA-actionable evidence:
+Se implementó un grupo `storage` ampliado y seguro desde el punto de vista de licenciamiento, enfocado en inventario Oracle reutilizable y evidencia accionable para DBA:
 
-- `tablespace_free_pct` with per-tablespace total, used, free, free percentage, used percentage, and autoextend evidence.
-- `tablespace_used_pct` with worst tablespace and configurable used-percentage thresholds.
-- `datafiles_autoextend_disabled` for fixed-size datafiles, warning by default because this can be intentional.
-- `datafiles_near_maxsize` for autoextensible datafiles approaching `MAXSIZE`.
-- `datafiles_status` for datafiles outside acceptable available/online states.
-- `tempfiles_status` for missing or anomalous tempfiles.
-- `temp_usage_pct` from active temporary segment usage evidence, with controlled fallback when `v$tempseg_usage` is unavailable.
-- `undo_tablespace_status` with current UNDO tablespace, retention, status, and size evidence when available.
-- `fra_configured` with configurable behavior when FRA is not required.
-- `fra_usage` / FRA percentage evidence with reclaimable-space details when FRA exists.
+- `tablespace_free_pct` con evidencia por tablespace de total, usado, libre, porcentaje libre, porcentaje usado y autoextend.
+- `tablespace_used_pct` con peor tablespace y umbrales configurables de porcentaje usado.
+- `datafiles_autoextend_disabled` para datafiles de tamaño fijo, con advertencia por defecto porque puede ser intencional.
+- `datafiles_near_maxsize` para datafiles autoextensibles cercanos a `MAXSIZE`.
+- `datafiles_status` para datafiles fuera de estados aceptables AVAILABLE/ONLINE.
+- `tempfiles_status` para tempfiles faltantes o anómalos.
+- `temp_usage_pct` con evidencia de uso activo de segmentos temporales y fallback controlado cuando `v$tempseg_usage` no está disponible.
+- `undo_tablespace_status` con tablespace UNDO actual, retención, estado y tamaño cuando está disponible.
+- `fra_configured` con comportamiento configurable cuando FRA no es obligatoria.
+- `fra_usage` con porcentaje de FRA y detalles de espacio reclaimable cuando FRA existe.
 
-The phase uses standard dynamic performance and data dictionary views (`dba_tablespaces`, `dba_data_files`, `dba_free_space`, `dba_temp_files`, `v$temp_space_header`, `v$parameter`, and `v$recovery_file_dest`) and intentionally avoids AWR, Diagnostic Pack, and historical licensed views. Missing privileges or unavailable views are handled as controlled evidence/status results, not unhandled tracebacks.
+La fase usa vistas dinámicas y de diccionario estándar (`dba_tablespaces`, `dba_data_files`, `dba_free_space`, `dba_temp_files`, `v$tempseg_usage`, `v$temp_space_header`, `v$parameter` y `v$recovery_file_dest`) y evita intencionalmente AWR, Diagnostic Pack y vistas históricas licenciadas. Los privilegios faltantes o vistas no disponibles se manejan como resultados controlados de evidencia/estado, no como tracebacks sin manejar.
 
 ### schema_objects basic checks
 

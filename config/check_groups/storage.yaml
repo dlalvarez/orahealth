@@ -1,6 +1,6 @@
 group_id: storage
-name: Storage
-description: Oracle database storage, datafile, tempfile, UNDO and FRA checks.
+name: Almacenamiento
+description: Checks de almacenamiento Oracle, datafiles, tempfiles, UNDO y FRA.
 checks:
   - tablespace_free_pct
   - tablespace_used_pct

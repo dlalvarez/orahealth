@@ -39,6 +39,26 @@ def test_executive_report_contains_dashboard_sections(tmp_path):
     assert "Hallazgos Principales" in html
 
 
+
+def test_reports_do_not_show_legacy_english_storage_text(tmp_path):
+    output = _run_example(tmp_path)
+    combined_html = "\n".join(
+        (output / report_name).read_text(encoding="utf-8")
+        for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html"]
+    )
+
+    assert "Porcentaje de uso activo de tablespaces temporales" in combined_html
+    assert "El uso activo de tablespace temporal" in combined_html
+    assert "Remediación" not in (output / "technical_report.html").read_text(encoding="utf-8")
+    for legacy_text in [
+        "Datafiles with autoextend disabled",
+        "Temporary tablespace active usage percentage",
+        "Tablespace used percentage",
+        "All datafiles are AVAILABLE/ONLINE",
+        "Regex condition passed",
+    ]:
+        assert legacy_text not in combined_html
+
 def test_reports_use_compact_professional_css(tmp_path):
     output = _run_example(tmp_path)
 
@@ -342,7 +362,7 @@ def test_fra_not_configured_is_skipped_not_error(tmp_path):
     fra_result = next(result for result in evidence["results"] if result["check_id"] == "fra_usage")
 
     assert fra_result["status"] == "SKIPPED"
-    assert "FRA is not configured" in fra_result["message"]
+    assert "FRA no está configurada" in fra_result["message"]
 
 
 def test_real_metrics_drive_tablespace_fra_and_invalid_object_results(tmp_path):
@@ -421,7 +441,7 @@ def test_temp_usage_active_zero_passes_with_real_metric_source(tmp_path):
     results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
 
     assert results["temp_usage_pct"]["status"] == "PASS"
-    assert "active usage" in results["temp_usage_pct"]["message"]
+    assert "uso activo" in results["temp_usage_pct"]["message"]
     assert results["temp_usage_pct"]["evidence"]["active_temp_segments_count"] == 0
     assert results["temp_usage_pct"]["evidence"]["calculation_method"] == "active_temp_segments"
 
@@ -473,7 +493,7 @@ def test_fra_configured_check_can_skip_when_fra_missing(tmp_path):
     ConfigValidator().validate(config)
     config["settings"]["app"]["default_output_dir"] = str(tmp_path)
     storage = config["targets"]["example_standalone"].database["mock_inventory"]["storage"]
-    storage["fra"] = {"fra_configured": False, "recovery_file_dest": None, "recovery_file_dest_size": None, "message": "FRA is not configured or space_limit is 0"}
+    storage["fra"] = {"fra_configured": False, "recovery_file_dest": None, "recovery_file_dest_size": None, "message": "FRA no está configurada o space_limit es 0"}
     config["targets"]["example_standalone"].database["mock_inventory"]["fra_configured"] = False
 
     output = CheckRunner(config).run_target("example_standalone")

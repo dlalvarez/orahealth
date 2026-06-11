@@ -1,6 +1,6 @@
 check_id: tablespace_used_pct
 group_id: storage
-title: Tablespace used percentage
+title: Porcentaje usado en tablespaces
 severity: WARNING
 collector:
   type: oracle_storage

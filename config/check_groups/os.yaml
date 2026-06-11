@@ -1,6 +1,6 @@
 group_id: os
-name: Operating System
-description: Basic OS checks through OS adapters.
+name: Sistema operativo
+description: Checks básicos de sistema operativo mediante adaptadores OS.
 checks:
   - os_filesystem_usage
   - os_memory

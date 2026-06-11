@@ -41,16 +41,16 @@ GROUP_LABELS = {
 }
 
 CHECK_TITLE_TRANSLATIONS = {
-    "Database status is OPEN": "Estado de base de datos OPEN",
-    "Database open mode is READ WRITE": "Modo de apertura READ WRITE",
-    "Database runs in ARCHIVELOG mode": "Base de datos en modo ARCHIVELOG",
-    "Minimum tablespace free percentage": "Porcentaje mínimo libre en tablespaces",
-    "FRA usage percentage": "Porcentaje de uso de FRA",
-    "Invalid object count is acceptable": "Cantidad de objetos inválidos aceptable",
-    "OS filesystem usage below critical thresholds": "Uso de filesystems bajo umbrales críticos",
-    "OS memory information can be collected": "Información de memoria del sistema operativo",
-    "OS CPU information can be collected": "Información de CPU del sistema operativo",
-    "Alert log has no critical ORA errors in sample": "Alert log sin errores ORA críticos en la muestra",
+    "Estado de base de datos OPEN": "Estado de base de datos OPEN",
+    "Modo de apertura de base de datos READ WRITE": "Modo de apertura de base de datos READ WRITE",
+    "Base de datos en modo ARCHIVELOG": "Base de datos en modo ARCHIVELOG",
+    "Porcentaje mínimo libre en tablespaces": "Porcentaje mínimo libre en tablespaces",
+    "Porcentaje de uso de FRA": "Porcentaje de uso de FRA",
+    "Cantidad de objetos inválidos dentro del umbral": "Cantidad de objetos inválidos dentro del umbral",
+    "Uso de filesystems del sistema operativo bajo umbrales críticos": "Uso de filesystems del sistema operativo bajo umbrales críticos",
+    "Información de memoria del sistema operativo recolectada correctamente": "Información de memoria del sistema operativo recolectada correctamente",
+    "Información de CPU del sistema operativo recolectada correctamente": "Información de CPU del sistema operativo recolectada correctamente",
+    "Alert log sin errores ORA críticos en la muestra": "Alert log sin errores ORA críticos en la muestra",
 }
 
 DB_INVENTORY_FIELDS = (

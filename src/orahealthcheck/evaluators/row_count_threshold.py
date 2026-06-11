@@ -10,9 +10,9 @@ class RowCountThresholdEvaluator:
         fail = config.get("fail", config.get("max"))
         critical = config.get("critical")
         if critical is not None and count >= int(critical):
-            return ResultStatus.CRITICAL, f"Row count {count} reached critical threshold {critical}"
+            return ResultStatus.CRITICAL, f"La cantidad de filas {count} alcanzó el umbral crítico {critical}"
         if fail is not None and count >= int(fail):
-            return ResultStatus.FAIL, f"Row count {count} reached fail threshold {fail}"
+            return ResultStatus.FAIL, f"La cantidad de filas {count} alcanzó el umbral de fallo {fail}"
         if warning is not None and count >= int(warning):
-            return ResultStatus.WARNING, f"Row count {count} reached warning threshold {warning}"
-        return ResultStatus.PASS, f"Row count {count} is within threshold"
+            return ResultStatus.WARNING, f"La cantidad de filas {count} alcanzó el umbral de advertencia {warning}"
+        return ResultStatus.PASS, f"La cantidad de filas {count} está dentro del umbral configurado"

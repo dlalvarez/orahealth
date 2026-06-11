@@ -1,6 +1,6 @@
 check_id: open_cursors
 group_id: configuration_general
-title: Open cursors cumple mínimo recomendado
+title: Parámetro open_cursors cumple mínimo recomendado
 severity: WARNING
 collector:
   type: oracle_parameter

@@ -20,13 +20,13 @@ def test_regex_must_not_match():
 def test_threshold_returns_controlled_error_for_none_metric():
     status, message = EVALUATORS["threshold"].evaluate(None, {"field": "tablespace_min_free_pct", "operator": "<=", "warning": 10})
     assert status == ResultStatus.ERROR
-    assert message == "Metric tablespace_min_free_pct was not found in evidence"
+    assert message == "La métrica tablespace_min_free_pct no se encontró en la evidencia"
 
 
 def test_threshold_returns_controlled_error_for_missing_field():
     status, message = EVALUATORS["threshold"].evaluate({}, {"field": "fra_used_pct", "operator": ">=", "warning": 80})
     assert status == ResultStatus.ERROR
-    assert message == "Metric fra_used_pct was not found in evidence"
+    assert message == "La métrica fra_used_pct no se encontró en la evidencia"
 
 
 def test_oracle_config_expected_value_uses_policy_evidence():

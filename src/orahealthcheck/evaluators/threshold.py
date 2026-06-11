@@ -7,7 +7,7 @@ _MISSING = object()
 
 
 def _metric_name(field: str | None) -> str:
-    return field or "value"
+    return field or "valor"
 
 
 def _extract(value: Any, field: str | None, aggregate: str | None = None) -> Any:
@@ -35,11 +35,11 @@ class ThresholdEvaluator:
         field = config.get("field")
         raw_value = _extract(evidence, field, config.get("aggregate"))
         if raw_value is _MISSING:
-            return ResultStatus.ERROR, f"Metric {_metric_name(field)} was not found in evidence"
+            return ResultStatus.ERROR, f"La métrica {_metric_name(field)} no se encontró en la evidencia"
         try:
             value = float(raw_value)
         except (TypeError, ValueError):
-            return ResultStatus.ERROR, f"Metric {_metric_name(field)} was not numeric in evidence"
+            return ResultStatus.ERROR, f"La métrica {_metric_name(field)} no es numérica en la evidencia"
         warning = config.get("warning")
         critical = config.get("critical")
         fail = config.get("fail")
@@ -52,9 +52,9 @@ class ThresholdEvaluator:
             return value >= limit if operator == ">=" else value <= limit
 
         if hit(critical):
-            return ResultStatus.CRITICAL, f"Value {value} reached critical threshold {critical}"
+            return ResultStatus.CRITICAL, f"El valor {value} alcanzó el umbral crítico {critical}"
         if hit(fail):
-            return ResultStatus.FAIL, f"Value {value} reached fail threshold {fail}"
+            return ResultStatus.FAIL, f"El valor {value} alcanzó el umbral de fallo {fail}"
         if hit(warning):
-            return ResultStatus.WARNING, f"Value {value} reached warning threshold {warning}"
-        return ResultStatus.PASS, f"Value {value} is within threshold"
+            return ResultStatus.WARNING, f"El valor {value} alcanzó el umbral de advertencia {warning}"
+        return ResultStatus.PASS, f"El valor {value} está dentro del umbral configurado"
