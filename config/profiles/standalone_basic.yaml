@@ -1,5 +1,5 @@
 profile_id: standalone_basic
-description: Minimal standalone profile for Phase 1 architecture validation.
+description: Perfil standalone mínimo para validación de arquitectura de Fase 1.
 enabled_groups:
   - configuration_general
   - storage

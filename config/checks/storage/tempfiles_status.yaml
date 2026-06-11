@@ -1,0 +1,28 @@
+check_id: tempfiles_status
+group_id: storage
+title: Tempfiles existentes y con estado válido
+severity: FAIL
+collector:
+  type: oracle_storage
+  source_view: dba_temp_files
+evaluator:
+  type: storage
+  missing_status: WARNING
+  anomaly_status: FAIL
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Faltan tempfiles o existen tempfiles con estado anómalo, lo que puede afectar operaciones de sort, hash o temporales.
+  actions:
+    - Verificar tablespaces temporales y tempfiles asociados.
+    - Agregar tempfile si falta capacidad temporal.
+    - Validar estado ONLINE/AVAILABLE del tempfile.
+    - Revisar errores recientes relacionados con TEMP.
+    - Coordinar corrección con el equipo DBA si hay sesiones activas usando TEMP.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, storage, temp]

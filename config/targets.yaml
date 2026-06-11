@@ -16,6 +16,79 @@ targets:
         fra_used_pct: 42
         invalid_objects_count: 0
         alert_log_excerpt: "No critical internal errors found"
+        storage:
+          tablespaces:
+            - tablespace_name: "SYSTEM"
+              total_mb: 1024
+              used_mb: 512
+              free_mb: 512
+              free_pct: 50
+              used_pct: 50
+              autoextensible: "YES"
+            - tablespace_name: USERS
+              total_mb: 2048
+              used_mb: 1434
+              free_mb: 614
+              free_pct: 30
+              used_pct: 70
+              autoextensible: "YES"
+          datafiles:
+            - file_name: /u01/oradata/ORCL/system01.dbf
+              tablespace_name: "SYSTEM"
+              bytes_mb: 1024
+              current_mb: 1024
+              autoextensible: "YES"
+              maxbytes_mb: 32768
+              max_mb: 32768
+              used_of_max_pct: 3.13
+              status: "AVAILABLE"
+              online_status: "SYSTEM"
+            - file_name: /u01/oradata/ORCL/users01.dbf
+              tablespace_name: USERS
+              bytes_mb: 2048
+              current_mb: 2048
+              autoextensible: "YES"
+              maxbytes_mb: 32768
+              max_mb: 32768
+              used_of_max_pct: 6.25
+              status: "AVAILABLE"
+              online_status: "ONLINE"
+          tempfiles:
+            - tablespace_name: TEMP
+              file_name: /u01/oradata/ORCL/temp01.dbf
+              bytes_mb: 1024
+              status: "AVAILABLE"
+              autoextensible: "YES"
+              maxbytes_mb: 32768
+          temp_usage:
+            - tablespace_name: TEMP
+              total_mb: 1024
+              used_mb: 128
+              free_mb: 896
+              used_pct: 12.5
+              active_temp_segments_count: 1
+              active_temp_sessions_count: 1
+              source: dba_temp_files+v$tempseg_usage
+              calculation_method: active_temp_segments
+              note: Uso activo calculado desde segmentos temporales actualmente asignados a sesiones.
+              active_usage_available: true
+          undo:
+            undo_tablespace: UNDOTBS1
+            undo_retention: 900
+            tablespace_name: UNDOTBS1
+            status: "ONLINE"
+            total_mb: 2048
+            used_mb: 256
+            free_mb: 1792
+          fra:
+            fra_configured: true
+            recovery_file_dest: /u01/fra
+            recovery_file_dest_size: 50G
+            space_limit_mb: 51200
+            space_used_mb: 21504
+            space_reclaimable_mb: 2048
+            used_pct: 42
+            reclaimable_pct: 4
         parameters:
           compatible:
             name: compatible
@@ -61,7 +134,7 @@ targets:
             name: control_files
             value: /u01/control01.ctl, /u02/control02.ctl
             display_value: /u01/control01.ctl, /u02/control02.ctl
-        force_logging: YES
+        force_logging: "YES"
         control_file_count: 2
         redo_log_group_count: 3
         min_redo_log_members_per_group: 2

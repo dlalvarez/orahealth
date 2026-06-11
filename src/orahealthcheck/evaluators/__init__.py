@@ -5,6 +5,7 @@ from .oracle_config import OracleConfigEvaluator
 from .regex import RegexEvaluator
 from .row_count_threshold import RowCountThresholdEvaluator
 from .threshold import ThresholdEvaluator
+from .storage import StorageEvaluator
 
 EVALUATORS = {
     "threshold": ThresholdEvaluator(),
@@ -14,6 +15,7 @@ EVALUATORS = {
     "oracle_config": OracleConfigEvaluator(),
     "row_count_threshold": RowCountThresholdEvaluator(),
     "regex": RegexEvaluator(),
+    "storage": StorageEvaluator(),
 }
 
 __all__ = ["EVALUATORS"]

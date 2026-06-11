@@ -299,6 +299,24 @@ Implement checks for:
 - FRA usage.
 - Filesystem usage where OS access is available.
 
+
+#### Fase 2B - Implementado: checks de almacenamiento Oracle
+
+Se implementó un grupo `storage` ampliado y seguro desde el punto de vista de licenciamiento, enfocado en inventario Oracle reutilizable y evidencia accionable para DBA:
+
+- `tablespace_free_pct` con evidencia por tablespace de total, usado, libre, porcentaje libre, porcentaje usado y autoextend.
+- `tablespace_used_pct` con peor tablespace y umbrales configurables de porcentaje usado.
+- `datafiles_autoextend_disabled` para datafiles de tamaño fijo, con advertencia por defecto porque puede ser intencional.
+- `datafiles_near_maxsize` para datafiles autoextensibles cercanos a `MAXSIZE`.
+- `datafiles_status` para datafiles fuera de estados aceptables AVAILABLE/ONLINE.
+- `tempfiles_status` para tempfiles faltantes o anómalos.
+- `temp_usage_pct` con evidencia de uso activo de segmentos temporales y fallback controlado cuando `v$tempseg_usage` no está disponible.
+- `undo_tablespace_status` con tablespace UNDO actual, retención, estado y tamaño cuando está disponible.
+- `fra_configured` con comportamiento configurable cuando FRA no es obligatoria.
+- `fra_usage` con porcentaje de FRA y detalles de espacio reclaimable cuando FRA existe.
+
+La fase usa vistas dinámicas y de diccionario estándar (`dba_tablespaces`, `dba_data_files`, `dba_free_space`, `dba_temp_files`, `v$tempseg_usage`, `v$temp_space_header`, `v$parameter` y `v$recovery_file_dest`) y evita intencionalmente AWR, Diagnostic Pack y vistas históricas licenciadas. Los privilegios faltantes o vistas no disponibles se manejan como resultados controlados de evidencia/estado, no como tracebacks sin manejar.
+
 ### schema_objects basic checks
 
 Implement checks for:

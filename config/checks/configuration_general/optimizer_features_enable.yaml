@@ -1,6 +1,6 @@
 check_id: optimizer_features_enable
 group_id: configuration_general
-title: Optimizer features enable según estándar
+title: Parámetro optimizer_features_enable según estándar
 severity: WARNING
 collector:
   type: oracle_parameter

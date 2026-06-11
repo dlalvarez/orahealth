@@ -1,6 +1,6 @@
 check_id: os_memory
 group_id: os
-title: OS memory information can be collected
+title: Información de memoria del sistema operativo recolectada correctamente
 severity: INFO
 collector:
   type: os_adapter

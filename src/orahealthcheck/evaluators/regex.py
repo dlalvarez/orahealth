@@ -11,5 +11,5 @@ class RegexEvaluator:
         matched = re.search(pattern, text, re.MULTILINE) is not None
         mode = config.get("mode", "must_match")
         if (mode == "must_match" and matched) or (mode == "must_not_match" and not matched):
-            return ResultStatus.PASS, "Regex condition passed"
-        return ResultStatus(config.get("failure_status", "FAIL")), "Regex condition failed"
+            return ResultStatus.PASS, "La condición de expresión regular fue satisfactoria"
+        return ResultStatus(config.get("failure_status", "FAIL")), "La condición de expresión regular no fue satisfactoria"

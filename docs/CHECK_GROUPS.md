@@ -481,6 +481,24 @@ Validate tablespaces, datafiles, tempfiles, segments, FRA, ASM diskgroups, files
 - Archive destination usage.
 - Backup/stage filesystem usage if configured.
 
+
+### Implementado en Fase 2B
+
+El grupo `storage` actual incluye estos checks implementados:
+
+- `tablespace_free_pct` — porcentaje libre mínimo por tablespace permanente, con MB totales/usados/libres, porcentaje libre/usado, indicador de autoextend, peor tablespace y umbrales de política.
+- `tablespace_used_pct` — porcentaje usado máximo por tablespace, con peor tablespace y umbrales configurables de advertencia/fallo.
+- `datafiles_autoextend_disabled` — datafiles con `AUTOEXTENSIBLE = NO`; por defecto genera `WARNING` porque los datafiles fijos pueden ser intencionales.
+- `datafiles_near_maxsize` — datafiles autoextensibles cercanos al `MAXSIZE` configurado.
+- `datafiles_status` — datafiles con `STATUS` u `ONLINE_STATUS` anómalo, como estados offline/recover/unavailable.
+- `tempfiles_status` — verifica que existan tempfiles y que estén en estado aceptable.
+- `temp_usage_pct` — porcentaje de uso activo de tablespaces temporales usando `dba_temp_files` más `v$tempseg_usage`; la evidencia fallback de `v$temp_space_header` se marca claramente y se omite del thresholding para evitar falsos positivos.
+- `undo_tablespace_status` — valida metadatos del tablespace UNDO actual, retención, estado y evidencia de tamaño/uso cuando está disponible.
+- `fra_configured` — informa si FRA está configurada; si falta, queda `SKIPPED` por defecto salvo que un estándar cambie la política.
+- `fra_usage` — porcentajes de uso y espacio reclaimable de FRA, con comportamiento `SKIPPED` claro cuando FRA no está configurada.
+
+Estos checks reutilizan una estructura de inventario `database.storage` con detalles de tablespaces, datafiles, tempfiles, uso temporal, FRA y UNDO. La implementación evita vistas AWR y Diagnostic Pack, mantiene compatibilidad con `example_standalone` y conserva las remediaciones únicamente en `corrective_actions.html`.
+
 ### Typical collectors
 
 ```text

@@ -1,5 +1,5 @@
 group_id: alert_log
 name: Alert Log
-description: Basic alert log error checks.
+description: Checks básicos de errores en alert log.
 checks:
   - alert_log_ora_errors_basic

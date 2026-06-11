@@ -1,6 +1,6 @@
 check_id: invalid_objects
 group_id: schema_objects
-title: Invalid object count is acceptable
+title: Cantidad de objetos inválidos dentro del umbral
 severity: WARNING
 collector:
   type: inventory

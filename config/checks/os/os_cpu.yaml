@@ -1,6 +1,6 @@
 check_id: os_cpu
 group_id: os
-title: OS CPU information can be collected
+title: Información de CPU del sistema operativo recolectada correctamente
 severity: INFO
 collector:
   type: os_adapter

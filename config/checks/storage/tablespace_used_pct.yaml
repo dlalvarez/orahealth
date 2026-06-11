@@ -1,31 +1,28 @@
-check_id: tablespace_free_pct
+check_id: tablespace_used_pct
 group_id: storage
-title: Porcentaje mínimo libre en tablespaces
+title: Porcentaje usado en tablespaces
 severity: WARNING
 collector:
   type: oracle_storage
   source_view: dba_data_files+dba_free_space
 evaluator:
   type: storage
-  operator: "<="
-  warning_policy: min_tablespace_free_pct_warning
-  fail_policy: min_tablespace_free_pct_fail
-  critical_policy: min_tablespace_free_pct_critical
-  warning: 20
-  fail: 10
-  critical: 5
+  warning_policy: max_tablespace_used_pct_warning
+  fail_policy: max_tablespace_used_pct_fail
+  warning: 80
+  fail: 90
 applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
 remediation:
-  summary: El tablespace tiene porcentaje de espacio libre bajo; si no se corrige, puede provocar errores de asignación de segmentos y fallas de aplicación.
+  summary: Uno o más tablespaces presentan uso elevado y podrían quedarse sin espacio si continúa el crecimiento.
   actions:
     - Revisar crecimiento del tablespace y objetos principales.
-    - Validar espacio disponible en storage, ASM o filesystem antes de ampliar.
+    - Validar espacio disponible en storage, ASM o filesystem.
     - Agregar datafile o redimensionar un datafile existente si aplica.
-    - Evaluar autoextend y maxsize para evitar crecimiento sin control.
+    - Evaluar autoextend y maxsize.
     - Coordinar ventana si el cambio impacta almacenamiento o requiere control de cambio.
   owner: DBA
   requires_window: false

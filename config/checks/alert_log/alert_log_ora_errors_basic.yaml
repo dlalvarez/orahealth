@@ -1,6 +1,6 @@
 check_id: alert_log_ora_errors_basic
 group_id: alert_log
-title: Alert log has no critical ORA errors in sample
+title: Alert log sin errores ORA críticos en la muestra
 severity: CRITICAL
 collector:
   type: inventory

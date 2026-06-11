@@ -3,6 +3,17 @@ policies:
   expected_open_mode: READ WRITE
   expected_archivelog_mode: ARCHIVELOG
   min_tablespace_free_pct: 10
+  min_tablespace_free_pct_warning: 20
+  min_tablespace_free_pct_fail: 10
+  min_tablespace_free_pct_critical: 5
+  max_tablespace_used_pct_warning: 80
+  max_tablespace_used_pct_fail: 90
+  datafiles_autoextend_disabled_status: WARNING
+  datafile_maxsize_used_pct_warning: 85
+  datafile_maxsize_used_pct_fail: 95
+  temp_usage_pct_warning: 80
+  temp_usage_pct_fail: 95
+  fra_not_configured_status: SKIPPED
   max_fra_used_pct_warning: 80
   max_fra_used_pct_critical: 95
   compatible_report_status: INFO
@@ -18,4 +29,4 @@ policies:
   min_control_files: 2
   min_redo_log_groups: 3
   min_redo_log_members_per_group: 2
-  expected_force_logging: YES
+  expected_force_logging: "YES"

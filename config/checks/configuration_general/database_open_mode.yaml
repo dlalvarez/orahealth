@@ -1,6 +1,6 @@
 check_id: database_open_mode
 group_id: configuration_general
-title: Database open mode is READ WRITE
+title: Modo de apertura de base de datos READ WRITE
 severity: WARNING
 collector:
   type: inventory

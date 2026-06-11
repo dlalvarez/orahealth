@@ -1,0 +1,25 @@
+check_id: datafiles_status
+group_id: storage
+title: Estado de datafiles disponible y válido
+severity: FAIL
+collector:
+  type: oracle_storage
+  source_view: dba_data_files
+evaluator:
+  type: storage
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Uno o más datafiles tienen estado anómalo como offline, recover o unavailable.
+  actions:
+    - Validar estado del datafile.
+    - Revisar alert log y eventos recientes.
+    - Confirmar si fue una operación planificada.
+    - Recuperar o poner online siguiendo procedimiento aprobado.
+    - No forzar online sin validar consistencia y backups.
+  owner: DBA
+  requires_window: true
+  outage_risk: high
+tags: [oracle, storage, datafile]
