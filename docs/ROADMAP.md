@@ -310,7 +310,7 @@ Implemented an expanded, license-safe `storage` group focused on reusable Oracle
 - `datafiles_near_maxsize` for autoextensible datafiles approaching `MAXSIZE`.
 - `datafiles_status` for datafiles outside acceptable available/online states.
 - `tempfiles_status` for missing or anomalous tempfiles.
-- `temp_usage_pct` from temporary tablespace usage evidence.
+- `temp_usage_pct` from active temporary segment usage evidence, with controlled fallback when `v$tempseg_usage` is unavailable.
 - `undo_tablespace_status` with current UNDO tablespace, retention, status, and size evidence when available.
 - `fra_configured` with configurable behavior when FRA is not required.
 - `fra_usage` / FRA percentage evidence with reclaimable-space details when FRA exists.

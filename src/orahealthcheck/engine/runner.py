@@ -214,24 +214,67 @@ class CheckRunner:
             from dba_temp_files
             order by tablespace_name, file_name
         """)
-        storage["temp_usage"] = self._query_rows(connector, "temporary tablespace usage", """
+        temp_usage, temp_usage_error = self._query_rows_with_error(connector, "active temporary tablespace usage", """
             select tf.tablespace_name,
                    round(tf.total_bytes / 1024 / 1024, 2) as total_mb,
-                   round(nvl(th.used_bytes, 0) / 1024 / 1024, 2) as used_mb,
-                   round((tf.total_bytes - nvl(th.used_bytes, 0)) / 1024 / 1024, 2) as free_mb,
-                   case when tf.total_bytes > 0 then round((nvl(th.used_bytes, 0) / tf.total_bytes) * 100, 2) else 0 end as used_pct
+                   round(nvl(tu.used_bytes, 0) / 1024 / 1024, 2) as used_mb,
+                   round((tf.total_bytes - nvl(tu.used_bytes, 0)) / 1024 / 1024, 2) as free_mb,
+                   case when tf.total_bytes > 0 then round((nvl(tu.used_bytes, 0) / tf.total_bytes) * 100, 2) else 0 end as used_pct,
+                   nvl(tu.active_temp_segments_count, 0) as active_temp_segments_count,
+                   nvl(tu.active_temp_sessions_count, 0) as active_temp_sessions_count,
+                   'dba_temp_files+v$tempseg_usage' as source,
+                   'active_temp_segments' as calculation_method,
+                   'Uso activo calculado desde segmentos temporales actualmente asignados a sesiones.' as note
             from (
               select tablespace_name, sum(bytes) as total_bytes
               from dba_temp_files
               group by tablespace_name
             ) tf
             left join (
-              select tablespace_name, sum(bytes_used) as used_bytes
-              from v$temp_space_header
-              group by tablespace_name
-            ) th on th.tablespace_name = tf.tablespace_name
+              select u.tablespace as tablespace_name,
+                     sum(u.blocks * ts.block_size) as used_bytes,
+                     count(*) as active_temp_segments_count,
+                     count(distinct rawtohex(u.session_addr) || ':' || to_char(u.session_num)) as active_temp_sessions_count
+              from v$tempseg_usage u
+              join dba_tablespaces ts on ts.tablespace_name = u.tablespace
+              group by u.tablespace
+            ) tu on tu.tablespace_name = tf.tablespace_name
             order by tf.tablespace_name
         """)
+        if temp_usage_error:
+            temp_usage = self._query_rows(connector, "fallback temporary tablespace usage", """
+                select tf.tablespace_name,
+                       round(tf.total_bytes / 1024 / 1024, 2) as total_mb,
+                       round(nvl(th.used_bytes, 0) / 1024 / 1024, 2) as used_mb,
+                       round((tf.total_bytes - nvl(th.used_bytes, 0)) / 1024 / 1024, 2) as free_mb,
+                       case when tf.total_bytes > 0 then round((nvl(th.used_bytes, 0) / tf.total_bytes) * 100, 2) else 0 end as used_pct,
+                       null as active_temp_segments_count,
+                       null as active_temp_sessions_count,
+                       'dba_temp_files+v$temp_space_header' as source,
+                       'fallback_temp_space_header' as calculation_method,
+                       'Fuente activa v$tempseg_usage no disponible; este valor puede reflejar extents temporales retenidos y no se usa para generar FAIL automático.' as note
+                from (
+                  select tablespace_name, sum(bytes) as total_bytes
+                  from dba_temp_files
+                  group by tablespace_name
+                ) tf
+                left join (
+                  select tablespace_name, sum(bytes_used) as used_bytes
+                  from v$temp_space_header
+                  group by tablespace_name
+                ) th on th.tablespace_name = tf.tablespace_name
+                order by tf.tablespace_name
+            """)
+            for row in temp_usage:
+                row["active_usage_available"] = False
+                row["fallback_reason"] = temp_usage_error
+        else:
+            for row in temp_usage:
+                row["active_usage_available"] = True
+        storage["temp_usage"] = temp_usage
+        storage["temp_usage_active_source_available"] = temp_usage_error is None
+        if temp_usage_error:
+            storage["temp_usage_error"] = temp_usage_error
         undo_tablespace = self._parameter_value(parameters, "undo_tablespace")
         undo_retention = self._parameter_value(parameters, "undo_retention")
         undo: dict[str, Any] = {"undo_tablespace": undo_tablespace, "undo_retention": undo_retention}
@@ -293,15 +336,19 @@ class CheckRunner:
         return rows[0] if rows else {}
 
     def _query_rows(self, connector: Any, label: str, sql: str) -> list[dict[str, Any]]:
+        rows, _ = self._query_rows_with_error(connector, label, sql)
+        return rows
+
+    def _query_rows_with_error(self, connector: Any, label: str, sql: str) -> tuple[list[dict[str, Any]], str | None]:
         try:
             rows = connector.query(sql)
         except Exception as exc:
             logging.warning("Oracle inventory query failed for %s: %s", label, exc)
-            return []
+            return [], str(exc)
         return [
             {key: self._normalize_inventory_value(value) for key, value in dict(row).items()}
             for row in rows
-        ]
+        ], None
 
     def _normalize_inventory_value(self, value: Any) -> Any:
         if isinstance(value, Decimal):
@@ -481,7 +528,17 @@ class CheckRunner:
             evidence.update({"tempfile_count": len(tempfiles), "affected_count": len(affected), "tempfiles": tempfiles, "affected_tempfiles": affected})
         elif check_id == "temp_usage_pct":
             worst = max(temp_usage, key=lambda row: row.get("used_pct", -1)) if temp_usage else {}
-            evidence.update({"max_used_pct": worst.get("used_pct"), "worst_tablespace": worst.get("tablespace_name"), "tablespaces": temp_usage})
+            evidence.update({
+                "max_used_pct": worst.get("used_pct"),
+                "worst_tablespace": worst.get("tablespace_name"),
+                "source": worst.get("source", evidence.get("source")),
+                "calculation_method": worst.get("calculation_method"),
+                "active_temp_segments_count": worst.get("active_temp_segments_count"),
+                "active_temp_sessions_count": worst.get("active_temp_sessions_count"),
+                "active_usage_available": storage.get("temp_usage_active_source_available", True),
+                "fallback_reason": storage.get("temp_usage_error"),
+                "tablespaces": temp_usage,
+            })
         elif check_id == "undo_tablespace_status":
             evidence.update(undo)
         elif check_id == "fra_configured":

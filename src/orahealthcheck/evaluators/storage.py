@@ -37,8 +37,12 @@ class StorageEvaluator:
             return ResultStatus.PASS, "Tempfiles exist and have acceptable status"
         if metric == "temp_usage_pct":
             if not evidence.get("tablespaces"):
-                return ResultStatus.ERROR, "Temporary tablespace usage information was not found in evidence"
-            return self._high_threshold(evidence.get("max_used_pct"), config, "Temporary tablespace usage")
+                return ResultStatus.ERROR, "Temporary tablespace active usage information was not found in evidence"
+            if evidence.get("active_usage_available") is False:
+                status = self._configured_status(config.get("fallback_status", "SKIPPED"))
+                reason = evidence.get("fallback_reason") or "active TEMP usage source is unavailable"
+                return status, f"Temporary tablespace active usage could not be measured from v$tempseg_usage; fallback evidence was collected but not thresholded to avoid false positives. Reason: {reason}"
+            return self._high_threshold(evidence.get("max_used_pct"), config, "Temporary tablespace active usage")
         if metric == "undo_tablespace_status":
             if not evidence.get("undo_tablespace") or evidence.get("status") is None:
                 return ResultStatus.WARNING, "UNDO tablespace information could not be fully determined"

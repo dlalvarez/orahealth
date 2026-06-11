@@ -200,6 +200,8 @@ class FakeOracleConnector:
         type(self).queries.append(normalized)
         for marker, rows in self.rows_by_marker.items():
             if marker in normalized:
+                if isinstance(rows, Exception):
+                    raise rows
                 return rows
         return []
 
@@ -234,7 +236,7 @@ def _oracle_configuration_markers():
 
 
 
-def _storage_markers(tablespace_free_pct=25.5, fra_used_pct=30, fra_space_limit=100, datafile_used_of_max_pct=10, datafile_status="AVAILABLE", datafile_online_status="ONLINE"):
+def _storage_markers(tablespace_free_pct=25.5, fra_used_pct=30, fra_space_limit=100, datafile_used_of_max_pct=10, datafile_status="AVAILABLE", datafile_online_status="ONLINE", temp_used_pct=12.5, temp_active_segments_count=1):
     return {
         "from ( select tablespace_name, sum(bytes) as bytes": [
             {
@@ -264,8 +266,8 @@ def _storage_markers(tablespace_free_pct=25.5, fra_used_pct=30, fra_space_limit=
         "from dba_temp_files order by": [
             {"tablespace_name": "TEMP", "file_name": "/u01/oradata/ORCL/temp01.dbf", "bytes_mb": 1024, "status": "AVAILABLE", "autoextensible": "YES"}
         ],
-        "from ( select tablespace_name, sum(bytes) as total_bytes": [
-            {"tablespace_name": "TEMP", "total_mb": 1024, "used_mb": 128, "free_mb": 896, "used_pct": 12.5}
+        "from v$tempseg_usage": [
+            {"tablespace_name": "TEMP", "total_mb": 1024, "used_mb": round(1024 * temp_used_pct / 100, 2), "free_mb": round(1024 * (100 - temp_used_pct) / 100, 2), "used_pct": temp_used_pct, "active_temp_segments_count": temp_active_segments_count, "active_temp_sessions_count": temp_active_segments_count, "source": "dba_temp_files+v$tempseg_usage", "calculation_method": "active_temp_segments", "note": "Uso activo calculado desde segmentos temporales actualmente asignados a sesiones."}
         ],
         "from dba_tablespaces t": [
             {"tablespace_name": "UNDOTBS1", "status": "ONLINE", "total_mb": 2048, "used_mb": 256, "free_mb": 1792}
@@ -402,6 +404,69 @@ def test_storage_tablespace_datafile_warning_and_fail_paths(tmp_path):
     assert "Aumentar maxsize si hay capacidad" not in technical_html
     assert "Aumentar maxsize si hay capacidad" in corrective_html
 
+
+
+def test_temp_usage_active_zero_passes_with_real_metric_source(tmp_path):
+    FakeOracleConnector.queries = []
+    FakeOracleConnector.rows_by_marker = {
+        "from v$database": [{"open_mode": "READ WRITE", "role": "PRIMARY", "archivelog_mode": "ARCHIVELOG", "force_logging": "YES"}],
+        "from v$instance": [{"status": "OPEN", "version": "19.20.0.0.0"}],
+        "from dba_objects": [{"invalid_objects_count": 0}],
+        **_storage_markers(temp_used_pct=0, temp_active_segments_count=0),
+        **_oracle_configuration_markers(),
+    }
+    config = _real_config(tmp_path)
+
+    output = CheckRunner(config, oracle_connector_factory=FakeOracleConnector).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["temp_usage_pct"]["status"] == "PASS"
+    assert "active usage" in results["temp_usage_pct"]["message"]
+    assert results["temp_usage_pct"]["evidence"]["active_temp_segments_count"] == 0
+    assert results["temp_usage_pct"]["evidence"]["calculation_method"] == "active_temp_segments"
+
+
+def test_temp_usage_high_active_usage_fails(tmp_path):
+    FakeOracleConnector.queries = []
+    FakeOracleConnector.rows_by_marker = {
+        "from v$database": [{"open_mode": "READ WRITE", "role": "PRIMARY", "archivelog_mode": "ARCHIVELOG", "force_logging": "YES"}],
+        "from v$instance": [{"status": "OPEN", "version": "19.20.0.0.0"}],
+        "from dba_objects": [{"invalid_objects_count": 0}],
+        **_storage_markers(temp_used_pct=98, temp_active_segments_count=5),
+        **_oracle_configuration_markers(),
+    }
+    config = _real_config(tmp_path)
+
+    output = CheckRunner(config, oracle_connector_factory=FakeOracleConnector).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["temp_usage_pct"]["status"] == "FAIL"
+    assert results["temp_usage_pct"]["evidence"]["max_used_pct"] == 98
+    assert results["temp_usage_pct"]["evidence"]["active_temp_segments_count"] == 5
+
+
+def test_temp_usage_without_active_view_is_skipped_with_fallback_evidence(tmp_path):
+    FakeOracleConnector.queries = []
+    FakeOracleConnector.rows_by_marker = {
+        "from v$database": [{"open_mode": "READ WRITE", "role": "PRIMARY", "archivelog_mode": "ARCHIVELOG", "force_logging": "YES"}],
+        "from v$instance": [{"status": "OPEN", "version": "19.20.0.0.0"}],
+        "from dba_objects": [{"invalid_objects_count": 0}],
+        "from v$tempseg_usage": RuntimeError("ORA-00942: table or view does not exist"),
+        "from v$temp_space_header": [
+            {"tablespace_name": "TEMP", "total_mb": 130, "used_mb": 130, "free_mb": 0, "used_pct": 100, "source": "dba_temp_files+v$temp_space_header", "calculation_method": "fallback_temp_space_header"}
+        ],
+        **{key: value for key, value in _storage_markers().items() if key not in {"from v$tempseg_usage"}},
+        **_oracle_configuration_markers(),
+    }
+    config = _real_config(tmp_path)
+
+    output = CheckRunner(config, oracle_connector_factory=FakeOracleConnector).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["temp_usage_pct"]["status"] == "SKIPPED"
+    assert "v$tempseg_usage" in results["temp_usage_pct"]["message"]
+    assert results["temp_usage_pct"]["evidence"]["active_usage_available"] is False
+    assert results["temp_usage_pct"]["evidence"]["calculation_method"] == "fallback_temp_space_header"
 
 def test_fra_configured_check_can_skip_when_fra_missing(tmp_path):
     config = ConfigLoader("config").load_all()

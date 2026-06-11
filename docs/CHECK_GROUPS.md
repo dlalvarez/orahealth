@@ -492,7 +492,7 @@ The current `storage` group includes these implemented checks:
 - `datafiles_near_maxsize` — autoextensible datafiles approaching configured `MAXSIZE`.
 - `datafiles_status` — datafiles with anomalous `STATUS` or `ONLINE_STATUS`, such as offline/recover/unavailable states.
 - `tempfiles_status` — verifies tempfiles exist and are in acceptable state.
-- `temp_usage_pct` — temporary tablespace usage percentage using standard tempfile/temp-space-header evidence.
+- `temp_usage_pct` — active temporary tablespace usage percentage using `dba_temp_files` plus `v$tempseg_usage`; fallback evidence from `v$temp_space_header` is marked clearly and skipped for thresholding to avoid false positives.
 - `undo_tablespace_status` — validates current UNDO tablespace metadata, retention, status, and size/usage evidence when available.
 - `fra_configured` — reports whether FRA is configured; missing FRA is `SKIPPED` by default unless a standard changes the policy.
 - `fra_usage` — FRA used and reclaimable percentages, with clear `SKIPPED` behavior when FRA is not configured.

@@ -1,29 +1,30 @@
 check_id: temp_usage_pct
 group_id: storage
-title: Temporary tablespace usage percentage
+title: Temporary tablespace active usage percentage
 severity: FAIL
 collector:
   type: oracle_storage
-  source_view: dba_temp_files+v$temp_space_header
+  source_view: dba_temp_files+v$tempseg_usage
 evaluator:
   type: storage
   warning_policy: temp_usage_pct_warning
   fail_policy: temp_usage_pct_fail
   warning: 80
   fail: 95
+  fallback_status: SKIPPED
 applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
 remediation:
-  summary: El uso de tablespaces temporales es alto y puede afectar consultas, ordenamientos, hash joins o procesos paralelos.
+  summary: El uso activo de TEMP por segmentos temporales de sesiones es alto y puede afectar consultas, ordenamientos, hash joins o procesos paralelos.
   actions:
-    - Identificar sesiones o SQL que consumen TEMP.
+    - Identificar sesiones o SQL que consumen TEMP actualmente.
     - Revisar operaciones de sort, hash y parallel execution.
     - Agregar tempfile si el consumo es recurrente.
     - Ajustar SQL o PGA si corresponde.
-    - Validar que el aumento de TEMP no oculte un problema de consulta.
+    - Validar que el aumento de TEMP no oculte un problema de consulta y confirmar que el consumo sea activo, no solo extents temporales retenidos.
   owner: DBA
   requires_window: false
   outage_risk: medium

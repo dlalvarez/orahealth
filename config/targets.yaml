@@ -66,6 +66,12 @@ targets:
               used_mb: 128
               free_mb: 896
               used_pct: 12.5
+              active_temp_segments_count: 1
+              active_temp_sessions_count: 1
+              source: dba_temp_files+v$tempseg_usage
+              calculation_method: active_temp_segments
+              note: Uso activo calculado desde segmentos temporales actualmente asignados a sesiones.
+              active_usage_available: true
           undo:
             undo_tablespace: UNDOTBS1
             undo_retention: 900
