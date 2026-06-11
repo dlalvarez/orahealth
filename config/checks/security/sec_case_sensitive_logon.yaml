@@ -1,0 +1,29 @@
+check_id: sec_case_sensitive_logon
+group_id: security
+title: Parámetro sec_case_sensitive_logon habilitado cuando aplica
+severity: WARNING
+collector:
+  type: oracle_parameter
+  parameter: sec_case_sensitive_logon
+evaluator:
+  type: oracle_config
+  expected: "TRUE"
+  failure_status: WARNING
+  missing_status: SKIPPED
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  oracle_versions:
+    max: "11.2"
+  requires:
+    database_connection: true
+remediation:
+  summary: En versiones donde aplica, sec_case_sensitive_logon debe mantener autenticación sensible a mayúsculas y minúsculas.
+  actions:
+    - Confirmar la versión Oracle y si el parámetro aún aplica en el entorno evaluado.
+    - Habilitar autenticación sensible a mayúsculas y minúsculas cuando la versión lo soporte.
+    - Validar clientes heredados antes de cambiar la configuración.
+    - Planificar rotación de contraseñas si existen cuentas con credenciales antiguas.
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, seguridad, parametro]

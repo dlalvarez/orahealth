@@ -1,0 +1,28 @@
+check_id: audit_trail_security
+group_id: security
+title: Configuración de auditoría básica habilitada
+severity: WARNING
+collector:
+  type: oracle_parameter
+  parameter: audit_trail
+evaluator:
+  type: oracle_config
+  expected_policy: expected_audit_trail
+  disallowed_values: [NONE, "FALSE"]
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: La auditoría básica debe estar habilitada para conservar evidencia operativa y de seguridad según la política definida.
+  actions:
+    - Confirmar la política de auditoría aplicable al ambiente y versión Oracle.
+    - Habilitar audit_trail con el valor aprobado si está deshabilitado.
+    - Validar espacio y ubicación de la tabla de auditoría o configuración unificada cuando aplique.
+    - Coordinar reinicio de instancia si el cambio del parámetro lo requiere.
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, seguridad, auditoria]

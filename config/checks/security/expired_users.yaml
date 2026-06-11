@@ -1,0 +1,29 @@
+check_id: expired_users
+group_id: security
+title: Usuarios expirados
+severity: WARNING
+collector:
+  type: oracle_security
+  field: expired_users
+  label: Usuarios expirados detectados
+  source_view: dba_users
+evaluator:
+  type: oracle_security
+  label: Usuarios expirados detectados
+  failure_status: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Existen cuentas expiradas; pueden indicar credenciales no rotadas correctamente o cuentas que requieren regularización.
+  actions:
+    - Confirmar si cada cuenta expirada sigue activa funcionalmente.
+    - Rotar contraseña en cuentas requeridas usando el procedimiento aprobado.
+    - Mantener expiradas o bloquear cuentas no utilizadas.
+    - Actualizar documentación de responsables de cuentas técnicas.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad]

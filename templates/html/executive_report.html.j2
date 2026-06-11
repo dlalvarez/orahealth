@@ -37,24 +37,24 @@
 
   <section class="section">
     <h2>Resumen Ejecutivo</h2>
-    <p class="hint">El puntaje inicia en 100 y disminuye cuando se encuentran WARNING, FAIL, CRITICAL o ERROR. El estado global resalta el mayor riesgo operativo observado.</p>
+    <p class="hint">El puntaje inicia en 100 y disminuye cuando se encuentran Advertencia, Fallo, Crítico o Error. El estado global resalta el mayor riesgo operativo observado.</p>
     <div class="cards">
       <div class="card score-card"><div class="label">Puntaje de Salud</div><div class="value">{{ summary.score }}</div></div>
       <div class="card"><div class="label">Estado Global</div><div class="value" style="font-size:1.2rem">{{ badge(summary.global_status) }}</div></div>
       <div class="card"><div class="label">Total de validaciones</div><div class="value">{{ summary.total_checks }}</div></div>
-      <div class="card"><div class="label">PASS</div><div class="value">{{ summary.PASS }}</div></div>
-      <div class="card"><div class="label">INFO</div><div class="value">{{ summary.INFO }}</div></div>
-      <div class="card"><div class="label">FAIL</div><div class="value">{{ summary.FAIL }}</div></div>
-      <div class="card"><div class="label">CRITICAL</div><div class="value">{{ summary.CRITICAL }}</div></div>
-      <div class="card"><div class="label">WARNING</div><div class="value">{{ summary.WARNING }}</div></div>
-      <div class="card"><div class="label">ERROR</div><div class="value">{{ summary.ERROR }}</div></div>
-      <div class="card"><div class="label">SKIPPED</div><div class="value">{{ summary.SKIPPED }}</div></div>
+      <div class="card"><div class="label">Correcto</div><div class="value">{{ summary.PASS }}</div></div>
+      <div class="card"><div class="label">Informativo</div><div class="value">{{ summary.INFO }}</div></div>
+      <div class="card"><div class="label">Fallo</div><div class="value">{{ summary.FAIL }}</div></div>
+      <div class="card"><div class="label">Crítico</div><div class="value">{{ summary.CRITICAL }}</div></div>
+      <div class="card"><div class="label">Advertencia</div><div class="value">{{ summary.WARNING }}</div></div>
+      <div class="card"><div class="label">Error</div><div class="value">{{ summary.ERROR }}</div></div>
+      <div class="card"><div class="label">Omitido</div><div class="value">{{ summary.SKIPPED }}</div></div>
     </div>
   </section>
 
   <section class="section">
     <h2>Resumen Ejecutivo</h2>
-    {% if findings %}<p>{{ findings|length }} hallazgo(s) prioritario(s) requieren revisión. Los elementos CRITICAL, ERROR, FAIL y WARNING se muestran primero para facilitar la priorización.</p>{% else %}<div class="positive"><strong>Todas las validaciones evaluadas están saludables.</strong> No se detectaron hallazgos ejecutivos críticos para este target.</div>{% endif %}
+    {% if findings %}<p>{{ findings|length }} hallazgo(s) prioritario(s) requieren revisión. Los elementos Crítico, Error, Fallo y Advertencia se muestran primero para facilitar la priorización.</p>{% else %}<div class="positive"><strong>Todas las validaciones evaluadas están saludables.</strong> No se detectaron hallazgos ejecutivos críticos para este target.</div>{% endif %}
   </section>
 
   <section class="section">
@@ -62,7 +62,7 @@
     {% if findings %}
     <div class="table-wrap"><table>
       <thead><tr><th>Estado</th><th>Grupo</th><th>Validación</th><th>Mensaje</th><th>Impacto / Severidad</th><th>Acción recomendada</th></tr></thead>
-      <tbody>{% for result in findings %}<tr><td>{{ badge(result.status.value) }}</td><td>{{ result.group_id | group_label }}<br><small>{{ result.group_id }}</small></td><td><div class="finding-title">{{ result.title | check_title }}</div><small>{{ result.check_id }}</small></td><td>{{ (result.message or result.error or result.skipped_reason) | friendly_message }}</td><td class="severity">{{ result.failure_severity }}</td><td>{{ result.remediation.summary or 'Revisar la evidencia de la validación y confirmar el impacto operativo.' }}</td></tr>{% endfor %}</tbody>
+      <tbody>{% for result in findings %}<tr><td>{{ badge(result.status.value) }}</td><td>{{ result.group_id | group_label }}<br><small>{{ result.group_id }}</small></td><td><div class="finding-title">{{ result.title | check_title }}</div><small>{{ result.check_id }}</small></td><td>{{ (result.message or result.error or result.skipped_reason) | friendly_message }}</td><td class="severity">{{ result.failure_severity | status_label }}</td><td>{{ result.remediation.summary or 'Revisar la evidencia de la validación y confirmar el impacto operativo.' }}</td></tr>{% endfor %}</tbody>
     </table></div>
     {% else %}<div class="positive">No hay hallazgos principales para reportar. El target está en estado saludable según el perfil ejecutado.</div>{% endif %}
   </section>

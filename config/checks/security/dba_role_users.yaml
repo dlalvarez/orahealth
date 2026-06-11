@@ -1,0 +1,29 @@
+check_id: dba_role_users
+group_id: security
+title: Usuarios con rol DBA
+severity: FAIL
+collector:
+  type: oracle_security
+  field: dba_role_users
+  label: Usuarios o roles con rol DBA otorgado
+  source_view: dba_role_privs
+evaluator:
+  type: oracle_security
+  label: Usuarios o roles con rol DBA otorgado
+  failure_status: FAIL
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: El rol DBA otorga privilegios amplios y debe limitarse a cuentas administrativas controladas.
+  actions:
+    - Revisar cada grantee con rol DBA y justificar necesidad.
+    - Revocar el rol DBA en cuentas de aplicación o usuarios no administrativos.
+    - Asignar roles de menor privilegio cuando sea posible.
+    - Auditar accesos administrativos y mantener aprobación formal.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad]

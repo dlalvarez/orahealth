@@ -13,7 +13,7 @@ from orahealthcheck.utils.masking import mask_secrets
 STATUS_ORDER = {"CRITICAL": 0, "ERROR": 1, "FAIL": 2, "WARNING": 3, "INFO": 4, "PASS": 5, "SKIPPED": 6}
 ACTION_STATUSES = {"FAIL", "CRITICAL", "WARNING", "ERROR"}
 ALL_STATUSES = ("PASS", "INFO", "WARNING", "FAIL", "CRITICAL", "ERROR", "SKIPPED")
-OWNER_ORDER = ("DBA", "OS", "Security", "Application", "Other")
+OWNER_ORDER = ("DBA", "OS", "Seguridad", "Aplicación", "Otro")
 
 STATUS_LABELS = {
     "PASS": "Correcto",
@@ -31,7 +31,7 @@ GROUP_LABELS = {
     "schema_objects": "Esquemas y objetos",
     "os": "Sistema operativo",
     "alert_log": "Alert log",
-    "security": "Seguridad",
+    "security": "Seguridad Oracle",
     "performance": "Rendimiento",
     "rac": "RAC",
     "dataguard": "Data Guard",
@@ -239,9 +239,13 @@ class HTMLReporter:
     def _group_corrective_actions(self, findings: list[Result]) -> dict[str, list[Result]]:
         grouped: dict[str, list[Result]] = {owner: [] for owner in OWNER_ORDER}
         for result in findings:
-            owner = str(result.remediation.get("owner") or "Other")
+            owner = str(result.remediation.get("owner") or "Otro")
+            if owner == "Security":
+                owner = "Seguridad"
+            if owner == "Application":
+                owner = "Aplicación"
             if owner not in grouped:
-                owner = "Other"
+                owner = "Otro"
             grouped[owner].append(result)
         return {owner: grouped[owner] for owner in OWNER_ORDER if grouped[owner]}
 
@@ -302,7 +306,7 @@ class HTMLReporter:
                 body.append("<div class='table-wrap'><table><tr><th>Estado</th><th>Grupo</th><th>Validación</th><th>Mensaje</th><th>Severidad</th><th>Acción recomendada</th></tr>")
                 for result in findings:
                     msg = self._friendly_message(result.message or result.error or result.skipped_reason)
-                    body.append(f"<tr><td>{badge(result.status.value)}</td><td>{esc(self._group_label(result.group_id))}<br><small>{esc(result.group_id)}</small></td><td>{esc(self._check_title(result.title))}<br><small>{esc(result.check_id)}</small></td><td>{esc(msg)}</td><td>{esc(result.failure_severity)}</td><td>{esc(result.remediation.get('summary') or 'Revisar evidencia.')}</td></tr>")
+                    body.append(f"<tr><td>{badge(result.status.value)}</td><td>{esc(self._group_label(result.group_id))}<br><small>{esc(result.group_id)}</small></td><td>{esc(self._check_title(result.title))}<br><small>{esc(result.check_id)}</small></td><td>{esc(msg)}</td><td>{esc(self._status_label(result.failure_severity))}</td><td>{esc(result.remediation.get('summary') or 'Revisar evidencia.')}</td></tr>")
                 body.append("</table></div>")
             else:
                 body.append("<div class='positive'>Todas las validaciones evaluadas están saludables. No hay hallazgos principales para reportar.</div>")
@@ -325,9 +329,9 @@ class HTMLReporter:
                 body.append("</table></div>")
             body.append("</section><section><h2>Detalle de validaciones</h2>")
             for group_id, group_results in grouped_results.items():
-                body.append(f"<h3>{esc(self._group_label(group_id))} <small>{esc(group_id)}</small></h3><div class='table-wrap'><table><tr><th>check_id</th><th>Título</th><th>Grupo</th><th>Estado</th><th>failure_severity</th><th>Mensaje</th><th>Evidencia</th><th>skipped_reason</th><th>error</th><th>duration_ms</th></tr>")
+                body.append(f"<h3>{esc(self._group_label(group_id))} <small>{esc(group_id)}</small></h3><div class='table-wrap'><table><tr><th>check_id</th><th>Título</th><th>Grupo</th><th>Estado</th><th>Severidad</th><th>Mensaje</th><th>Evidencia</th><th>skipped_reason</th><th>error</th><th>duration_ms</th></tr>")
                 for result in group_results:
-                    body.append(f"<tr><td>{esc(result.check_id)}</td><td>{esc(self._check_title(result.title))}</td><td>{esc(self._group_label(result.group_id))}</td><td>{badge(result.status.value)}</td><td>{esc(result.failure_severity)}</td><td>{esc(self._friendly_message(result.message))}</td><td><pre>{esc(self._pretty_json(result.evidence))}</pre></td><td>{esc(self._friendly_message(result.skipped_reason))}</td><td>{esc(result.error or '')}</td><td>{esc(result.duration_ms)}</td></tr>")
+                    body.append(f"<tr><td>{esc(result.check_id)}</td><td>{esc(self._check_title(result.title))}</td><td>{esc(self._group_label(result.group_id))}</td><td>{badge(result.status.value)}</td><td>{esc(self._status_label(result.failure_severity))}</td><td>{esc(self._friendly_message(result.message))}</td><td><pre>{esc(self._pretty_json(result.evidence))}</pre></td><td>{esc(self._friendly_message(result.skipped_reason))}</td><td>{esc(result.error or '')}</td><td>{esc(result.duration_ms)}</td></tr>")
                 body.append("</table></div>")
             body.append("</section>")
         else:
@@ -339,7 +343,7 @@ class HTMLReporter:
                 for owner, owner_results in corrective_actions.items():
                     body.append(f"<h3>Responsable: {esc(owner)}</h3>")
                     for result in owner_results:
-                        body.append(f"<article><p>{badge(result.status.value)} <strong>Severidad:</strong> {esc(result.failure_severity)} <strong>Validación afectada:</strong> {esc(result.check_id)} <strong>Requiere ventana:</strong> {esc(result.remediation.get('requires_window', False))} <strong>Riesgo de indisponibilidad:</strong> {esc(result.remediation.get('outage_risk', 'desconocido'))}</p><h4>{esc(self._check_title(result.title))}</h4><p><strong>Resumen del problema:</strong> {esc(result.remediation.get('summary') or result.message or result.error)}</p><strong>Acciones recomendadas:</strong><ul>")
+                        body.append(f"<article><p>{badge(result.status.value)} <strong>Severidad:</strong> {esc(self._status_label(result.failure_severity))} <strong>Validación afectada:</strong> {esc(result.check_id)} <strong>Requiere ventana:</strong> {esc(result.remediation.get('requires_window', False))} <strong>Riesgo de indisponibilidad:</strong> {esc(result.remediation.get('outage_risk', 'desconocido'))}</p><h4>{esc(self._check_title(result.title))}</h4><p><strong>Resumen del problema:</strong> {esc(result.remediation.get('summary') or result.message or result.error)}</p><strong>Acciones recomendadas:</strong><ul>")
                         actions = result.remediation.get("actions") or ["Revisar la evidencia y definir un plan de remediación con el responsable."]
                         for action in actions:
                             body.append(f"<li>{esc(action)}</li>")

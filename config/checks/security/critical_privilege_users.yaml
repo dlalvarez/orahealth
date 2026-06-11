@@ -1,0 +1,29 @@
+check_id: critical_privilege_users
+group_id: security
+title: Usuarios con privilegios críticos
+severity: FAIL
+collector:
+  type: oracle_security
+  field: critical_privilege_users
+  label: Usuarios o roles con privilegios críticos otorgados directamente
+  source_view: dba_sys_privs
+evaluator:
+  type: oracle_security
+  label: Usuarios o roles con privilegios críticos otorgados directamente
+  failure_status: FAIL
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Existen privilegios críticos otorgados directamente; pueden permitir cambios sensibles o acceso amplio a datos.
+  actions:
+    - Revisar cada privilegio crítico y su justificación.
+    - Revocar privilegios innecesarios o reemplazarlos por roles específicos.
+    - Evitar ADMIN OPTION salvo necesidad formal.
+    - Validar aplicaciones dependientes y registrar excepciones aprobadas.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad]

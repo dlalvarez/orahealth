@@ -121,7 +121,8 @@ class CheckRunner:
                   'undo_tablespace',
                   'undo_retention',
                   'db_recovery_file_dest',
-                  'db_recovery_file_dest_size'
+                  'db_recovery_file_dest_size',
+                  'sec_case_sensitive_logon'
                 )
             """)
             if parameter_rows:
@@ -151,10 +152,86 @@ class CheckRunner:
                 where status = 'INVALID'
             """))
             inventory.update(self._discover_storage_inventory(connector, inventory.get("parameters", {})))
+            inventory.update(self._discover_security_inventory(connector))
             return inventory
         finally:
             connector.close()
 
+    def _discover_security_inventory(self, connector: Any) -> dict[str, Any]:
+        security: dict[str, Any] = {}
+        default_accounts = "'ANONYMOUS','APEX_PUBLIC_USER','CTXSYS','DBSNMP','DIP','EXFSYS','FLOWS_FILES','GSMADMIN_INTERNAL','MDSYS','MGMT_VIEW','OLAPSYS','ORDDATA','ORDPLUGINS','ORDSYS','OUTLN','SI_INFORMTN_SCHEMA','WMSYS','XDB'"
+        security["locked_users"] = self._query_rows(connector, "usuarios bloqueados", """
+            select username, account_status, profile, oracle_maintained, common
+            from dba_users
+            where account_status like '%LOCKED%'
+            order by username
+        """)
+        security["expired_users"] = self._query_rows(connector, "usuarios expirados", """
+            select username, account_status, profile, oracle_maintained, common
+            from dba_users
+            where account_status like '%EXPIRED%'
+            order by username
+        """)
+        security["default_open_users"] = self._query_rows(connector, "usuarios default abiertos", f"""
+            select username, account_status, profile, oracle_maintained, common
+            from dba_users
+            where username in ({default_accounts})
+              and account_status = 'OPEN'
+            order by username
+        """)
+        security["default_profile_users"] = self._query_rows(connector, "usuarios con perfil DEFAULT", """
+            select username, account_status, profile, oracle_maintained, common
+            from dba_users
+            where profile = 'DEFAULT'
+              and account_status = 'OPEN'
+            order by username
+        """)
+        security["dba_role_users"] = self._query_rows(connector, "usuarios con rol DBA", """
+            select grantee, granted_role, admin_option, default_role
+            from dba_role_privs
+            where granted_role = 'DBA'
+            order by grantee
+        """)
+        security["critical_privilege_users"] = self._query_rows(connector, "usuarios con privilegios críticos", """
+            select grantee, privilege, admin_option
+            from dba_sys_privs
+            where privilege in (
+              'ALTER SYSTEM','ALTER DATABASE','CREATE ANY DIRECTORY','CREATE ANY LIBRARY',
+              'CREATE ANY PROCEDURE','CREATE ANY TABLE','DROP ANY TABLE','GRANT ANY PRIVILEGE',
+              'GRANT ANY ROLE','SELECT ANY DICTIONARY','SELECT ANY TABLE'
+            )
+            order by grantee, privilege
+        """)
+        security["permissive_failed_login_profiles"] = self._query_rows(connector, "perfiles con failed_login_attempts permisivo", """
+            select profile, resource_name, limit
+            from dba_profiles
+            where resource_name = 'FAILED_LOGIN_ATTEMPTS'
+              and (limit = 'UNLIMITED' or limit = 'DEFAULT' or regexp_like(limit, '^[0-9]+$') and to_number(limit) > 10)
+            order by profile
+        """)
+        security["unlimited_password_life_profiles"] = self._query_rows(connector, "perfiles con password_life_time ilimitado", """
+            select profile, resource_name, limit
+            from dba_profiles
+            where resource_name = 'PASSWORD_LIFE_TIME'
+              and limit in ('UNLIMITED','DEFAULT')
+            order by profile
+        """)
+        security["missing_password_verify_profiles"] = self._query_rows(connector, "perfiles sin password_verify_function", """
+            select profile, resource_name, limit
+            from dba_profiles
+            where resource_name = 'PASSWORD_VERIFY_FUNCTION'
+              and limit in ('NULL','DEFAULT')
+            order by profile
+        """)
+        security["common_accounts_not_locked_or_expired"] = self._query_rows(connector, "cuentas comunes sin bloqueo o expiración", f"""
+            select username, account_status, profile, oracle_maintained, common
+            from dba_users
+            where username in ({default_accounts})
+              and account_status not like '%LOCKED%'
+              and account_status not like '%EXPIRED%'
+            order by username
+        """)
+        return {"security": security}
 
     def _discover_storage_inventory(self, connector: Any, parameters: dict[str, Any]) -> dict[str, Any]:
         storage: dict[str, Any] = {"tablespaces": [], "datafiles": [], "tempfiles": [], "temp_usage": [], "fra": {}, "undo": {}}
@@ -449,7 +526,7 @@ class CheckRunner:
                 status=ResultStatus.ERROR,
                 title=check.title,
                 failure_severity=check.failure_severity,
-                message="Technical execution error",
+                message="Error técnico de ejecución",
                 error=str(exc),
                 duration_ms=duration_ms,
             )
@@ -470,6 +547,8 @@ class CheckRunner:
             return self._build_oracle_config_evidence(check, parameter, actual, "v$parameter", exists=bool(parameter_data))
         if ctype == "oracle_storage":
             return self._build_storage_evidence(check, inventory.database)
+        if ctype == "oracle_security":
+            return self._build_security_evidence(check, inventory.database)
         if ctype == "oracle_metric":
             field = collector["field"]
             return self._build_oracle_config_evidence(
@@ -484,7 +563,7 @@ class CheckRunner:
         if ctype == "os_adapter":
             adapter = LinuxAdapter(LocalConnector()) if inventory.operating_system.get("platform") == "linux" else AIXAdapter(LocalConnector())
             return getattr(adapter, collector["method"])()
-        raise ValueError(f"Unsupported collector type {ctype}")
+        raise ValueError(f"Tipo de colector no soportado: {ctype}")
 
 
     def _build_storage_evidence(self, check: Check, database: dict[str, Any]) -> dict[str, Any]:
@@ -547,6 +626,23 @@ class CheckRunner:
             evidence.update(fra)
             if "used_pct" in fra:
                 evidence["fra_used_pct"] = fra.get("used_pct")
+        return evidence
+
+    def _build_security_evidence(self, check: Check, database: dict[str, Any]) -> dict[str, Any]:
+        security = database.get("security") if isinstance(database.get("security"), dict) else {}
+        field = check.collector.get("field", check.check_id)
+        rows = security.get(field, [])
+        if rows is None:
+            rows = []
+        evidence = {
+            "metric": check.check_id,
+            "label": check.collector.get("label", check.title),
+            "source": check.collector.get("source_view", "inventario de seguridad Oracle"),
+            "affected_count": len(rows) if isinstance(rows, list) else 1,
+            "rows": rows,
+        }
+        if field not in security and check.collector.get("missing_status"):
+            evidence["collection_error"] = f"No se encontró la sección {field} en el inventario de seguridad"
         return evidence
 
     def _build_oracle_config_evidence(

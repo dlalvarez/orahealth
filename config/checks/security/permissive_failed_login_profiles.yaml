@@ -1,0 +1,29 @@
+check_id: permissive_failed_login_profiles
+group_id: security
+title: Perfiles con failed_login_attempts permisivo
+severity: WARNING
+collector:
+  type: oracle_security
+  field: permissive_failed_login_profiles
+  label: Perfiles con demasiados intentos fallidos permitidos
+  source_view: dba_profiles
+evaluator:
+  type: oracle_security
+  label: Perfiles con demasiados intentos fallidos permitidos
+  failure_status: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Uno o más perfiles permiten demasiados intentos fallidos o heredan un valor permisivo.
+  actions:
+    - Definir FAILED_LOGIN_ATTEMPTS con un límite acorde a la política corporativa.
+    - Aplicar cambios primero en ambientes no productivos si hay riesgo operativo.
+    - Coordinar con aplicaciones que puedan generar bloqueos por credenciales obsoletas.
+    - Monitorear cuentas bloqueadas después del cambio.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad]

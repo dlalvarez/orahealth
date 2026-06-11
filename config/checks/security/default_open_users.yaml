@@ -1,0 +1,29 @@
+check_id: default_open_users
+group_id: security
+title: Usuarios default abiertos
+severity: FAIL
+collector:
+  type: oracle_security
+  field: default_open_users
+  label: Cuentas default abiertas
+  source_view: dba_users
+evaluator:
+  type: oracle_security
+  label: Cuentas default abiertas
+  failure_status: FAIL
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Una o más cuentas default de Oracle están abiertas y aumentan la superficie de ataque.
+  actions:
+    - Bloquear y expirar cuentas default no utilizadas.
+    - Validar dependencias de componentes Oracle antes del cambio.
+    - Cambiar contraseñas default si alguna cuenta debe permanecer habilitada temporalmente.
+    - Registrar excepción con vigencia y responsable cuando aplique.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad]

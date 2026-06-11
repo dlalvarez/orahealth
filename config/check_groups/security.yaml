@@ -1,0 +1,17 @@
+group_id: security
+name: Seguridad Oracle
+description: Checks de seguridad Oracle sin AWR, ASH ni Diagnostic Pack.
+checks:
+  - locked_users
+  - expired_users
+  - default_open_users
+  - default_profile_users
+  - dba_role_users
+  - critical_privilege_users
+  - remote_login_passwordfile_security
+  - sec_case_sensitive_logon
+  - audit_trail_security
+  - permissive_failed_login_profiles
+  - unlimited_password_life_profiles
+  - missing_password_verify_profiles
+  - common_accounts_not_locked_or_expired

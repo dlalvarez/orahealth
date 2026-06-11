@@ -1,0 +1,29 @@
+check_id: default_profile_users
+group_id: security
+title: Usuarios con perfil DEFAULT
+severity: WARNING
+collector:
+  type: oracle_security
+  field: default_profile_users
+  label: Usuarios abiertos que usan el perfil DEFAULT
+  source_view: dba_users
+evaluator:
+  type: oracle_security
+  label: Usuarios abiertos que usan el perfil DEFAULT
+  failure_status: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Hay usuarios abiertos usando el perfil DEFAULT; esto puede heredar políticas débiles de contraseña y bloqueo.
+  actions:
+    - Crear perfiles específicos por tipo de cuenta o aplicación.
+    - Asignar perfiles con límites de contraseña, bloqueo y verificación adecuados.
+    - Validar impacto con dueños de aplicación antes de cambiar perfiles.
+    - Monitorear autenticaciones después del ajuste.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad]
