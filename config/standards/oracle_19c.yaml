@@ -29,4 +29,4 @@ policies:
   min_control_files: 2
   min_redo_log_groups: 3
   min_redo_log_members_per_group: 2
-  expected_force_logging: YES
+  expected_force_logging: "YES"
