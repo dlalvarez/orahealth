@@ -1,0 +1,32 @@
+check_id: recyclebin_objects
+group_id: schema_objects
+title: Objetos en papelera de reciclaje de esquemas de aplicación
+description: La papelera de reciclaje permite recuperación lógica, pero puede consumir espacio relevante en tablespaces de aplicación.
+severity: INFO
+collector:
+  type: oracle_schema_objects
+  field: recyclebin_objects
+  label: Objetos en papelera de reciclaje
+  source_view: DBA_RECYCLEBIN + DBA_SEGMENTS
+evaluator:
+  type: schema_objects
+  status_when_found: INFO
+  warning_count: 1000
+  warning_mb: 10240
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: La papelera de reciclaje permite recuperación lógica, pero puede consumir espacio relevante en tablespaces de aplicación.
+  actions:
+    - Revisar cantidad, propietario, tablespace y tamaño aproximado de objetos en la papelera de reciclaje.
+    - Confirmar con dueños de aplicación si aún se requiere capacidad de recuperación lógica.
+    - Planificar PURGE controlado por propietario, objeto o tablespace cuando exista aprobación.
+    - Evitar purgas masivas durante ventanas sensibles si compiten por recursos de diccionario o almacenamiento.
+    - Validar espacio liberado y ausencia de requerimientos de recuperación pendientes.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]

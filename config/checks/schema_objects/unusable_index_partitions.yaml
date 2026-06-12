@@ -1,0 +1,29 @@
+check_id: unusable_index_partitions
+group_id: schema_objects
+title: Particiones o subparticiones de índices no utilizables
+description: Las particiones o subparticiones de índices no utilizables pueden afectar consultas particionadas, cargas y mantenimiento lógico de tablas grandes.
+severity: FAIL
+collector:
+  type: oracle_schema_objects
+  field: unusable_index_partitions
+  label: Particiones de índice en estado UNUSABLE
+  source_view: DBA_IND_PARTITIONS + DBA_IND_SUBPARTITIONS + DBA_INDEXES
+evaluator:
+  type: schema_objects
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Las particiones o subparticiones de índices no utilizables pueden afectar consultas particionadas, cargas y mantenimiento lógico de tablas grandes.
+  actions:
+    - Identificar si el hallazgo corresponde a PARTITION o SUBPARTITION y asociarlo con la tabla base.
+    - Revisar operaciones recientes de partition exchange, direct path load, split, merge o move partition.
+    - Validar espacio, paralelismo y ventana de mantenimiento antes de reconstruir.
+    - Ejecutar ALTER INDEX ... REBUILD PARTITION o ALTER INDEX ... REBUILD SUBPARTITION según corresponda.
+    - Confirmar estado posterior y revisar estadísticas del índice si el mantenimiento las invalidó.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]

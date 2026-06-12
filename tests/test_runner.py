@@ -179,7 +179,7 @@ def test_evidence_json_has_minimum_structure(tmp_path):
     assert set(evidence) == {"summary", "results"}
     assert evidence["summary"]["global_status"]
     assert isinstance(evidence["summary"]["score"], int)
-    assert len(evidence["results"]) == 45
+    assert len(evidence["results"]) == 55
     first_result = evidence["results"][0]
     assert {"check_id", "group_id", "status", "failure_severity", "evidence", "duration_ms"}.issubset(first_result)
     assert isinstance(first_result["duration_ms"], int)
@@ -192,8 +192,8 @@ def test_execution_log_contains_run_metadata(tmp_path):
     assert "Target: example_standalone" in log_text
     assert "Profile: standalone_basic" in log_text
     assert "Enabled groups:" in log_text
-    assert "Loaded checks (45):" in log_text
-    assert "Executed checks (44):" in log_text
+    assert "Loaded checks (55):" in log_text
+    assert "Executed checks (54):" in log_text
     assert "Skipped checks (1):" in log_text
     assert "Status summary:" in log_text
     assert f"Output directory: {output}" in log_text
@@ -733,3 +733,162 @@ def test_critical_privilege_users_fails_for_non_oracle_maintained_user(tmp_path)
     assert results["critical_privilege_users"]["status"] == "FAIL"
     assert results["critical_privilege_users"]["evidence"]["rows"][0]["grantee"] == "PROMETHEUS"
     assert "no esperados con privilegios críticos" in results["critical_privilege_users"]["message"]
+
+
+
+def _run_with_schema_objects(tmp_path, schema_objects):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    config["targets"]["example_standalone"].database["mock_inventory"]["schema_objects"] = schema_objects
+    output = CheckRunner(config).run_target("example_standalone")
+    return {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+
+def test_schema_objects_advanced_checks_pass_with_clean_inventory(tmp_path):
+    results = _run_with_schema_objects(tmp_path, {})
+
+    for check_id in [
+        "invalid_objects_detail",
+        "unusable_indexes",
+        "unusable_index_partitions",
+        "disabled_constraints",
+        "disabled_triggers",
+        "stale_table_statistics",
+        "missing_table_statistics",
+        "locked_table_statistics",
+        "recyclebin_objects",
+        "invalid_synonyms",
+    ]:
+        assert results[check_id]["status"] == "PASS"
+        assert results[check_id]["evidence"]["affected_count"] == 0
+
+
+def test_invalid_objects_detail_detects_application_object_and_excludes_oracle_maintained(tmp_path):
+    results = _run_with_schema_objects(tmp_path, {
+        "invalid_objects_detail": [
+            {"owner": "SYS", "object_name": "DBMS_INTERNAL", "object_type": "PACKAGE", "status": "INVALID", "oracle_maintained": "Y"},
+            {"owner": "APP", "object_name": "PKG_ORDERS", "object_type": "PACKAGE", "status": "INVALID", "created": "2026-01-01", "last_ddl_time": "2026-06-01", "oracle_maintained": "N"},
+        ]
+    })
+
+    result = results["invalid_objects_detail"]
+    assert result["status"] == "FAIL"
+    assert result["evidence"]["affected_count"] == 1
+    assert result["evidence"]["excluded_count"] == 1
+    assert result["evidence"]["rows"][0]["owner"] == "APP"
+    assert result["evidence"]["rows"][0]["object_name"] == "PKG_ORDERS"
+
+
+def test_unusable_indexes_detects_application_index(tmp_path):
+    results = _run_with_schema_objects(tmp_path, {
+        "unusable_indexes": [
+            {"owner": "APP", "index_name": "IX_ORDERS_01", "table_owner": "APP", "table_name": "ORDERS", "status": "UNUSABLE", "partitioned": "NO", "index_type": "NORMAL", "tablespace_name": "USERS", "oracle_maintained": "N"}
+        ]
+    })
+
+    assert results["unusable_indexes"]["status"] == "FAIL"
+    assert results["unusable_indexes"]["evidence"]["rows"][0]["index_name"] == "IX_ORDERS_01"
+
+
+def test_unusable_index_partitions_detects_partition_or_subpartition(tmp_path):
+    results = _run_with_schema_objects(tmp_path, {
+        "unusable_index_partitions": [
+            {"owner": "APP", "index_name": "IX_SALES_P", "partition_name": "P2026", "subpartition_name": None, "table_owner": "APP", "table_name": "SALES", "status": "UNUSABLE", "level": "PARTITION", "oracle_maintained": "N"},
+            {"owner": "APP", "index_name": "IX_SALES_SP", "partition_name": "P2026", "subpartition_name": "SP01", "table_owner": "APP", "table_name": "SALES", "status": "UNUSABLE", "level": "SUBPARTITION", "oracle_maintained": "N"},
+        ]
+    })
+
+    assert results["unusable_index_partitions"]["status"] == "FAIL"
+    assert {row["level"] for row in results["unusable_index_partitions"]["evidence"]["rows"]} == {"PARTITION", "SUBPARTITION"}
+
+
+def test_disabled_constraints_evidence_includes_type_and_table(tmp_path):
+    results = _run_with_schema_objects(tmp_path, {
+        "disabled_constraints": [
+            {"owner": "APP", "constraint_name": "PK_ORDERS", "constraint_type": "P", "table_name": "ORDERS", "status": "DISABLED", "validated": "NOT VALIDATED", "deferrable": "NOT DEFERRABLE", "deferred": "IMMEDIATE", "generated": "USER NAME", "oracle_maintained": "N"}
+        ]
+    })
+
+    result = results["disabled_constraints"]
+    assert result["status"] == "FAIL"
+    assert result["evidence"]["rows"][0]["constraint_type"] == "P"
+    assert result["evidence"]["rows"][0]["table_name"] == "ORDERS"
+
+
+def test_disabled_triggers_detects_application_trigger(tmp_path):
+    results = _run_with_schema_objects(tmp_path, {
+        "disabled_triggers": [
+            {"owner": "APP", "trigger_name": "TRG_AUD_ORDERS", "table_owner": "APP", "table_name": "ORDERS", "trigger_type": "BEFORE EACH ROW", "triggering_event": "INSERT OR UPDATE", "status": "DISABLED", "oracle_maintained": "N"}
+        ]
+    })
+
+    assert results["disabled_triggers"]["status"] == "WARNING"
+    assert results["disabled_triggers"]["evidence"]["rows"][0]["trigger_name"] == "TRG_AUD_ORDERS"
+
+
+def test_stale_and_missing_table_statistics_are_reported(tmp_path):
+    results = _run_with_schema_objects(tmp_path, {
+        "stale_table_statistics": [
+            {"owner": "APP", "table_name": "ORDERS", "object_type": "TABLE", "stale_stats": "YES", "last_analyzed": "2026-01-01", "num_rows": 1000, "oracle_maintained": "N"}
+        ],
+        "missing_table_statistics": [
+            {"owner": "APP", "table_name": "NEW_TABLE", "num_rows": None, "blocks": None, "last_analyzed": None, "stale_stats": None, "oracle_maintained": "N"}
+        ],
+    })
+
+    assert results["stale_table_statistics"]["status"] == "WARNING"
+    assert results["stale_table_statistics"]["evidence"]["rows"][0]["stale_stats"] == "YES"
+    assert results["missing_table_statistics"]["status"] == "WARNING"
+    assert results["missing_table_statistics"]["evidence"]["rows"][0]["last_analyzed"] is None
+
+
+def test_optional_schema_object_checks_are_reported_when_present(tmp_path):
+    results = _run_with_schema_objects(tmp_path, {
+        "locked_table_statistics": [
+            {"owner": "APP", "table_name": "CONFIG", "stattype_locked": "ALL", "last_analyzed": "2026-01-01", "stale_stats": "NO", "oracle_maintained": "N"}
+        ],
+        "recyclebin_objects": [
+            {"owner": "APP", "object_name": "BIN$ABC", "original_name": "OLD_TABLE", "type": "TABLE", "ts_name": "USERS", "can_undrop": "YES", "can_purge": "YES", "space_mb": 12.5, "oracle_maintained": "N"}
+        ],
+        "invalid_synonyms": [
+            {"owner": "APP", "synonym_name": "S_MISSING", "table_owner": "APP", "table_name": "MISSING_TABLE", "db_link": None, "oracle_maintained": "N"}
+        ],
+    })
+
+    assert results["locked_table_statistics"]["status"] == "INFO"
+    assert results["recyclebin_objects"]["status"] == "INFO"
+    assert results["recyclebin_objects"]["evidence"]["total_mb"] == 12.5
+    assert results["invalid_synonyms"]["status"] == "WARNING"
+
+
+def test_schema_objects_queries_do_not_use_licensed_views_or_packs():
+    forbidden = ["DBA_" + "HIST", "V$ACTIVE_SESSION_" + "HISTORY", "DBMS_WORKLOAD_" + "REPOSITORY", "DBA_" + "ADVISOR", "DBA_" + "SQLTUNE"]
+    text = "\n".join(Path(path).read_text(encoding="utf-8") for path in [
+        "src/orahealthcheck/engine/runner.py",
+        *Path("config/checks/schema_objects").glob("*.yaml"),
+    ])
+
+    for token in forbidden:
+        assert token not in text
+
+
+def test_new_schema_objects_visible_text_is_spanish():
+    config = ConfigLoader("config").load_all()
+    for check_id in [
+        "invalid_objects_detail",
+        "unusable_indexes",
+        "unusable_index_partitions",
+        "disabled_constraints",
+        "disabled_triggers",
+        "stale_table_statistics",
+        "missing_table_statistics",
+        "locked_table_statistics",
+        "recyclebin_objects",
+        "invalid_synonyms",
+    ]:
+        check = config["checks"][check_id]
+        assert any(word in check.title.lower() for word in ["objet", "índice", "restric", "disparador", "tabla", "sinónimo", "papelera"])
+        assert check.remediation["summary"]
+        assert len(check.remediation["actions"]) >= 5
+        assert check.remediation["owner"] == "DBA"

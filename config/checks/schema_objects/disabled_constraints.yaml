@@ -1,0 +1,31 @@
+check_id: disabled_constraints
+group_id: schema_objects
+title: Restricciones deshabilitadas en esquemas de aplicación
+description: Las restricciones deshabilitadas reducen la protección de integridad de datos y pueden permitir duplicados, datos huérfanos o reglas de negocio incumplidas.
+severity: WARNING
+collector:
+  type: oracle_schema_objects
+  field: disabled_constraints
+  label: Restricciones deshabilitadas
+  source_view: DBA_CONSTRAINTS + DBA_USERS
+evaluator:
+  type: schema_objects
+  status_when_found: WARNING
+  fail_constraint_types: [P, U]
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Las restricciones deshabilitadas reducen la protección de integridad de datos y pueden permitir duplicados, datos huérfanos o reglas de negocio incumplidas.
+  actions:
+    - Identificar tipo de restricción, tabla afectada y si corresponde a llave primaria, única, foránea o check.
+    - Confirmar si fue deshabilitada por una carga masiva o mantenimiento aprobado.
+    - Revisar datos existentes para detectar duplicados, huérfanos o registros que incumplen reglas.
+    - Rehabilitar con ENABLE VALIDATE o ENABLE NOVALIDATE según el riesgo y la estrategia acordada.
+    - Validar la aplicación después del cambio y documentar cualquier excepción intencional.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]

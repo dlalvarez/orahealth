@@ -1,0 +1,32 @@
+check_id: invalid_objects_detail
+group_id: schema_objects
+title: Detalle de objetos inválidos en esquemas de aplicación
+description: Los objetos inválidos pueden producir errores de ejecución en paquetes, vistas, disparadores, procedimientos o dependencias de aplicación.
+severity: WARNING
+collector:
+  type: oracle_schema_objects
+  field: invalid_objects_detail
+  label: Objetos inválidos no mantenidos por Oracle
+  source_view: DBA_OBJECTS + DBA_USERS
+evaluator:
+  type: schema_objects
+  warning: 1
+  fail: 20
+  critical_object_types: [PACKAGE, PACKAGE BODY, PROCEDURE, FUNCTION, TRIGGER, VIEW, MATERIALIZED VIEW]
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Los objetos inválidos pueden producir errores de ejecución en paquetes, vistas, disparadores, procedimientos o dependencias de aplicación.
+  actions:
+    - Identificar propietario, tipo y nombre de cada objeto inválido y priorizar componentes críticos de aplicación.
+    - Revisar errores de compilación con las vistas de errores correspondientes y validar dependencias, sinónimos, privilegios y cambios recientes.
+    - Recompilar de forma controlada con UTL_RECOMP o con scripts aprobados por el equipo DBA.
+    - Corregir dependencias o privilegios faltantes antes de repetir la recompilación para evitar ciclos de invalidez.
+    - Validar posteriormente que el conteo de objetos inválidos relevantes sea cero y ejecutar pruebas funcionales básicas.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]
