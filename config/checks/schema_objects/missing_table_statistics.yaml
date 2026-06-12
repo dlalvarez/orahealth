@@ -1,0 +1,31 @@
+check_id: missing_table_statistics
+group_id: schema_objects
+title: Tablas sin estadísticas del optimizador
+description: Las tablas sin estadísticas obligan al optimizador a estimar con información incompleta y pueden producir planes inestables.
+severity: WARNING
+collector:
+  type: oracle_schema_objects
+  field: missing_table_statistics
+  label: Tablas sin LAST_ANALYZED
+  source_view: DBA_TAB_STATISTICS + DBA_USERS
+evaluator:
+  type: schema_objects
+  warning: 1
+  fail: 100
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Las tablas sin estadísticas obligan al optimizador a estimar con información incompleta y pueden producir planes inestables.
+  actions:
+    - Identificar tablas sin LAST_ANALYZED y descartar objetos temporales o recién creados que aún no entran al mantenimiento regular.
+    - Definir prioridad según criticidad, volumen y frecuencia de uso.
+    - Recolectar estadísticas de forma controlada con DBMS_STATS.GATHER_TABLE_STATS o jobs corporativos.
+    - Revisar preferencias de DBMS_STATS, particionamiento e histograms antes de recolectar masivamente.
+    - Validar que LAST_ANALYZED quede poblado y que consultas críticas mantengan tiempos aceptables.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]

@@ -1,0 +1,30 @@
+check_id: invalid_synonyms
+group_id: schema_objects
+title: Sinónimos locales con destino inexistente
+description: Los sinónimos locales apuntando a objetos inexistentes pueden causar errores de resolución en consultas, paquetes o despliegues incompletos.
+severity: WARNING
+collector:
+  type: oracle_schema_objects
+  field: invalid_synonyms
+  label: Sinónimos locales rotos
+  source_view: DBA_SYNONYMS + DBA_OBJECTS + DBA_USERS
+evaluator:
+  type: schema_objects
+  status_when_found: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Los sinónimos locales apuntando a objetos inexistentes pueden causar errores de resolución en consultas, paquetes o despliegues incompletos.
+  actions:
+    - Identificar sinónimo, propietario y objeto destino esperado.
+    - Validar si el objeto destino fue eliminado, renombrado o no se desplegó correctamente.
+    - Revisar privilegios y dependencias asociadas antes de recrear el sinónimo.
+    - Recrear, corregir o eliminar el sinónimo según la decisión funcional.
+    - Validar compilación y ejecución de objetos que dependen del sinónimo corregido.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]

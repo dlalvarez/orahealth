@@ -1,0 +1,29 @@
+check_id: unusable_indexes
+group_id: schema_objects
+title: Índices no utilizables en esquemas de aplicación
+description: Un índice no utilizable puede degradar consultas, impedir operaciones DML si soporta restricciones o causar errores en procesos críticos.
+severity: FAIL
+collector:
+  type: oracle_schema_objects
+  field: unusable_indexes
+  label: Índices en estado UNUSABLE
+  source_view: DBA_INDEXES + DBA_USERS
+evaluator:
+  type: schema_objects
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Un índice no utilizable puede degradar consultas, impedir operaciones DML si soporta restricciones o causar errores en procesos críticos.
+  actions:
+    - Identificar índice, propietario, tabla asociada, tipo de índice y si está particionado.
+    - Confirmar si el estado fue causado por carga directa, mantenimiento, movimiento de tabla o exchange partition.
+    - Validar espacio disponible, concurrencia, bloqueos e impacto sobre planes de ejecución sensibles.
+    - Reconstruir el índice con ALTER INDEX ... REBUILD en una ventana adecuada cuando aplique.
+    - Verificar que el índice quede VALID y monitorear los procesos de aplicación afectados.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]

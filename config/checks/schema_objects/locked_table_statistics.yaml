@@ -1,0 +1,31 @@
+check_id: locked_table_statistics
+group_id: schema_objects
+title: Tablas con estadísticas bloqueadas
+description: Las estadísticas bloqueadas pueden ser intencionales, pero impiden que la recolección automática refleje cambios de volumen o distribución.
+severity: INFO
+collector:
+  type: oracle_schema_objects
+  field: locked_table_statistics
+  label: Estadísticas bloqueadas
+  source_view: DBA_TAB_STATISTICS + DBA_USERS
+evaluator:
+  type: schema_objects
+  status_when_found: INFO
+  warning: 50
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Las estadísticas bloqueadas pueden ser intencionales, pero impiden que la recolección automática refleje cambios de volumen o distribución.
+  actions:
+    - Confirmar con DBA y aplicación si el bloqueo de estadísticas fue una decisión documentada.
+    - Revisar si las tablas bloqueadas también presentan STALE_STATS = YES o cambios significativos de volumen.
+    - Desbloquear con DBMS_STATS.UNLOCK_TABLE_STATS únicamente si se aprueba el cambio.
+    - Recolectar estadísticas después del desbloqueo cuando corresponda.
+    - Documentar excepciones permanentes y revisar periódicamente su vigencia.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]

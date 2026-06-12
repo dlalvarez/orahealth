@@ -1,5 +1,15 @@
 group_id: schema_objects
 name: Objetos de esquema
-description: Checks básicos de salud de objetos.
+description: Checks avanzados de salud de esquemas, objetos, índices, restricciones, disparadores y estadísticas.
 checks:
   - invalid_objects
+  - invalid_objects_detail
+  - unusable_indexes
+  - unusable_index_partitions
+  - disabled_constraints
+  - disabled_triggers
+  - stale_table_statistics
+  - missing_table_statistics
+  - locked_table_statistics
+  - recyclebin_objects
+  - invalid_synonyms

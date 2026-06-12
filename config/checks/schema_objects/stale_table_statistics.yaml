@@ -1,0 +1,30 @@
+check_id: stale_table_statistics
+group_id: schema_objects
+title: Tablas con estadísticas desactualizadas
+description: Las estadísticas desactualizadas pueden causar estimaciones incorrectas del optimizador y planes de ejecución ineficientes.
+severity: WARNING
+collector:
+  type: oracle_schema_objects
+  field: stale_table_statistics
+  label: Estadísticas de tabla stale
+  source_view: DBA_TAB_STATISTICS + DBA_USERS
+evaluator:
+  type: schema_objects
+  status_when_found: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Las estadísticas desactualizadas pueden causar estimaciones incorrectas del optimizador y planes de ejecución ineficientes.
+  actions:
+    - Identificar tablas con STALE_STATS = YES y priorizar objetos de alto volumen o uso transaccional.
+    - Validar ventanas de mantenimiento, preferencias de DBMS_STATS e histograms requeridos por la aplicación.
+    - Recolectar estadísticas con DBMS_STATS.GATHER_TABLE_STATS o mediante jobs aprobados.
+    - Evitar recolecciones indiscriminadas durante horas pico para reducir impacto en I/O y CPU.
+    - Comparar planes o tiempos de consultas críticas después de actualizar estadísticas.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]
