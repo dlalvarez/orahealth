@@ -604,3 +604,132 @@ def test_expired_common_accounts_are_findings_until_locked(tmp_path):
 
     assert results["common_accounts_not_locked_or_expired"]["status"] == "FAIL"
     assert "Cuentas comunes/default que no están bloqueadas" in results["common_accounts_not_locked_or_expired"]["message"]
+
+
+def test_dba_role_users_does_not_fail_for_sys_and_system_only(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["dba_role_users"] = [
+        {"grantee": "SYS", "granted_role": "DBA", "grantee_type": "USER", "oracle_maintained": "Y"},
+        {"grantee": "SYSTEM", "granted_role": "DBA", "grantee_type": "USER", "oracle_maintained": "Y"},
+    ]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["dba_role_users"]["status"] == "PASS"
+    assert results["dba_role_users"]["evidence"]["affected_count"] == 0
+    assert results["dba_role_users"]["evidence"]["excluded_count"] == 2
+
+
+def test_dba_role_users_fails_for_application_user_with_dba(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["dba_role_users"] = [
+        {"grantee": "APP_ADMIN", "granted_role": "DBA", "grantee_type": "USER", "oracle_maintained": "N", "account_status": "OPEN"},
+    ]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["dba_role_users"]["status"] == "FAIL"
+    assert results["dba_role_users"]["evidence"]["rows"][0]["grantee"] == "APP_ADMIN"
+    assert "no esperados con rol DBA" in results["dba_role_users"]["message"]
+
+
+def test_critical_privilege_users_does_not_penalize_oracle_maintained_users(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["critical_privilege_users"] = [
+        {
+            "grantee": "GGSYS",
+            "privilege": "SELECT ANY DICTIONARY",
+            "admin_option": "NO",
+            "grantee_type": "USER",
+            "account_status": "LOCKED",
+            "oracle_maintained": "Y",
+            "role_oracle_maintained": None,
+            "common": "NO",
+            "profile": "DEFAULT",
+        },
+        {
+            "grantee": "AUDSYS",
+            "privilege": "ALTER SYSTEM",
+            "admin_option": "NO",
+            "grantee_type": "USER",
+            "account_status": "LOCKED",
+            "oracle_maintained": "Y",
+            "role_oracle_maintained": None,
+            "common": "NO",
+            "profile": "DEFAULT",
+        },
+    ]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["critical_privilege_users"]["status"] == "PASS"
+    assert results["critical_privilege_users"]["evidence"]["affected_count"] == 0
+    assert results["critical_privilege_users"]["evidence"]["excluded_count"] == 2
+    assert "allowlist" not in results["critical_privilege_users"]["evidence"]["classification_note"].lower()
+
+
+def test_critical_privilege_users_does_not_penalize_oracle_maintained_roles(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["critical_privilege_users"] = [
+        {
+            "grantee": "DV_REALM_OWNER",
+            "privilege": "ALTER SYSTEM",
+            "admin_option": "NO",
+            "grantee_type": "ROLE",
+            "account_status": None,
+            "oracle_maintained": None,
+            "role_oracle_maintained": "Y",
+            "common": None,
+            "profile": None,
+        },
+        {
+            "grantee": "EM_EXPRESS_ALL",
+            "privilege": "SELECT ANY DICTIONARY",
+            "admin_option": "NO",
+            "grantee_type": "ROLE",
+            "account_status": None,
+            "oracle_maintained": None,
+            "role_oracle_maintained": "Y",
+            "common": None,
+            "profile": None,
+        },
+    ]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["critical_privilege_users"]["status"] == "PASS"
+    assert results["critical_privilege_users"]["evidence"]["affected_count"] == 0
+    assert results["critical_privilege_users"]["evidence"]["excluded_count"] == 2
+
+
+def test_critical_privilege_users_fails_for_non_oracle_maintained_user(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["critical_privilege_users"] = [
+        {"grantee": "PROMETHEUS", "privilege": "SELECT ANY DICTIONARY", "admin_option": "NO", "grantee_type": "USER", "account_status": "OPEN", "oracle_maintained": "N", "role_oracle_maintained": None, "common": "NO", "profile": "DEFAULT"},
+    ]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["critical_privilege_users"]["status"] == "FAIL"
+    assert results["critical_privilege_users"]["evidence"]["rows"][0]["grantee"] == "PROMETHEUS"
+    assert "no esperados con privilegios críticos" in results["critical_privilege_users"]["message"]
