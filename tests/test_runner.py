@@ -129,7 +129,7 @@ def test_technical_report_keeps_skipped_reason_and_error_without_remediation(tmp
     skipped_output = CheckRunner(skipped_config).run_target("example_standalone")
     skipped_html = (skipped_output / "technical_report.html").read_text(encoding="utf-8")
 
-    assert "Architecture unsupported is not applicable" in skipped_html
+    assert "La arquitectura unsupported no aplica" in skipped_html
     assert "<th>Remediación</th>" not in skipped_html
     assert "La instancia de base de datos no reporta un estado operativo esperado" not in skipped_html
 
@@ -141,7 +141,7 @@ def test_technical_report_keeps_skipped_reason_and_error_without_remediation(tmp
     error_output = CheckRunner(error_config).run_target("example_standalone")
     error_html = (error_output / "technical_report.html").read_text(encoding="utf-8")
 
-    assert "Unsupported collector type unsupported" in error_html
+    assert "Tipo de colector no soportado: unsupported" in error_html
     assert "<th>Remediación</th>" not in error_html
     assert "Un valor bajo de open_cursors puede provocar errores ORA-01000" not in error_html
 
@@ -179,7 +179,7 @@ def test_evidence_json_has_minimum_structure(tmp_path):
     assert set(evidence) == {"summary", "results"}
     assert evidence["summary"]["global_status"]
     assert isinstance(evidence["summary"]["score"], int)
-    assert len(evidence["results"]) == 32
+    assert len(evidence["results"]) == 45
     first_result = evidence["results"][0]
     assert {"check_id", "group_id", "status", "failure_severity", "evidence", "duration_ms"}.issubset(first_result)
     assert isinstance(first_result["duration_ms"], int)
@@ -192,9 +192,9 @@ def test_execution_log_contains_run_metadata(tmp_path):
     assert "Target: example_standalone" in log_text
     assert "Profile: standalone_basic" in log_text
     assert "Enabled groups:" in log_text
-    assert "Loaded checks (32):" in log_text
-    assert "Executed checks (32):" in log_text
-    assert "Skipped checks (0):" in log_text
+    assert "Loaded checks (45):" in log_text
+    assert "Executed checks (44):" in log_text
+    assert "Skipped checks (1):" in log_text
     assert "Status summary:" in log_text
     assert f"Output directory: {output}" in log_text
     assert "Total duration_ms:" in log_text
@@ -515,3 +515,92 @@ def test_missing_oracle_configuration_metric_is_controlled_error(tmp_path):
     assert results["open_cursors"]["status"] == "ERROR"
     assert "No se encontró evidencia" in results["open_cursors"]["message"]
     assert results["open_cursors"]["error"] is None
+
+
+def test_security_checks_pass_for_healthy_mock_inventory(tmp_path):
+    output = _run_example(tmp_path)
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    for check_id in [
+        "locked_users",
+        "expired_users",
+        "default_open_users",
+        "default_profile_users",
+        "dba_role_users",
+        "critical_privilege_users",
+        "remote_login_passwordfile_security",
+        "audit_trail_security",
+        "permissive_failed_login_profiles",
+        "unlimited_password_life_profiles",
+        "missing_password_verify_profiles",
+        "common_accounts_not_locked_or_expired",
+    ]:
+        assert results[check_id]["status"] == "PASS"
+    assert results["sec_case_sensitive_logon"]["status"] == "SKIPPED"
+
+
+def test_security_findings_generate_corrective_actions(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["default_open_users"] = [{"username": "SCOTT", "account_status": "OPEN"}]
+    security["dba_role_users"] = [{"grantee": "APP_ADMIN", "granted_role": "DBA"}]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["default_open_users"]["status"] == "FAIL"
+    assert results["dba_role_users"]["status"] == "FAIL"
+    assert "Se detectaron 1 hallazgo" in results["default_open_users"]["message"]
+    corrective_html = (output / "corrective_actions.html").read_text(encoding="utf-8")
+    assert "Cuentas default abiertas" in corrective_html
+    assert "Bloquear y expirar cuentas default no utilizadas" in corrective_html
+
+
+def test_security_account_status_predicates_are_precise():
+    class CaptureConnector:
+        queries = []
+
+        def query(self, sql: str):
+            normalized = " ".join(sql.lower().split())
+            type(self).queries.append(normalized)
+            return []
+
+    CaptureConnector.queries = []
+    CheckRunner({})._discover_security_inventory(CaptureConnector())
+    joined = "\n".join(CaptureConnector.queries)
+    common_query = next(query for query in CaptureConnector.queries if "where username in" in query and "account_status not like '%locked%'" in query)
+
+    assert "where account_status like '%locked%'" in joined
+    assert "where account_status like 'expired%' and account_status not like '%locked%'" in joined
+    assert "account_status not like '%expired%'" not in common_query
+
+
+def test_locked_users_are_informational_inventory(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["locked_users"] = [{"username": "MDSYS", "account_status": "EXPIRED & LOCKED"}]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["locked_users"]["status"] == "INFO"
+    assert results["locked_users"]["failure_severity"] == "INFO"
+    assert "Usuarios bloqueados registrados" in results["locked_users"]["message"]
+
+
+def test_expired_common_accounts_are_findings_until_locked(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["common_accounts_not_locked_or_expired"] = [{"username": "XDB", "account_status": "EXPIRED(GRACE)"}]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["common_accounts_not_locked_or_expired"]["status"] == "FAIL"
+    assert "Cuentas comunes/default que no están bloqueadas" in results["common_accounts_not_locked_or_expired"]["message"]

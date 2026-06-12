@@ -3,6 +3,7 @@ description: Perfil standalone mínimo para validación de arquitectura de Fase 
 enabled_groups:
   - configuration_general
   - storage
+  - security
   - schema_objects
   - os
   - alert_log

@@ -1,0 +1,29 @@
+check_id: locked_users
+group_id: security
+title: Inventario de usuarios bloqueados
+severity: INFO
+collector:
+  type: oracle_security
+  field: locked_users
+  label: Usuarios bloqueados registrados
+  source_view: dba_users
+evaluator:
+  type: oracle_security
+  label: Usuarios bloqueados registrados
+  failure_status: INFO
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Existen cuentas bloqueadas; este inventario permite confirmar cuentas Oracle-maintained, default o no utilizadas que permanecen cerradas según la política.
+  actions:
+    - Validar que las cuentas Oracle-maintained, default o no utilizadas permanezcan bloqueadas.
+    - Investigar bloqueos recientes solo cuando correspondan a cuentas activas de aplicación o usuarios finales.
+    - Mantener bloqueadas las cuentas no utilizadas o default.
+    - Desbloquear únicamente cuentas aprobadas por el dueño funcional y ajustar credenciales si aplica.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad]

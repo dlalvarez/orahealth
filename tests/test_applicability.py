@@ -8,4 +8,4 @@ def test_non_matching_platform_is_skipped():
     check = Check("c1", "g1", "C1", applies_to={"platforms": ["aix"]})
     applies, reason = ApplicabilityEngine().evaluate(check, target, inventory)
     assert applies is False
-    assert "Platform" in reason
+    assert "plataforma" in reason

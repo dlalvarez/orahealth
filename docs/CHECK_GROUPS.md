@@ -769,6 +769,24 @@ Identify security weaknesses, excessive privileges, risky profiles, default user
 - SYS operations audited.
 - Minimum audit policies if defined.
 
+### Implementado en Fase 2C
+
+La fase 2C implementa checks de seguridad Oracle basados en vistas de diccionario y parámetros estándar, sin usar AWR, ASH ni Diagnostic Pack:
+
+- `locked_users` — inventario informativo de usuarios bloqueados desde `DBA_USERS` con `ACCOUNT_STATUS like '%LOCKED%'`.
+- `expired_users` — usuarios expirados desde `DBA_USERS`, excluyendo cuentas bloqueadas.
+- `default_open_users` — cuentas default abiertas.
+- `default_profile_users` — usuarios abiertos con perfil `DEFAULT`.
+- `dba_role_users` — usuarios o roles con rol `DBA` otorgado.
+- `critical_privilege_users` — privilegios críticos otorgados directamente.
+- `remote_login_passwordfile_security` — política de `remote_login_passwordfile`.
+- `sec_case_sensitive_logon` — validación condicionada por versión para `sec_case_sensitive_logon`.
+- `audit_trail_security` — configuración básica de auditoría.
+- `permissive_failed_login_profiles` — perfiles con `FAILED_LOGIN_ATTEMPTS` permisivo.
+- `unlimited_password_life_profiles` — perfiles con `PASSWORD_LIFE_TIME` ilimitado o heredado.
+- `missing_password_verify_profiles` — perfiles sin función efectiva de verificación de contraseña.
+- `common_accounts_not_locked_or_expired` — cuentas comunes/default que deberían estar bloqueadas; una cuenta expirada sin bloqueo sigue siendo hallazgo.
+
 ### Typical collectors
 
 ```text

@@ -134,6 +134,17 @@ targets:
             name: control_files
             value: /u01/control01.ctl, /u02/control02.ctl
             display_value: /u01/control01.ctl, /u02/control02.ctl
+        security:
+          locked_users: []
+          expired_users: []
+          default_open_users: []
+          default_profile_users: []
+          dba_role_users: []
+          critical_privilege_users: []
+          permissive_failed_login_profiles: []
+          unlimited_password_life_profiles: []
+          missing_password_verify_profiles: []
+          common_accounts_not_locked_or_expired: []
         force_logging: "YES"
         control_file_count: 2
         redo_log_group_count: 3
