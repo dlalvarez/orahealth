@@ -21,32 +21,6 @@ from orahealthcheck.utils.time import timestamp
 # Allowlists de seguridad Oracle para reducir falsos positivos de cuentas internas
 # esperadas por diseño. No incluyen usuarios de aplicación ni roles custom.
 ORACLE_DBA_ROLE_ALLOWED_GRANTEES = {"SYS", "SYSTEM"}
-ORACLE_CRITICAL_PRIVILEGE_ALLOWED_USERS = {
-    "SYS",
-    "SYSTEM",
-    "AUDSYS",
-    "DBSNMP",
-    "GSMADMIN_INTERNAL",
-    "SYSBACKUP",
-    "SYSDG",
-    "SYSKM",
-    "SYSRAC",
-    "OUTLN",
-    "XDB",
-    "MDSYS",
-    "CTXSYS",
-    "ORDSYS",
-    "WMSYS",
-}
-ORACLE_CRITICAL_PRIVILEGE_ALLOWED_ROLES = {
-    "DBA",
-    "EXP_FULL_DATABASE",
-    "IMP_FULL_DATABASE",
-    "DATAPUMP_EXP_FULL_DATABASE",
-    "DATAPUMP_IMP_FULL_DATABASE",
-    "EXECUTE_CATALOG_ROLE",
-    "SELECT_CATALOG_ROLE",
-}
 
 
 class CheckRunner:
@@ -218,8 +192,6 @@ class CheckRunner:
             order by username
         """)
         allowed_dba_grantees = self._sql_in_list(ORACLE_DBA_ROLE_ALLOWED_GRANTEES)
-        allowed_critical_users = self._sql_in_list(ORACLE_CRITICAL_PRIVILEGE_ALLOWED_USERS)
-        allowed_critical_roles = self._sql_in_list(ORACLE_CRITICAL_PRIVILEGE_ALLOWED_ROLES)
         security["dba_role_users"] = self._query_rows(connector, "usuarios o roles no esperados con rol DBA", f"""
             select
               rp.grantee,
@@ -256,14 +228,8 @@ class CheckRunner:
               'CREATE ANY PROCEDURE','CREATE ANY TABLE','DROP ANY TABLE','GRANT ANY PRIVILEGE',
               'GRANT ANY ROLE','SELECT ANY DICTIONARY','SELECT ANY TABLE'
             )
-              and not (
-                u.oracle_maintained = 'Y'
-                and sp.grantee in ({allowed_critical_users})
-              )
-              and not (
-                r.oracle_maintained = 'Y'
-                and sp.grantee in ({allowed_critical_roles})
-              )
+              and nvl(u.oracle_maintained, 'N') <> 'Y'
+              and nvl(r.oracle_maintained, 'N') <> 'Y'
             order by sp.grantee, sp.privilege
         """)
         security["permissive_failed_login_profiles"] = self._query_rows(connector, "perfiles con failed_login_attempts permisivo", """
@@ -709,7 +675,7 @@ class CheckRunner:
         if filtered_rows != original_rows and check.check_id in ("dba_role_users", "critical_privilege_users"):
             evidence["inventory_count"] = len(original_rows)
             evidence["excluded_count"] = len(original_rows) - len(filtered_rows)
-            evidence["classification_note"] = "Se excluyeron cuentas o roles internos Oracle esperados por allowlist documentada."
+            evidence["classification_note"] = "Se excluyeron usuarios o roles Oracle-maintained esperados del hallazgo principal."
         if field not in security and check.collector.get("missing_status"):
             evidence["collection_error"] = f"No se encontró la sección {field} en el inventario de seguridad"
         return evidence
@@ -733,11 +699,7 @@ class CheckRunner:
         grantee_type = str(row.get("grantee_type", "")).upper()
         oracle_maintained = str(row.get("oracle_maintained", "")).upper() == "Y"
         role_oracle_maintained = str(row.get("role_oracle_maintained", "")).upper() == "Y"
-        if grantee in ORACLE_CRITICAL_PRIVILEGE_ALLOWED_USERS and (oracle_maintained or grantee_type != "ROLE"):
-            return True
-        if grantee in ORACLE_CRITICAL_PRIVILEGE_ALLOWED_ROLES and (role_oracle_maintained or grantee_type == "ROLE"):
-            return True
-        return False
+        return oracle_maintained or role_oracle_maintained
 
     def _sql_in_list(self, values: set[str]) -> str:
         return ",".join(f"'{value}'" for value in sorted(values))
