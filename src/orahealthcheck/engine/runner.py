@@ -169,7 +169,8 @@ class CheckRunner:
         security["expired_users"] = self._query_rows(connector, "usuarios expirados", """
             select username, account_status, profile, oracle_maintained, common
             from dba_users
-            where account_status like '%EXPIRED%'
+            where account_status like 'EXPIRED%'
+              and account_status not like '%LOCKED%'
             order by username
         """)
         security["default_open_users"] = self._query_rows(connector, "usuarios default abiertos", f"""
@@ -223,12 +224,11 @@ class CheckRunner:
               and limit in ('NULL','DEFAULT')
             order by profile
         """)
-        security["common_accounts_not_locked_or_expired"] = self._query_rows(connector, "cuentas comunes sin bloqueo o expiración", f"""
+        security["common_accounts_not_locked_or_expired"] = self._query_rows(connector, "cuentas comunes no bloqueadas", f"""
             select username, account_status, profile, oracle_maintained, common
             from dba_users
             where username in ({default_accounts})
               and account_status not like '%LOCKED%'
-              and account_status not like '%EXPIRED%'
             order by username
         """)
         return {"security": security}

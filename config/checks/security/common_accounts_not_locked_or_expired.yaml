@@ -1,15 +1,15 @@
 check_id: common_accounts_not_locked_or_expired
 group_id: security
-title: Cuentas comunes Oracle sin bloqueo o expiración
+title: Cuentas comunes Oracle no bloqueadas
 severity: FAIL
 collector:
   type: oracle_security
   field: common_accounts_not_locked_or_expired
-  label: Cuentas comunes/default que no están bloqueadas ni expiradas
+  label: Cuentas comunes/default que no están bloqueadas
   source_view: dba_users
 evaluator:
   type: oracle_security
-  label: Cuentas comunes/default que no están bloqueadas ni expiradas
+  label: Cuentas comunes/default que no están bloqueadas
   failure_status: FAIL
 applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
@@ -17,9 +17,9 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Cuentas comunes/default de Oracle no están bloqueadas ni expiradas; esto incrementa el riesgo de uso indebido.
+  summary: Cuentas comunes/default de Oracle no están bloqueadas; que estén expiradas no es suficiente para considerarlas cerradas de forma segura.
   actions:
-    - Bloquear y expirar cuentas Oracle comunes que no sean requeridas.
+    - Bloquear cuentas Oracle comunes o default que no sean requeridas.
     - Validar componentes instalados que puedan depender de alguna cuenta.
     - Mantener evidencia de cuentas que deban permanecer abiertas por soporte.
     - Revisar periódicamente nuevas cuentas creadas por componentes Oracle.

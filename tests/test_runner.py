@@ -556,3 +556,51 @@ def test_security_findings_generate_corrective_actions(tmp_path):
     corrective_html = (output / "corrective_actions.html").read_text(encoding="utf-8")
     assert "Cuentas default abiertas" in corrective_html
     assert "Bloquear y expirar cuentas default no utilizadas" in corrective_html
+
+
+def test_security_account_status_predicates_are_precise():
+    class CaptureConnector:
+        queries = []
+
+        def query(self, sql: str):
+            normalized = " ".join(sql.lower().split())
+            type(self).queries.append(normalized)
+            return []
+
+    CaptureConnector.queries = []
+    CheckRunner({})._discover_security_inventory(CaptureConnector())
+    joined = "\n".join(CaptureConnector.queries)
+    common_query = next(query for query in CaptureConnector.queries if "where username in" in query and "account_status not like '%locked%'" in query)
+
+    assert "where account_status like '%locked%'" in joined
+    assert "where account_status like 'expired%' and account_status not like '%locked%'" in joined
+    assert "account_status not like '%expired%'" not in common_query
+
+
+def test_locked_users_are_informational_inventory(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["locked_users"] = [{"username": "MDSYS", "account_status": "EXPIRED & LOCKED"}]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["locked_users"]["status"] == "INFO"
+    assert results["locked_users"]["failure_severity"] == "INFO"
+    assert "Usuarios bloqueados registrados" in results["locked_users"]["message"]
+
+
+def test_expired_common_accounts_are_findings_until_locked(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["common_accounts_not_locked_or_expired"] = [{"username": "XDB", "account_status": "EXPIRED(GRACE)"}]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["common_accounts_not_locked_or_expired"]["status"] == "FAIL"
+    assert "Cuentas comunes/default que no están bloqueadas" in results["common_accounts_not_locked_or_expired"]["message"]
