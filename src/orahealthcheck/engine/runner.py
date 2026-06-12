@@ -205,7 +205,7 @@ class CheckRunner:
         """)
         schema_objects["unusable_index_partitions"] = self._query_schema_rows(connector, "particiones de índices no utilizables", """
             select i.owner, i.index_name, p.partition_name, cast(null as varchar2(128)) as subpartition_name,
-                   i.table_owner, i.table_name, p.status, 'PARTITION' as level, u.oracle_maintained
+                   i.table_owner, i.table_name, p.status, 'PARTITION' as "level", u.oracle_maintained
             from dba_ind_partitions p
             join dba_indexes i on i.owner = p.index_owner and i.index_name = p.index_name
             left join dba_users u on u.username = i.owner
@@ -213,28 +213,28 @@ class CheckRunner:
               and nvl(u.oracle_maintained, 'N') = 'N'
             union all
             select i.owner, i.index_name, sp.partition_name, sp.subpartition_name,
-                   i.table_owner, i.table_name, sp.status, 'SUBPARTITION' as level, u.oracle_maintained
+                   i.table_owner, i.table_name, sp.status, 'SUBPARTITION' as "level", u.oracle_maintained
             from dba_ind_subpartitions sp
             join dba_indexes i on i.owner = sp.index_owner and i.index_name = sp.index_name
             left join dba_users u on u.username = i.owner
             where sp.status = 'UNUSABLE'
               and nvl(u.oracle_maintained, 'N') = 'N'
-            order by owner, index_name, level, partition_name, subpartition_name
+            order by owner, index_name, "level", partition_name, subpartition_name
         """, """
             select i.owner, i.index_name, p.partition_name, cast(null as varchar2(128)) as subpartition_name,
-                   i.table_owner, i.table_name, p.status, 'PARTITION' as level, null as oracle_maintained
+                   i.table_owner, i.table_name, p.status, 'PARTITION' as "level", null as oracle_maintained
             from dba_ind_partitions p
             join dba_indexes i on i.owner = p.index_owner and i.index_name = p.index_name
             where p.status = 'UNUSABLE'
               and i.owner not in ({internal_schemas})
             union all
             select i.owner, i.index_name, sp.partition_name, sp.subpartition_name,
-                   i.table_owner, i.table_name, sp.status, 'SUBPARTITION' as level, null as oracle_maintained
+                   i.table_owner, i.table_name, sp.status, 'SUBPARTITION' as "level", null as oracle_maintained
             from dba_ind_subpartitions sp
             join dba_indexes i on i.owner = sp.index_owner and i.index_name = sp.index_name
             where sp.status = 'UNUSABLE'
               and i.owner not in ({internal_schemas})
-            order by owner, index_name, level, partition_name, subpartition_name
+            order by owner, index_name, "level", partition_name, subpartition_name
         """)
         schema_objects["disabled_constraints"] = self._query_schema_rows(connector, "constraints deshabilitadas", """
             select c.owner, c.constraint_name, c.constraint_type, c.table_name, c.status, c.validated,
@@ -274,11 +274,12 @@ class CheckRunner:
               and t.owner not in ({internal_schemas})
             order by t.owner, t.trigger_name
         """)
-        table_stats_where = "and s.object_type = 'TABLE' and nvl(s.global_stats, 'YES') = 'YES' and nvl(s.temporary, 'N') = 'N'"
+        table_stats_where = "and s.object_type = 'TABLE' and nvl(s.global_stats, 'YES') = 'YES' and nvl(t.temporary, 'N') = 'N'"
         schema_objects["stale_table_statistics"] = self._query_schema_rows(connector, "tablas con estadísticas desactualizadas", f"""
             select s.owner, s.table_name, s.object_type, s.stale_stats, s.last_analyzed, s.num_rows,
-                   s.blocks, s.stattype_locked, s.temporary, u.oracle_maintained
+                   s.blocks, s.stattype_locked, t.temporary, u.oracle_maintained
             from dba_tab_statistics s
+            join dba_tables t on t.owner = s.owner and t.table_name = s.table_name
             left join dba_users u on u.username = s.owner
             where s.stale_stats = 'YES'
               {table_stats_where}
@@ -286,8 +287,9 @@ class CheckRunner:
             order by s.owner, s.table_name
         """, f"""
             select s.owner, s.table_name, s.object_type, s.stale_stats, s.last_analyzed, s.num_rows,
-                   s.blocks, s.stattype_locked, s.temporary, null as oracle_maintained
+                   s.blocks, s.stattype_locked, t.temporary, null as oracle_maintained
             from dba_tab_statistics s
+            join dba_tables t on t.owner = s.owner and t.table_name = s.table_name
             where s.stale_stats = 'YES'
               {table_stats_where}
               and s.owner not in ({{internal_schemas}})
@@ -295,8 +297,9 @@ class CheckRunner:
         """)
         schema_objects["missing_table_statistics"] = self._query_schema_rows(connector, "tablas sin estadísticas", f"""
             select s.owner, s.table_name, s.object_type, s.stale_stats, s.last_analyzed, s.num_rows,
-                   s.blocks, s.temporary, u.oracle_maintained
+                   s.blocks, t.temporary, u.oracle_maintained
             from dba_tab_statistics s
+            join dba_tables t on t.owner = s.owner and t.table_name = s.table_name
             left join dba_users u on u.username = s.owner
             where s.last_analyzed is null
               {table_stats_where}
@@ -304,8 +307,9 @@ class CheckRunner:
             order by s.owner, s.table_name
         """, f"""
             select s.owner, s.table_name, s.object_type, s.stale_stats, s.last_analyzed, s.num_rows,
-                   s.blocks, s.temporary, null as oracle_maintained
+                   s.blocks, t.temporary, null as oracle_maintained
             from dba_tab_statistics s
+            join dba_tables t on t.owner = s.owner and t.table_name = s.table_name
             where s.last_analyzed is null
               {table_stats_where}
               and s.owner not in ({{internal_schemas}})
@@ -313,8 +317,9 @@ class CheckRunner:
         """)
         schema_objects["locked_table_statistics"] = self._query_schema_rows(connector, "tablas con estadísticas bloqueadas", f"""
             select s.owner, s.table_name, s.object_type, s.stattype_locked, s.last_analyzed,
-                   s.stale_stats, s.num_rows, s.temporary, u.oracle_maintained
+                   s.stale_stats, s.num_rows, t.temporary, u.oracle_maintained
             from dba_tab_statistics s
+            join dba_tables t on t.owner = s.owner and t.table_name = s.table_name
             left join dba_users u on u.username = s.owner
             where s.stattype_locked is not null
               {table_stats_where}
@@ -322,8 +327,9 @@ class CheckRunner:
             order by s.owner, s.table_name
         """, f"""
             select s.owner, s.table_name, s.object_type, s.stattype_locked, s.last_analyzed,
-                   s.stale_stats, s.num_rows, s.temporary, null as oracle_maintained
+                   s.stale_stats, s.num_rows, t.temporary, null as oracle_maintained
             from dba_tab_statistics s
+            join dba_tables t on t.owner = s.owner and t.table_name = s.table_name
             where s.stattype_locked is not null
               {table_stats_where}
               and s.owner not in ({{internal_schemas}})
@@ -354,27 +360,36 @@ class CheckRunner:
         schema_objects["recyclebin_objects"] = recyclebin_rows
         schema_objects["recyclebin_total_mb"] = round(sum(float(row.get("space_mb") or 0) for row in recyclebin_rows), 2)
         schema_objects["invalid_synonyms"] = self._query_schema_rows(connector, "sinónimos locales con destino inexistente", """
-            select s.owner, s.synonym_name, s.table_owner, s.table_name, s.db_link, u.oracle_maintained
+            select s.owner, s.synonym_name, s.table_owner, s.table_name, s.db_link,
+                   u.oracle_maintained,
+                   tu.oracle_maintained as table_owner_oracle_maintained
             from dba_synonyms s
             left join dba_users u on u.username = s.owner
+            left join dba_users tu on tu.username = s.table_owner
             left join dba_objects o on o.owner = s.table_owner and o.object_name = s.table_name
             where s.db_link is null
               and o.object_name is null
+              and s.owner <> 'PUBLIC'
               and nvl(u.oracle_maintained, 'N') = 'N'
+              and nvl(tu.oracle_maintained, 'N') = 'N'
             order by s.owner, s.synonym_name
         """, """
-            select s.owner, s.synonym_name, s.table_owner, s.table_name, s.db_link, null as oracle_maintained
+            select s.owner, s.synonym_name, s.table_owner, s.table_name, s.db_link,
+                   null as oracle_maintained,
+                   null as table_owner_oracle_maintained
             from dba_synonyms s
             left join dba_objects o on o.owner = s.table_owner and o.object_name = s.table_name
             where s.db_link is null
               and o.object_name is null
+              and s.owner <> 'PUBLIC'
               and s.owner not in ({internal_schemas})
+              and s.table_owner not in ({internal_schemas})
             order by s.owner, s.synonym_name
         """)
         return {"schema_objects": schema_objects}
 
     def _query_schema_rows(self, connector: Any, label: str, sql: str, fallback_sql: str | None = None) -> list[dict[str, Any]]:
-        rows, error = self._query_rows_with_error(connector, label, sql)
+        rows, error = self._query_rows_with_error(connector, label, sql, log_warning=False)
         if error and fallback_sql:
             logging.info("Retrying Oracle schema object query without ORACLE_MAINTAINED for %s", label)
             rows = self._query_rows(connector, f"{label} sin columna oracle_maintained", fallback_sql.format(internal_schemas=self._sql_in_list(ORACLE_INTERNAL_SCHEMAS)))
@@ -664,11 +679,12 @@ class CheckRunner:
         rows, _ = self._query_rows_with_error(connector, label, sql)
         return rows
 
-    def _query_rows_with_error(self, connector: Any, label: str, sql: str) -> tuple[list[dict[str, Any]], str | None]:
+    def _query_rows_with_error(self, connector: Any, label: str, sql: str, log_warning: bool = True) -> tuple[list[dict[str, Any]], str | None]:
         try:
             rows = connector.query(sql)
         except Exception as exc:
-            logging.warning("Oracle inventory query failed for %s: %s", label, exc)
+            if log_warning:
+                logging.warning("Oracle inventory query failed for %s: %s", label, exc)
             return [], str(exc)
         return [
             {key: self._normalize_inventory_value(value) for key, value in dict(row).items()}
@@ -911,7 +927,11 @@ class CheckRunner:
                 continue
             oracle_maintained = str(row.get("oracle_maintained", "")).upper() == "Y"
             owner = str(row.get("owner", row.get("table_owner", ""))).upper()
+            table_owner = str(row.get("table_owner", "")).upper()
+            table_owner_oracle_maintained = str(row.get("table_owner_oracle_maintained", "")).upper() == "Y"
             if not owner or oracle_maintained or owner in ORACLE_INTERNAL_SCHEMAS:
+                continue
+            if row.get("synonym_name") and (owner == "PUBLIC" or table_owner in ORACLE_INTERNAL_SCHEMAS or table_owner_oracle_maintained):
                 continue
             filtered.append(row)
         return filtered

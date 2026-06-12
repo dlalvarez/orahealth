@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 from orahealthcheck.config_loader import ConfigLoader, ConfigValidator
@@ -852,7 +853,8 @@ def test_optional_schema_object_checks_are_reported_when_present(tmp_path):
             {"owner": "APP", "object_name": "BIN$ABC", "original_name": "OLD_TABLE", "type": "TABLE", "ts_name": "USERS", "can_undrop": "YES", "can_purge": "YES", "space_mb": 12.5, "oracle_maintained": "N"}
         ],
         "invalid_synonyms": [
-            {"owner": "APP", "synonym_name": "S_MISSING", "table_owner": "APP", "table_name": "MISSING_TABLE", "db_link": None, "oracle_maintained": "N"}
+            {"owner": "PUBLIC", "synonym_name": "V$XS_SESSION_ROLE", "table_owner": "SYS", "table_name": "V$XS_SESSION_ROLES", "db_link": None, "oracle_maintained": None, "table_owner_oracle_maintained": "Y"},
+            {"owner": "APP", "synonym_name": "S_MISSING", "table_owner": "APP", "table_name": "MISSING_TABLE", "db_link": None, "oracle_maintained": "N", "table_owner_oracle_maintained": "N"},
         ],
     })
 
@@ -860,6 +862,61 @@ def test_optional_schema_object_checks_are_reported_when_present(tmp_path):
     assert results["recyclebin_objects"]["status"] == "INFO"
     assert results["recyclebin_objects"]["evidence"]["total_mb"] == 12.5
     assert results["invalid_synonyms"]["status"] == "WARNING"
+    assert results["invalid_synonyms"]["evidence"]["affected_count"] == 1
+    assert results["invalid_synonyms"]["evidence"]["rows"][0]["synonym_name"] == "S_MISSING"
+
+
+
+def test_schema_object_real_inventory_queries_use_oracle_19c_safe_sql():
+    class CaptureConnector:
+        queries: list[str] = []
+
+        def query(self, sql: str):
+            normalized = " ".join(sql.lower().split())
+            type(self).queries.append(normalized)
+            return []
+
+    CaptureConnector.queries = []
+    CheckRunner({})._discover_schema_objects_inventory(CaptureConnector())
+    joined = "\n".join(CaptureConnector.queries)
+    partition_query = next(query for query in CaptureConnector.queries if "from dba_ind_partitions" in query and "from dba_ind_subpartitions" in query)
+    stats_queries = [query for query in CaptureConnector.queries if "from dba_tab_statistics" in query]
+    synonym_query = next(query for query in CaptureConnector.queries if "from dba_synonyms" in query)
+
+    assert "dba_ind_partitions" in partition_query
+    assert "dba_ind_subpartitions" in partition_query
+    assert 'as "level"' in partition_query
+    assert "'partition'" in partition_query
+    assert "'subpartition'" in partition_query
+    assert "s.temporary" not in joined
+    assert len(stats_queries) == 3
+    for query in stats_queries:
+        assert "join dba_tables t on t.owner = s.owner and t.table_name = s.table_name" in query
+        assert "nvl(t.temporary, 'n') = 'n'" in query
+    assert "s.owner <> 'public'" in synonym_query
+    assert "left join dba_users tu on tu.username = s.table_owner" in synonym_query
+    assert "nvl(tu.oracle_maintained, 'n') = 'n'" in synonym_query
+
+
+
+def test_schema_object_fallback_does_not_log_warning_for_optional_oracle_maintained(caplog):
+    class FallbackConnector:
+        def query(self, sql: str):
+            normalized = " ".join(sql.lower().split())
+            if "u.oracle_maintained" in normalized:
+                raise Exception('ORA-00904: "U"."ORACLE_MAINTAINED": invalid identifier')
+            return [{"owner": "APP", "object_name": "PKG_APP", "oracle_maintained": None}]
+
+    with caplog.at_level(logging.WARNING):
+        rows = CheckRunner({})._query_schema_rows(
+            FallbackConnector(),
+            "objetos inválidos no mantenidos por Oracle",
+            "select o.owner, o.object_name, u.oracle_maintained from dba_objects o left join dba_users u on u.username = o.owner",
+            "select o.owner, o.object_name, null as oracle_maintained from dba_objects o where o.owner not in ({internal_schemas})",
+        )
+
+    assert rows == [{"owner": "APP", "object_name": "PKG_APP", "oracle_maintained": None}]
+    assert "Oracle inventory query failed" not in caplog.text
 
 
 def test_schema_objects_queries_do_not_use_licensed_views_or_packs():
