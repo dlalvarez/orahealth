@@ -1,10 +1,25 @@
 from orahealthcheck.evaluators import EVALUATORS
+from orahealthcheck.evaluators.oracle_resources import OracleResourcesEvaluator
 from orahealthcheck.models import ResultStatus
 
 
 def _eval(metric, evidence, **config):
     payload = {"metric": metric, **evidence}
     return EVALUATORS["oracle_resources"].evaluate(payload, {"type": "oracle_resources", **config})
+
+
+def test_memory_value_parser_handles_oracle_units():
+    evaluator = OracleResourcesEvaluator()
+
+    assert evaluator._memory_value_bytes("0") == 0
+    assert evaluator._memory_value_bytes("2304M") > 0
+    assert evaluator._memory_value_bytes("765M") > 0
+    assert evaluator._memory_value_bytes("2G") > 0
+    assert evaluator._memory_value_bytes("1024K") > 0
+    assert evaluator._memory_value_bytes(" 2 g ") == 2 * 1024 ** 3
+    assert evaluator._memory_value_bytes(123456789) == 123456789
+    assert evaluator._memory_value_bytes(None) is None
+    assert evaluator._memory_value_bytes("") is None
 
 
 def test_processes_usage_pct_pass_warning_fail_and_unlimited():
@@ -64,21 +79,32 @@ def test_transactions_usage_pct_missing_resource_is_info():
 
 
 def test_sga_target_configured_modes():
-    status, _ = _eval("sga_target_configured", {"sga_target": 2147483648, "memory_target": 0, "management_mode": "ASMM"})
+    status, message = _eval("sga_target_configured", {"sga_target": "0", "memory_target": "2G", "management_mode": "AMM"})
     assert status == ResultStatus.PASS
+    assert "AMM" in message
 
-    status, _ = _eval("sga_target_configured", {"sga_target": 0, "memory_target": 2147483648, "management_mode": "AMM"})
+    status, message = _eval("sga_target_configured", {"sga_target": "2304M", "memory_target": "0", "management_mode": "ASMM"})
     assert status == ResultStatus.PASS
+    assert "ASMM" in message
 
-    status, _ = _eval("sga_target_configured", {"sga_target": 0, "memory_target": 0, "management_mode": "MANUAL"}, manual_status="WARNING")
-    assert status == ResultStatus.WARNING
+    status, message = _eval("sga_target_configured", {"sga_target": "0", "memory_target": "0", "management_mode": "MANUAL"}, manual_status="INFO")
+    assert status == ResultStatus.INFO
+    assert "sga_target y memory_target no tienen valor mayor a cero" in message
 
 
 def test_pga_aggregate_target_configured_pass_and_warning():
-    status, _ = _eval("pga_aggregate_target_configured", {"exists": True, "pga_aggregate_target": 536870912})
+    status, _ = _eval("pga_aggregate_target_configured", {"exists": True, "pga_aggregate_target": "765M"})
     assert status == ResultStatus.PASS
 
-    status, _ = _eval("pga_aggregate_target_configured", {"exists": True, "pga_aggregate_target": 0}, zero_status="WARNING")
+    status, _ = _eval("pga_aggregate_target_configured", {"exists": True, "pga_aggregate_target": "0"}, zero_status="WARNING")
+    assert status == ResultStatus.WARNING
+
+
+def test_pga_aggregate_limit_configured_pass_and_warning():
+    status, _ = _eval("pga_aggregate_limit_configured", {"exists": True, "pga_aggregate_limit": "2G"})
+    assert status == ResultStatus.PASS
+
+    status, _ = _eval("pga_aggregate_limit_configured", {"exists": True, "pga_aggregate_limit": "0"}, zero_status="WARNING")
     assert status == ResultStatus.WARNING
 
 
@@ -91,8 +117,11 @@ def test_pga_memory_usage_info_normal_and_overallocation_warning():
 
 
 def test_sga_memory_info_is_informational_with_rows():
-    status, _ = _eval("sga_memory_info", {"rows": [{"name": "Maximum SGA Size", "mb": 1024}], "free_sga_memory_pct": 10})
+    status, _ = _eval("sga_memory_info", {"rows": [{"name": "Maximum SGA Size", "mb": 1024}], "free_sga_memory_pct": 0}, warning_free_pct_min=1)
     assert status == ResultStatus.INFO
+
+    status, _ = _eval("sga_memory_info", {"rows": [{"name": "Maximum SGA Size", "mb": 1024}], "free_sga_memory_pct": 0}, warning_free_pct_min=1, enable_free_pct_warning=True)
+    assert status == ResultStatus.WARNING
 
 
 def test_blocked_sessions_basic_pass_warning_and_fail():

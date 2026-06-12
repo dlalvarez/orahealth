@@ -9,7 +9,6 @@ collector:
   source_view: v$sgainfo
 evaluator:
   type: oracle_resources
-  warning_free_pct_min: 1
 applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]

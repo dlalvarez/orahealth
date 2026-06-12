@@ -11,6 +11,7 @@ from orahealthcheck.connectors import LocalConnector, OracleConnector
 from orahealthcheck.engine.applicability import ApplicabilityEngine
 from orahealthcheck.engine.scoring import summarize
 from orahealthcheck.evaluators import EVALUATORS
+from orahealthcheck.evaluators.oracle_resources import OracleResourcesEvaluator
 from orahealthcheck.models import Check, Inventory, Result, ResultStatus, Target
 from orahealthcheck.os_adapters import AIXAdapter, LinuxAdapter
 from orahealthcheck.reports.html_reporter import HTMLReporter
@@ -676,8 +677,16 @@ class CheckRunner:
 
     def _default_oracle_resources_inventory(self, parameters: dict[str, Any] | None = None, healthy_defaults: bool = False) -> dict[str, Any]:
         parameters = parameters if isinstance(parameters, dict) else {}
-        def parameter(name: str) -> Any:
-            value = self._parameter_value(parameters, name)
+
+        def parameter_data(name: str) -> dict[str, Any]:
+            data = parameters.get(name.lower(), {}) if isinstance(parameters, dict) else {}
+            return data if isinstance(data, dict) else {}
+
+        def parameter_value(name: str) -> Any:
+            data = parameter_data(name)
+            value = data.get("value")
+            if value is None:
+                value = data.get("display_value")
             if value is None and healthy_defaults:
                 defaults = {
                     "sga_target": 2147483648,
@@ -689,6 +698,40 @@ class CheckRunner:
                 }
                 return defaults.get(name)
             return value
+
+        def parameter_display(name: str) -> Any:
+            data = parameter_data(name)
+            display = data.get("display_value")
+            if display is None:
+                display = data.get("value")
+            if display is None:
+                display = parameter_value(name)
+            return display
+
+        def memory_parameter(name: str) -> dict[str, Any]:
+            value = parameter_value(name)
+            display = parameter_display(name)
+            normalized_bytes = self._parse_memory_value_bytes(value)
+            if normalized_bytes is None:
+                normalized_bytes = self._parse_memory_value_bytes(display)
+            return {
+                name: display,
+                f"{name}_value": value,
+                f"{name}_bytes": normalized_bytes,
+                f"{name}_mb": round(normalized_bytes / 1024 / 1024, 2) if normalized_bytes is not None else None,
+            }
+
+        memory_parameters: dict[str, Any] = {}
+        for memory_name in (
+            "sga_target",
+            "sga_max_size",
+            "memory_target",
+            "memory_max_target",
+            "pga_aggregate_target",
+            "pga_aggregate_limit",
+        ):
+            memory_parameters.update(memory_parameter(memory_name))
+
         return {
             "resource_limits": [
                 {"resource_name": "processes", "current_utilization": 50, "max_utilization": 80, "limit_value": 500},
@@ -696,14 +739,7 @@ class CheckRunner:
                 {"resource_name": "transactions", "current_utilization": 10, "max_utilization": 20, "limit_value": 854},
             ] if healthy_defaults else [],
             "memory": {
-                "parameters": {
-                    "sga_target": parameter("sga_target"),
-                    "sga_max_size": parameter("sga_max_size"),
-                    "memory_target": parameter("memory_target"),
-                    "memory_max_target": parameter("memory_max_target"),
-                    "pga_aggregate_target": parameter("pga_aggregate_target"),
-                    "pga_aggregate_limit": parameter("pga_aggregate_limit"),
-                },
+                "parameters": memory_parameters,
                 "pga_stats": [
                     {"name": "aggregate PGA target parameter", "value": 536870912, "unit": "bytes"},
                     {"name": "aggregate PGA auto target", "value": 402653184, "unit": "bytes"},
@@ -1070,21 +1106,45 @@ class CheckRunner:
         memory = resources.get("memory") if isinstance(resources.get("memory"), dict) else {}
         params = memory.get("parameters") if isinstance(memory.get("parameters"), dict) else {}
         if check_id == "sga_target_configured":
-            sga_target = self._safe_float(params.get("sga_target")) or 0
-            memory_target = self._safe_float(params.get("memory_target")) or 0
-            mode = "AMM" if memory_target > 0 else "ASMM" if sga_target > 0 else "MANUAL"
+            sga_target_bytes = self._parse_memory_value_bytes(params.get("sga_target_bytes", params.get("sga_target_value", params.get("sga_target")))) or 0
+            memory_target_bytes = self._parse_memory_value_bytes(params.get("memory_target_bytes", params.get("memory_target_value", params.get("memory_target")))) or 0
+            mode = "AMM" if memory_target_bytes > 0 else "ASMM" if sga_target_bytes > 0 else "MANUAL"
             evidence.update({
                 "source": "v$parameter",
                 "sga_target": params.get("sga_target"),
+                "sga_target_value": params.get("sga_target_value"),
+                "sga_target_bytes": sga_target_bytes,
+                "sga_target_mb": round(sga_target_bytes / 1024 / 1024, 2) if sga_target_bytes is not None else None,
                 "sga_max_size": params.get("sga_max_size"),
+                "sga_max_size_value": params.get("sga_max_size_value"),
+                "sga_max_size_bytes": params.get("sga_max_size_bytes"),
+                "sga_max_size_mb": params.get("sga_max_size_mb"),
                 "memory_target": params.get("memory_target"),
+                "memory_target_value": params.get("memory_target_value"),
+                "memory_target_bytes": memory_target_bytes,
+                "memory_target_mb": round(memory_target_bytes / 1024 / 1024, 2) if memory_target_bytes is not None else None,
                 "memory_max_target": params.get("memory_max_target"),
+                "memory_max_target_value": params.get("memory_max_target_value"),
+                "memory_max_target_bytes": params.get("memory_max_target_bytes"),
+                "memory_max_target_mb": params.get("memory_max_target_mb"),
                 "management_mode": mode,
             })
             return evidence
         if check_id in {"pga_aggregate_target_configured", "pga_aggregate_limit_configured"}:
             parameter = check_id.replace("_configured", "")
-            evidence.update({"source": "v$parameter", "exists": parameter in params and params.get(parameter) is not None, parameter: params.get(parameter), f"{parameter}_display": params.get(parameter)})
+            raw_value = params.get(f"{parameter}_value", params.get(parameter))
+            normalized_bytes = self._parse_memory_value_bytes(params.get(f"{parameter}_bytes", raw_value))
+            if normalized_bytes is None:
+                normalized_bytes = self._parse_memory_value_bytes(params.get(parameter))
+            evidence.update({
+                "source": "v$parameter",
+                "exists": parameter in params and params.get(parameter) is not None,
+                parameter: params.get(parameter),
+                f"{parameter}_display": params.get(parameter),
+                f"{parameter}_value": raw_value,
+                f"{parameter}_bytes": normalized_bytes,
+                f"{parameter}_mb": round(normalized_bytes / 1024 / 1024, 2) if normalized_bytes is not None else None,
+            })
             return evidence
         if check_id == "pga_memory_usage_info":
             stats = memory.get("pga_stats") or []
@@ -1151,6 +1211,11 @@ class CheckRunner:
         evidence.update({"affected_count": len(rows), "rows": rows})
         evidence.update(extra)
         return evidence
+
+
+    def _parse_memory_value_bytes(self, value: Any) -> float | None:
+        parsed = OracleResourcesEvaluator()._memory_value_bytes(value)
+        return parsed if parsed is not None else self._safe_float(value)
 
     def _safe_float(self, value: Any) -> float | None:
         try:

@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from orahealthcheck.models import ResultStatus
@@ -47,19 +48,19 @@ class OracleResourcesEvaluator:
 
     def _sga_target(self, evidence: dict[str, Any], config: dict[str, Any]) -> tuple[ResultStatus, str]:
         mode = str(evidence.get("management_mode") or "MANUAL")
-        sga_target = self._numeric(evidence.get("sga_target")) or 0
-        memory_target = self._numeric(evidence.get("memory_target")) or 0
+        sga_target = self._memory_value_bytes(evidence.get("sga_target_bytes", evidence.get("sga_target"))) or 0
+        memory_target = self._memory_value_bytes(evidence.get("memory_target_bytes", evidence.get("memory_target"))) or 0
         if memory_target > 0:
             return ResultStatus.PASS, "La memoria Oracle se administra mediante AMM con memory_target configurado"
         if sga_target > 0:
             return ResultStatus.PASS, "SGA está configurada mediante ASMM con sga_target mayor a cero"
-        status = self._configured_status(config.get("manual_status", "WARNING"))
-        return status, f"La instancia opera en modo {mode} sin sga_target ni memory_target configurados"
+        status = self._configured_status(config.get("manual_status", "INFO"))
+        return status, f"La instancia opera en modo {mode}; sga_target y memory_target no tienen valor mayor a cero"
 
     def _positive_parameter(self, evidence: dict[str, Any], parameter: str, config: dict[str, Any], auto_info: bool = False) -> tuple[ResultStatus, str]:
         if not evidence.get("exists", False):
             return self._configured_status(config.get("missing_status", "WARNING")), f"No se encontró el parámetro {parameter} en v$parameter"
-        value = self._numeric(evidence.get(parameter))
+        value = self._memory_value_bytes(evidence.get(f"{parameter}_bytes", evidence.get(parameter)))
         if value is not None and value > 0:
             return ResultStatus.PASS, f"El parámetro {parameter} está configurado con valor mayor a cero"
         display = str(evidence.get(f"{parameter}_display", evidence.get(parameter, ""))).lower()
@@ -82,9 +83,9 @@ class OracleResourcesEvaluator:
         if not rows:
             return self._configured_status(config.get("missing_status", "INFO")), "No se encontraron filas de v$sgainfo para reportar SGA"
         free_pct = self._numeric(evidence.get("free_sga_memory_pct"))
-        warning = self._numeric(config.get("warning_free_pct_min"))
+        warning = self._numeric(config.get("warning_free_pct_min")) if config.get("enable_free_pct_warning") is True else None
         if warning is not None and free_pct is not None and free_pct < warning:
-            return ResultStatus.WARNING, f"La memoria libre de SGA {free_pct}% está bajo el umbral {warning}%"
+            return ResultStatus.WARNING, f"La memoria libre de SGA {free_pct}% está bajo el umbral opcional {warning}%"
         return ResultStatus.INFO, "Información de SGA recolectada para análisis de capacidad"
 
     def _blocked_sessions(self, evidence: dict[str, Any], config: dict[str, Any]) -> tuple[ResultStatus, str]:
@@ -134,6 +135,37 @@ class OracleResourcesEvaluator:
         if config.get("warning") is not None and value >= float(config["warning"]):
             return ResultStatus.WARNING, f"{label} {value}% alcanzó el umbral de advertencia {config['warning']}%"
         return ResultStatus.PASS, f"{label} {value}% está dentro del umbral configurado"
+
+
+    def _memory_value_bytes(self, raw_value: Any) -> float | None:
+        if raw_value is None:
+            return None
+        if isinstance(raw_value, (int, float)):
+            return float(raw_value)
+        text = str(raw_value).strip()
+        if not text:
+            return None
+        normalized = text.replace(",", "").replace(" ", "")
+        match = re.fullmatch(r"(?i)([+-]?\d+(?:\.\d+)?)([kmgtp]?b?)?", normalized)
+        if not match:
+            return None
+        value = float(match.group(1))
+        unit = (match.group(2) or "").upper()
+        factors = {
+            "": 1,
+            "B": 1,
+            "K": 1024,
+            "KB": 1024,
+            "M": 1024 ** 2,
+            "MB": 1024 ** 2,
+            "G": 1024 ** 3,
+            "GB": 1024 ** 3,
+            "T": 1024 ** 4,
+            "TB": 1024 ** 4,
+            "P": 1024 ** 5,
+            "PB": 1024 ** 5,
+        }
+        return value * factors.get(unit, 1)
 
     def _numeric(self, raw_value: Any) -> float | None:
         try:
