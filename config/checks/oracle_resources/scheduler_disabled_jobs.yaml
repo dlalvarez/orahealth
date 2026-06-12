@@ -1,0 +1,29 @@
+check_id: scheduler_disabled_jobs
+group_id: oracle_resources
+title: Jobs scheduler deshabilitados
+description: Inventaría jobs DBMS_SCHEDULER deshabilitados en esquemas no mantenidos por Oracle.
+severity: INFO
+collector:
+  type: oracle_resources
+  label: Jobs scheduler deshabilitados
+  source_view: dba_scheduler_jobs
+evaluator:
+  type: oracle_resources
+  status_when_found: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Un job de aplicación deshabilitado puede ser intencional o puede impedir procesos críticos programados.
+  actions:
+    - Validar con el responsable funcional si la deshabilitación fue aprobada.
+    - Revisar dependencias, calendario, último inicio y próxima ejecución esperada.
+    - No habilitar jobs sin autorización porque podrían ejecutar cambios de negocio.
+    - Corregir dependencias o configuración antes de habilitar si aplica.
+    - Confirmar posteriormente que el estado y próxima ejecución sean los esperados.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, recursos]

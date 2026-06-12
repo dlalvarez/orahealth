@@ -1,0 +1,29 @@
+check_id: legacy_dba_jobs_broken
+group_id: oracle_resources
+title: Jobs legacy DBMS_JOB rotos
+description: Detecta jobs legacy de DBMS_JOB marcados como BROKEN en esquemas de aplicación.
+severity: WARNING
+collector:
+  type: oracle_resources
+  label: Jobs legacy DBMS_JOB rotos
+  source_view: dba_jobs
+evaluator:
+  type: oracle_resources
+  status_when_found: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: DBMS_JOB es un mecanismo legacy; jobs rotos pueden dejar procesos sin ejecutar y deben revisarse cuidadosamente.
+  actions:
+    - Revisar schema_user, job, failures, last_date, next_date y código what truncado.
+    - Validar errores del código, objetos dependientes y permisos del esquema.
+    - Evaluar migración a DBMS_SCHEDULER si aplica al estándar de la organización.
+    - No reactivar jobs sin aprobación funcional y validación de impacto.
+    - Confirmar ejecución exitosa posterior o plan de retiro documentado.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, recursos]

@@ -1,0 +1,30 @@
+check_id: pga_aggregate_limit_configured
+group_id: oracle_resources
+title: Configuración de pga_aggregate_limit
+description: Valida que pga_aggregate_limit sea visible y esté configurado o derivado de forma controlada.
+severity: INFO
+collector:
+  type: oracle_resources
+  label: Configuración de pga_aggregate_limit
+  source_view: v$parameter
+evaluator:
+  type: oracle_resources
+  zero_status: WARNING
+  missing_status: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: El límite de PGA ayuda a evitar consumo excesivo de memoria, pero si se alcanza puede terminar sesiones o consultas.
+  actions:
+    - Confirmar si el valor es explícito o derivado automáticamente por Oracle.
+    - Revisar consumo real de PGA, procesos paralelos y errores por límite de memoria.
+    - Ajustar solo después de validar memoria del host y criticidad de cargas concurrentes.
+    - Comunicar el riesgo de cancelación de sesiones si el límite queda demasiado bajo.
+    - Validar posteriormente que no existan terminaciones inesperadas por PGA.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, recursos]

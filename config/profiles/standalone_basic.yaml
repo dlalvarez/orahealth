@@ -7,6 +7,7 @@ enabled_groups:
   - schema_objects
   - os
   - alert_log
+  - oracle_resources
 standards:
   - oracle_19c
   - development

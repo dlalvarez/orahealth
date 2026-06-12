@@ -1,0 +1,31 @@
+check_id: scheduler_failed_jobs_recent
+group_id: oracle_resources
+title: Jobs scheduler fallidos recientes
+description: Detecta ejecuciones fallidas recientes de DBMS_SCHEDULER en esquemas de aplicación.
+severity: WARNING
+collector:
+  type: oracle_resources
+  label: Jobs scheduler fallidos recientes
+  source_view: dba_scheduler_job_run_details+dba_scheduler_jobs
+evaluator:
+  type: oracle_resources
+  lookback_days: 7
+  status_when_found: WARNING
+  fail: 10
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Jobs fallidos pueden dejar procesos críticos sin ejecutar, datos desactualizados o mantenimientos incompletos.
+  actions:
+    - Revisar logs del job, error#, additional_info y objetos dependientes.
+    - Validar credenciales, ventanas de mantenimiento, permisos y disponibilidad de recursos.
+    - Corregir la causa raíz antes de reejecutar el job.
+    - Coordinar con responsables funcionales si el job modifica datos de negocio.
+    - Confirmar ejecución exitosa posterior y ausencia de nuevas fallas.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, recursos]

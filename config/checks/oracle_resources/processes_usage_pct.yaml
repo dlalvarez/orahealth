@@ -1,0 +1,33 @@
+check_id: processes_usage_pct
+group_id: oracle_resources
+title: Uso de procesos contra límite configurado
+description: Valida el uso actual del recurso processes contra el límite configurado en Oracle.
+severity: WARNING
+collector:
+  type: oracle_resources
+  resource_name: processes
+  label: Uso de procesos contra límite configurado
+  source_view: v$resource_limit
+evaluator:
+  type: oracle_resources
+  warning: 70
+  fail: 85
+  critical: 95
+  missing_status: INFO
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Alcanzar el límite de procesos puede rechazar conexiones, generar ORA-00020 y afectar la disponibilidad de la instancia.
+  actions:
+    - Revisar tendencia de conexiones, procesos batch, jobs y pools de aplicación antes de cambiar el parámetro.
+    - Identificar picos por usuario, servicio o programa y corregir fugas de conexión si existen.
+    - Ajustar processes solo cuando la demanda sea válida y exista capacidad de CPU y memoria en el host.
+    - Planificar reinicio cuando el cambio de processes lo requiera y validar que sessions conserve coherencia.
+    - Confirmar posteriormente que CURRENT_UTILIZATION y MAX_UTILIZATION quedan bajo los umbrales aprobados.
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, recursos, limites]
