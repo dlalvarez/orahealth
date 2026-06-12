@@ -1,0 +1,19 @@
+group_id: oracle_resources
+name: Recursos Oracle
+description: Checks de recursos operativos Oracle, memoria, sesiones, procesos, jobs y concurrencia básica.
+checks:
+  - processes_usage_pct
+  - sessions_usage_pct
+  - transactions_usage_pct
+  - sga_target_configured
+  - pga_aggregate_target_configured
+  - pga_aggregate_limit_configured
+  - pga_memory_usage_info
+  - sga_memory_info
+  - blocked_sessions_basic
+  - blocking_sessions_basic
+  - inactive_sessions_high
+  - scheduler_failed_jobs_recent
+  - scheduler_disabled_jobs
+  - scheduler_broken_jobs
+  - legacy_dba_jobs_broken

@@ -1,0 +1,30 @@
+check_id: pga_aggregate_target_configured
+group_id: oracle_resources
+title: Configuración de pga_aggregate_target
+description: Valida que pga_aggregate_target esté definido con valor mayor a cero sin imponer un tamaño fijo.
+severity: WARNING
+collector:
+  type: oracle_resources
+  label: Configuración de pga_aggregate_target
+  source_view: v$parameter
+evaluator:
+  type: oracle_resources
+  zero_status: WARNING
+  missing_status: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: PGA insuficiente o no configurada puede afectar sorts, hash joins, procesos paralelos y consumo de memoria por sesión.
+  actions:
+    - Revisar operaciones que consumen PGA, paralelismo y uso de TEMP asociado.
+    - Validar memoria disponible del host y política de administración de memoria.
+    - Definir un valor alineado al workload y a los estándares internos.
+    - Aplicar cambios con control de cambio y observar consumo posterior por sesión.
+    - Confirmar que no aumenten spills a TEMP ni esperas asociadas.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, recursos]

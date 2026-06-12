@@ -1,0 +1,30 @@
+check_id: blocking_sessions_basic
+group_id: oracle_resources
+title: Sesiones bloqueadoras actuales
+description: Deriva sesiones que bloquean a otras a partir de v$session.
+severity: WARNING
+collector:
+  type: oracle_resources
+  label: Sesiones bloqueadoras actuales
+  source_view: v$session
+evaluator:
+  type: oracle_resources
+  fail_blocked_count: 10
+  fail_seconds_in_wait: 600
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Una sesión bloqueadora puede detener múltiples sesiones de aplicación y generar impacto funcional.
+  actions:
+    - Revisar bloqueador, cantidad de sesiones afectadas y tiempo máximo de espera.
+    - Confirmar si el bloqueo corresponde a una transacción normal, batch o incidente.
+    - Coordinar liberación segura con responsables funcionales antes de matar sesiones.
+    - Corregir lógica transaccional o commits faltantes si la causa es recurrente.
+    - Validar que no queden sesiones bloqueadas y documentar la causa raíz.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, recursos]

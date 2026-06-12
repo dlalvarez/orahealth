@@ -1,0 +1,33 @@
+check_id: sessions_usage_pct
+group_id: oracle_resources
+title: Uso de sesiones contra límite configurado
+description: Valida el uso actual del recurso sessions contra el límite configurado en Oracle.
+severity: WARNING
+collector:
+  type: oracle_resources
+  resource_name: sessions
+  label: Uso de sesiones contra límite configurado
+  source_view: v$resource_limit
+evaluator:
+  type: oracle_resources
+  warning: 70
+  fail: 85
+  critical: 95
+  missing_status: INFO
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Agotar sesiones puede rechazar conexiones, provocar ORA-00018 y degradar la disponibilidad de aplicaciones.
+  actions:
+    - Revisar pools de conexión, sesiones inactivas y crecimiento por usuario, máquina, servicio y programa.
+    - Validar que el límite de sessions sea coherente con processes y con la capacidad del host.
+    - Corregir sesiones huérfanas o fugas de conexión antes de incrementar límites.
+    - Ajustar parámetros solo con control de cambio y pruebas de conexión posteriores.
+    - Monitorear nuevamente el consumo para confirmar reducción del riesgo.
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, recursos, limites]

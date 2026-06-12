@@ -3,6 +3,7 @@ from .expected_value import ExpectedValueEvaluator
 from .not_empty_fail import NotEmptyFailEvaluator
 from .oracle_config import OracleConfigEvaluator
 from .oracle_security import OracleSecurityEvaluator
+from .oracle_resources import OracleResourcesEvaluator
 from .regex import RegexEvaluator
 from .schema_objects import SchemaObjectsEvaluator
 from .row_count_threshold import RowCountThresholdEvaluator
@@ -16,6 +17,7 @@ EVALUATORS = {
     "not_empty_fail": NotEmptyFailEvaluator(),
     "oracle_config": OracleConfigEvaluator(),
     "oracle_security": OracleSecurityEvaluator(),
+    "oracle_resources": OracleResourcesEvaluator(),
     "row_count_threshold": RowCountThresholdEvaluator(),
     "regex": RegexEvaluator(),
     "schema_objects": SchemaObjectsEvaluator(),

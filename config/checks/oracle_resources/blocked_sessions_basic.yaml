@@ -1,0 +1,31 @@
+check_id: blocked_sessions_basic
+group_id: oracle_resources
+title: Sesiones bloqueadas actuales
+description: Detecta sesiones bloqueadas en el momento de la recolección usando v$session.
+severity: WARNING
+collector:
+  type: oracle_resources
+  label: Sesiones bloqueadas actuales
+  source_view: v$session
+evaluator:
+  type: oracle_resources
+  warning_blocked_count: 1
+  fail_blocked_count: 10
+  fail_seconds_in_wait: 600
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Bloqueos prolongados pueden detener procesos de negocio, acumular sesiones y degradar disponibilidad.
+  actions:
+    - Identificar sesión bloqueada, sesión bloqueadora, usuario, programa, módulo y evento de espera.
+    - Validar transacciones activas y operación funcional antes de terminar cualquier sesión.
+    - Coordinar con el equipo de aplicación para liberar o corregir la causa raíz.
+    - Documentar SQL, objeto afectado y responsable funcional cuando aplique.
+    - Confirmar posteriormente que las sesiones bloqueadas desaparezcan y no se repitan.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, recursos]

@@ -1,0 +1,29 @@
+check_id: sga_target_configured
+group_id: oracle_resources
+title: Configuración de SGA
+description: Valida si la instancia usa ASMM, AMM o memoria manual sin imponer un tamaño global.
+severity: WARNING
+collector:
+  type: oracle_resources
+  label: Configuración de SGA
+  source_view: v$parameter
+evaluator:
+  type: oracle_resources
+  manual_status: INFO
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Una configuración de memoria sin sga_target ni memory_target puede indicar administración manual que requiere validación operativa.
+  actions:
+    - Confirmar el estándar de memoria de la organización y si se usa ASMM, AMM o memoria manual.
+    - Revisar workload, memoria física del host y convivencia con otros procesos antes de cambiar valores.
+    - Evaluar sga_target, sga_max_size, memory_target y memory_max_target de forma integral.
+    - Aplicar cambios en ventana cuando el parámetro sea estático o requiera reinicio.
+    - Validar posteriormente arranque, uso de SGA y comportamiento de la aplicación.
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, recursos]

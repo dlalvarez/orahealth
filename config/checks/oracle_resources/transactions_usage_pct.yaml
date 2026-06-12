@@ -1,0 +1,33 @@
+check_id: transactions_usage_pct
+group_id: oracle_resources
+title: Uso de transacciones contra límite configurado
+description: Valida el uso actual del recurso transactions cuando está disponible en v$resource_limit.
+severity: WARNING
+collector:
+  type: oracle_resources
+  resource_name: transactions
+  label: Uso de transacciones contra límite configurado
+  source_view: v$resource_limit
+evaluator:
+  type: oracle_resources
+  warning: 70
+  fail: 85
+  critical: 95
+  missing_status: INFO
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: La presión sobre transacciones puede relacionarse con alta concurrencia, transacciones largas o configuración insuficiente.
+  actions:
+    - Confirmar si el recurso transactions existe y aplica en la versión y configuración de la instancia.
+    - Revisar transacciones largas, sesiones activas y procesos batch concurrentes.
+    - Validar parámetros relacionados y capacidad del host antes de incrementar límites.
+    - Coordinar cambios con el equipo de aplicación para evitar cortes innecesarios.
+    - Recolectar nuevamente el uso luego de las correcciones para confirmar estabilidad.
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, recursos, limites]

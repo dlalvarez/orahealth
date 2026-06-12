@@ -2,6 +2,7 @@ profile_id: standalone_configuration
 description: Perfil standalone ampliado para checks reales de configuración general Oracle.
 enabled_groups:
   - configuration_general
+  - oracle_resources
 standards:
   - oracle_19c
   - development

@@ -1,0 +1,30 @@
+check_id: scheduler_broken_jobs
+group_id: oracle_resources
+title: Jobs scheduler problemáticos
+description: Detecta jobs DBMS_SCHEDULER en estados problemáticos en esquemas de aplicación.
+severity: WARNING
+collector:
+  type: oracle_resources
+  label: Jobs scheduler problemáticos
+  source_view: dba_scheduler_jobs
+evaluator:
+  type: oracle_resources
+  status_when_found: WARNING
+  fail: 10
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Jobs detenidos o con fallas recurrentes pueden interrumpir procesos críticos y mantenimiento operativo.
+  actions:
+    - Revisar estado, failure_count, retry_count, última ejecución y próxima ejecución.
+    - Analizar errores del programa asociado y dependencias de objetos o credenciales.
+    - Corregir el problema antes de forzar una nueva ejecución.
+    - Coordinar con aplicación si el job participa en cadenas o procesos de negocio.
+    - Validar que el estado vuelva a programado o completado según corresponda.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, recursos]
