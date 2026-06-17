@@ -845,3 +845,9 @@ The foundation is done when:
 - At least 10 checks run successfully or skip/error correctly.
 - Tests cover core logic.
 
+
+---
+
+## Nota de alineación posterior a Fase 2M
+
+Después de la Fase 2M se incorporó la Fase 2N como una auditoría documental de alineación entre el roadmap inicial, los grupos definidos originalmente y el estado real implementado. El resultado queda registrado en `docs/IMPLEMENTATION_STATUS.md` y no elimina ni revierte funcionalidades ya implementadas.

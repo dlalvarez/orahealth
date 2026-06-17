@@ -1521,3 +1521,18 @@ Target overrides exceptions only.
 ```
 
 This keeps OraHealthCheck powerful while remaining maintainable.
+
+---
+
+## Nota de evolución controlada de grupos
+
+Además de los grupos requeridos originalmente en este documento, el proyecto acepta y conserva los siguientes grupos adicionales implementados por evolución controlada:
+
+```text
+oracle_resources
+io_redo_archive
+recoverability_drp
+multitenant
+```
+
+Estos grupos no eliminan ni reemplazan la lista original de grupos requeridos. Se conservan porque documentan funcionalidad ya implementada y serán reconciliados documentalmente con el roadmap y las fases futuras según `docs/IMPLEMENTATION_STATUS.md`.

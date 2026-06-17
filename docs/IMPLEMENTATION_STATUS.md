@@ -1,0 +1,156 @@
+# OraHealthCheck - Estado de implementación y alineación del roadmap
+
+## 1. Propósito
+
+Este documento registra el estado real de implementación de OraHealthCheck frente a los documentos rectores iniciales: `docs/ROADMAP.md`, `docs/CHECK_GROUPS.md` y `docs/ARCHITECTURE.md`.
+
+La Fase 2N no agrega checks Oracle nuevos ni rediseña el motor. Su objetivo es dejar una foto oficial del avance actual, identificar funcionalidades completas, parciales, pendientes o adelantadas, y formalizar las desviaciones aceptadas para continuar el roadmap sin romper compatibilidad.
+
+## 2. Regla de conservación
+
+```text
+No se elimina nada de lo ya implementado.
+Las funcionalidades adelantadas o adicionales se conservan.
+Las desviaciones aceptadas se documentan.
+El roadmap se continúa completando sin romper compatibilidad.
+```
+
+Esta regla aplica explícitamente a los grupos `oracle_resources`, `io_redo_archive`, `recoverability_drp`, `multitenant`, al soporte básico de `rac`, a la detección de features, a la visualización de features en reportes, al reporte dedicado de evidencias y a la limpieza de nomenclatura Data Guard ya realizada.
+
+## 3. Estado por fase
+
+| Fase | Nombre | Estado | Implementado | Parcial | Pendiente | Observaciones |
+| --- | --- | --- | --- | --- | --- | --- |
+| Fase 1 | Framework Foundation | PARCIAL | Estructura Python, CLI base, loader/validator, modelos, conectores Oracle/SSH/Local, adaptadores Linux/AIX, engine, aplicabilidad, scoring, reportes HTML/JSON/log, checks iniciales y pruebas. | Faltan o requieren ampliación comandos avanzados y evaluadores base `comparison`/`contains`/`custom`; algunos collectors declarados en arquitectura todavía no existen como módulos separados. | Completar paridad con todos los comandos, collectors y evaluadores definidos originalmente. | La base funcional está operativa y validada, pero no cubre todo el alcance fundacional descrito en arquitectura. |
+| Fase 2 | Configuration, Storage, Schema Objects, Alert Log | PARCIAL | `configuration_general`, `storage`, `schema_objects` y `alert_log` existen; se implementaron checks reales y seguros de licencia para configuración, almacenamiento, objetos, FRA, UNDO, TEMP y alert log básico. | `alert_log` permanece básico; faltan checks intermedios y varios checks detallados de configuración, storage y schema objects. | Completar gaps de alert log, tablespaces/usuarios, fragmentación, objetos sin PK/FK, redundancia de índices y errores específicos. | Se adelantaron `io_redo_archive` y parte de recoverability como apoyo conceptual de storage/redo/DRP. |
+| Fase 3 | Security and Production Readiness | INICIADA | `security` existe con checks de cuentas, perfiles, privilegios y parámetros; algunos temas de readiness aparecen indirectamente en configuración y recoverability. | `production_readiness` no existe como grupo formal; `security` no cubre todo el checklist original. | Crear grupo `production_readiness` y ampliar seguridad. | Seguridad se adelantó antes del cierre formal de Fase 3 y se conserva. |
+| Fase 4 | Performance and Capacity | INICIADA | Existen checks adelantados en `oracle_resources` e `io_redo_archive` sobre sesiones, procesos, PGA/SGA, jobs, I/O básico, redo y archive. | No existen grupos formales `performance` ni `capacity`; no hay reconciliación documental completa con los grupos adelantados. | Crear/reconciliar `performance` y `capacity`, manteniendo enfoque sin AWR por defecto. | No se introdujo histórico interno ni SQLite. |
+| Fase 5 | RAC, ASM, Data Guard | INICIADA | `rac` básico existe con checks de instancias, servicios, threads, undo, interconnect y parámetro cluster_database. | `asm` y `dataguard` reales no existen como grupos; `recoverability_drp` cubre preparación de recuperación, no Data Guard real. | ASM básico feature-aware, Data Guard real feature-aware, DRP profile behavior y RAC avanzado. | El uso de “Data Guard” queda reservado para primary/standby real. |
+| Fase 6 | Patching and Readiness | PENDIENTE | Sin grupo `patching` implementado. | No aplica. | Inventario OPatch/DBA_REGISTRY, PSU/RU y readiness de patching. | Debe implementarse en fase futura sin romper perfiles existentes. |
+| Fase 7 | Report Refinement and User Experience | ADELANTADA | Reportes HTML, evidencia JSON, inventario JSON, corrective actions, visualización de features y reporte dedicado de evidencias ya existen. | Falta refinamiento visual/profesional final y UX avanzada. | Mejoras visuales, navegación, filtros y sample reports. | Lo adelantado se acepta y se conserva. |
+| Fase 8 | Hardening, Testing, and Packaging | PARCIAL | Suite de pruebas automatizadas existente y validaciones CLI operativas. | Falta hardening final, packaging completo, CI/CD, documentación final, sample reports y developer guide. | Cierre de empaquetado, pipeline y documentación de entrega. | La base de pruebas crece por fases y debe mantenerse compatible. |
+
+## 4. Estado por grupo funcional requerido originalmente
+
+| Grupo | Existe | Checks implementados | Estado | Principales checks implementados | Principales checks pendientes |
+| --- | --- | ---: | --- | --- | --- |
+| `configuration_general` | Sí | 17 | PARCIAL | `database_status`, `database_open_mode`, `archivelog_mode`, `compatible`, `optimizer_features_enable`, `db_block_size`, `open_cursors`, `processes`, `sessions`, `audit_trail`, `remote_login_passwordfile`, `recyclebin`, `filesystemio_options`, `control_files_multiplexed`, `redo_log_group_count`, `redo_log_members_multiplexed`, `force_logging`. | Parámetros deprecated/obsolete/hidden, `optimizer_index_caching`, `optimizer_index_cost_adj`, memoria avanzada, `cursor_sharing`, `session_cached_cursors`, `fast_start_mttr_target`, trazas, DB links, `SYS.AUD$`, AWR interval/retention solo con reglas de licencia. |
+| `performance` | No | 0 | PENDIENTE | Algunos síntomas viven adelantados en `oracle_resources` e `io_redo_archive`. | Grupo formal, conexión/uptime, sesiones activas, waits básicos sin AWR, parse ratio, cache/advisory cuando aplique y SQL performance sin vistas licenciadas por defecto. |
+| `alert_log` | Sí | 1 | PARCIAL | `alert_log_ora_errors_basic`. | ORA-00600, ORA-07445, ORA-01555, ORA-01652, ORA-01653, ORA-00257, ORA-04031, ORA-04030, corrupción, archive/redo, ASM y standby real cuando aplique. |
+| `storage` | Sí | 10 | PARCIAL | `tablespace_free_pct`, `tablespace_used_pct`, `datafiles_autoextend_disabled`, `datafiles_near_maxsize`, `datafiles_status`, `tempfiles_status`, `temp_usage_pct`, `undo_tablespace_status`, `fra_configured`, `fra_usage`. | Usuarios con SYSTEM/default/temp inválidos, tablespace fragmentation, objetos sin posibilidad de extender, dictionary-managed tablespaces, segmentos con riesgo, filesystems Oracle. |
+| `schema_objects` | Sí | 11 | PARCIAL | `invalid_objects`, `invalid_objects_detail`, `invalid_synonyms`, `disabled_constraints`, `disabled_triggers`, `missing_table_statistics`, `stale_table_statistics`, `locked_table_statistics`, `unusable_indexes`, `unusable_index_partitions`, `recyclebin_objects`. | Tablas sin PK/UK, índices redundantes, FK sin índice, demasiadas columnas/índices, LONG/LONG RAW, particionamiento, row chaining, jobs avanzados y privilegios/sinónimos adicionales. |
+| `production_readiness` | No | 0 | PENDIENTE | No existe grupo formal. | Readiness productivo: auditoría mínima, backups/readiness, parámetros críticos, servicios, logging, operación segura y criterios por ambiente. |
+| `security` | Sí | 13 | INICIADA | `audit_trail_security`, `remote_login_passwordfile_security`, `sec_case_sensitive_logon`, cuentas default/open/expired/locked, perfiles permisivos, roles DBA y privilegios críticos. | Grants con ADMIN/GRANT OPTION, roles anidados/no asignados, OS-auth users, paquetes SYS a PUBLIC, roles CONNECT/RESOURCE, usuarios SYSDBA/SYSOPER/SYSASM, usuarios con default password. |
+| `rac` | Sí | 7 | INICIADA | `rac_cluster_database_parameter`, `rac_instance_count`, `rac_instances_status`, `rac_interconnect_info`, `rac_services_basic`, `rac_threads_status`, `rac_undo_configuration_basic`. | Consistencia avanzada entre instancias, servicios/policies, interconnect detallado, parámetros inconsistentes, OCR/voting/clusterware cuando se agregue soporte OS/Grid. |
+| `dataguard` | No | 0 | PENDIENTE | No existe grupo real. | Primary/standby real, transport/apply lag, MRP/RFS/FAL, gaps, protección, broker y estado standby. |
+| `asm` | No | 0 | PENDIENTE | No existe grupo formal. | Diskgroups, espacio libre, redundancia, discos offline, rebalance, ASM instance y errores de storage. |
+| `os` | Sí | 3 | PARCIAL | `os_cpu`, `os_memory`, `os_filesystem_usage`. | Ulimits, swap, procesos Oracle, time sync, Oracle Base/Home/diag/audit/archive filesystems y cobertura AIX/Linux más completa. |
+| `capacity` | No | 0 | PENDIENTE | Algunos datos de crecimiento/uso existen en storage y recursos. | Snapshot de capacidad sin histórico interno, tablespaces, FRA, sesiones/procesos, CPU/memoria, proyección externa/documental cuando aplique. |
+| `patching` | No | 0 | PENDIENTE | No existe grupo formal. | OPatch, DBA_REGISTRY, componentes inválidos, RU/PSU, datapatch y readiness. |
+
+## 5. Grupos adicionales aceptados
+
+| Grupo adicional | Motivo de existencia | Relación con roadmap original | Decisión de conservación | Posible mapeo conceptual futuro |
+| --- | --- | --- | --- | --- |
+| `oracle_resources` | Agrupa checks operativos de sesiones, procesos, transacciones, memoria SGA/PGA y jobs. | Se relaciona con performance, capacity y production readiness. | Se conserva; no debe revertirse ni renombrarse sin fase específica. | Reconciliar con `performance` y `capacity` en Fase 4A. |
+| `io_redo_archive` | Agrupa checks de I/O básico, redo, archive, flashback y objetos nologging/unrecoverable. | Se relaciona con storage, performance, recoverability y DRP. | Se conserva como evolución controlada. | Mapear parcialmente a storage/performance/recoverability durante reconciliación futura. |
+| `recoverability_drp` | Agrupa evidencias de backups, recoverability, restore points, controlfile record keep time y archivos que requieren recovery. | Se relaciona con production readiness, DRP y Fase 5. | Se conserva; no representa Data Guard real. | Integrar con `drp_precheck_compare` y readiness de recuperación en fases 5C/3A. |
+| `multitenant` | Agrega soporte básico CDB/PDB feature-aware. | `CHECK_GROUPS.md` no lo listaba como grupo requerido independiente, pero `ARCHITECTURE.md` exige soporte para CDB/PDB. | Se acepta como grupo adicional válido y se conserva. | Mantener como grupo propio o mapear a configuración/capacidad multitenant según evolucione el roadmap. |
+
+## 6. Desviaciones aceptadas frente al roadmap inicial
+
+- Seguridad se implementó antes de la Fase 3 formal mediante el grupo `security` y checks asociados.
+- Recursos Oracle e I/O/redo/archive se implementaron antes de cerrar formalmente performance/capacity mediante `oracle_resources` e `io_redo_archive`.
+- RAC básico se implementó antes de completar ASM y Data Guard.
+- Multitenant se agregó como grupo adicional porque la arquitectura exige soporte CDB/PDB.
+- Reportes de evidencias y visualización de features se adelantaron respecto a la fase de refinamiento de reportes.
+
+Estas desviaciones son aceptadas formalmente y no deben revertirse. La ruta correcta es documentarlas, conservarlas, reconciliarlas con el roadmap y completar los pendientes sin romper compatibilidad.
+
+## 7. Gaps principales detectados
+
+### Fase 1 / Foundation
+
+- `list-targets`, `list-profiles`, `list-groups` y `list-checks` existen en CLI, pero los comandos avanzados definidos por arquitectura todavía pueden requerir ampliación futura.
+- `LocalConnector` existe.
+- `AIXAdapter` existe, pero la cobertura real debe ampliarse con pruebas y métodos completos por plataforma.
+- Evaluadores base presentes: `threshold`, `expected_value`, `empty_result_pass`, `not_empty_fail`, `row_count_threshold`, `regex` y evaluadores especializados. Permanecen pendientes `comparison`, `contains` y `custom` como evaluadores genéricos si se requiere paridad estricta con arquitectura.
+- Algunos collectors descritos en arquitectura, como `plugin_collector`, `manual_info_collector`, `local_command_collector` y `os_adapter_collector`, no aparecen todavía como módulos separados.
+
+### Fase 2
+
+- `configuration_general`: faltan parámetros de memoria, optimizer, trace, DB links, parámetros deprecated/obsolete/hidden, `SYS.AUD$` y políticas avanzadas.
+- `storage`: faltan usuarios con SYSTEM/default/temp inválidos, fragmentación, dictionary-managed tablespaces, objetos sin posibilidad de extender, segmentos con riesgo y filesystems Oracle.
+- `schema_objects`: faltan tablas sin primary key, tablas sin unique key o índice, índices redundantes, foreign keys sin índice, LONG/LONG RAW, row chaining, particionamiento y jobs avanzados.
+- `alert_log`: falta pasar de básico a intermedio con detección específica de ORA-00600, ORA-07445, ORA-01555, ORA-01652, ORA-01653, ORA-00257, ORA-04031, ORA-04030, corrupción, archive, redo, ASM y standby real cuando aplique.
+
+### Fase 3
+
+- Falta el grupo formal `production_readiness`.
+- Falta ampliar `security` con grants, roles, usuarios administrativos, paquetes SYS a PUBLIC, roles heredados y políticas de contraseña completas.
+
+### Fase 4
+
+- Falta el grupo formal `performance`.
+- Falta el grupo formal `capacity`.
+- Falta reconciliar `oracle_resources` e `io_redo_archive` con performance/capacity sin eliminar lo existente.
+
+### Fase 5
+
+- Falta `asm`.
+- Falta `dataguard` real para ambientes primary/standby.
+- Falta `drp_precheck_compare` formal.
+- Falta RAC avanzado.
+
+### Fase 6
+
+- Falta `patching`.
+
+### Fase 7
+
+- Falta refinamiento visual/profesional de reportes.
+
+### Fase 8
+
+- Falta hardening.
+- Falta packaging.
+- Falta CI/CD.
+- Falta documentación final.
+- Faltan sample reports.
+- Falta developer guide.
+
+## 8. Ruta recomendada corregida
+
+```text
+2N - Auditoría de alineación roadmap/grupos/estado real
+2O - Alert log intermedio
+2P - Cierre de gaps storage/schema_objects de Fase 2
+3A - Production readiness básico
+3B - Security ampliado
+4A - Reconciliación performance/capacity con grupos actuales
+4B - Performance básico sin AWR
+4C - Capacity snapshot sin histórico interno
+5A - ASM básico feature-aware
+5B - Data Guard real feature-aware
+5C - DRP profile behavior
+6A - Patching básico
+7A - Report UX final
+8A - Hardening/packaging/CI
+```
+
+Esta ruta no reemplaza el roadmap original. Lo realinea con el estado actual ya implementado, conserva las funcionalidades adelantadas y ordena los pendientes para completar el alcance original sin romper perfiles, reportes, checks ni pruebas existentes.
+
+## 9. Reglas de continuidad
+
+- No eliminar grupos existentes.
+- No eliminar checks existentes.
+- No mover o renombrar grupos sin fase específica y justificación.
+- No romper compatibilidad con perfiles existentes.
+- No modificar `config/targets.yaml` salvo fase específica aprobada.
+- No introducir SQLite ni histórico interno.
+- No usar AWR/ASH/DBA_HIST por defecto.
+- Cualquier check que use AWR/ASH/DBA_HIST en el futuro debe declarar explícitamente requisitos de licenciamiento y quedar `SKIPPED` si no está habilitado.
+- Checks no aplicables deben quedar `SKIPPED`, no `FAIL`.
+- Errores técnicos deben ser `ERROR`, no findings de salud.
+- Todo texto visible debe estar en español.
+- “Data Guard” solo debe usarse para temas reales de standby/primary-standby.
