@@ -10,6 +10,13 @@ def _version(value: str) -> tuple[int, ...] | None:
 
 class ApplicabilityEngine:
     def evaluate(self, check: Check, target: Target, inventory: Inventory) -> tuple[bool, str | None]:
+        feature_applicability = check.applicability or {}
+        required_feature = feature_applicability.get("requires_feature")
+        if required_feature:
+            applies, reason = self._evaluate_required_feature(str(required_feature), inventory)
+            if not applies:
+                return False, reason
+
         applies = check.applies_to or {}
         if applies.get("architectures") and target.expected_architecture not in applies["architectures"]:
             return False, f"La arquitectura {target.expected_architecture} no aplica"
@@ -36,3 +43,18 @@ class ApplicabilityEngine:
             if requires.get(feature) and not inventory.features.get(feature):
                 return False, f"La característica requerida {feature} no está habilitada"
         return True, None
+
+    def _evaluate_required_feature(self, feature_id: str, inventory: Inventory) -> tuple[bool, str | None]:
+        features = inventory.features if isinstance(inventory.features, dict) else {}
+        feature = features.get(feature_id)
+        if not isinstance(feature, dict):
+            return False, f"La característica requerida '{feature_id}' no existe en el inventario de características."
+
+        detected = feature.get("detected")
+        status = feature.get("status")
+        reason = feature.get("reason") or "sin razón informada"
+        if detected is True:
+            return True, None
+        if status == "unknown":
+            return False, f"La característica requerida '{feature_id}' no pudo determinarse: {reason}."
+        return False, f"La característica requerida '{feature_id}' no está detectada: {reason}."

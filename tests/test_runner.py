@@ -4,6 +4,7 @@ from pathlib import Path
 
 from orahealthcheck.config_loader import ConfigLoader, ConfigValidator
 from orahealthcheck.engine import CheckRunner
+from orahealthcheck.models import Check
 
 
 def _run_example(tmp_path):
@@ -25,6 +26,40 @@ def test_runner_generates_required_files(tmp_path):
         "execution.log",
     }
     assert expected.issubset({path.name for path in Path(output).iterdir()})
+
+
+def test_inventory_includes_oracle_features(tmp_path):
+    output = _run_example(tmp_path)
+    inventory = json.loads((output / "inventory.json").read_text(encoding="utf-8"))
+
+    assert set(["oracle_rac", "multitenant", "standby_configuration", "fra_configured", "flashback_database"]).issubset(inventory["features"])
+    assert inventory["features"]["oracle_rac"]["status"] in {"detected", "not_detected", "unknown", "skipped", "error"}
+
+
+def test_runner_skips_check_when_required_feature_is_not_detected(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    profile = config["profiles"][config["targets"]["example_standalone"].profile]
+    first_group_id = profile.enabled_groups[0]
+    config["groups"][first_group_id].checks.insert(0, "applicability_requires_rac")
+    config["checks"]["applicability_requires_rac"] = Check(
+        check_id="applicability_requires_rac",
+        group_id=first_group_id,
+        title="Validación ficticia con aplicabilidad RAC",
+        collector={"type": "inventory", "source": "database", "field": "status"},
+        evaluator={"type": "expected_value", "expected": "OPEN"},
+        applicability={"requires_feature": "oracle_rac"},
+    )
+
+    output = CheckRunner(config).run_target("example_standalone")
+    evidence = json.loads((output / "evidence.json").read_text(encoding="utf-8"))
+    result = next(item for item in evidence["results"] if item["check_id"] == "applicability_requires_rac")
+
+    assert result["status"] == "SKIPPED"
+    assert "no está detectada" in result["skipped_reason"]
+    assert result["evidence"]["required_feature"] == "oracle_rac"
+    assert evidence["summary"]["score"] == 100
 
 
 def test_executive_report_contains_dashboard_sections(tmp_path):
