@@ -1,0 +1,30 @@
+check_id: recoverability_backup_metadata_recent
+group_id: recoverability_drp
+title: Metadatos locales de respaldos recientes
+description: Revisa respaldos recientes visibles en los metadatos locales consultados.
+severity: WARNING
+collector:
+  type: recoverability_drp
+  label: Metadatos locales de respaldos recientes
+  source_view: v$rman_backup_job_details
+evaluator:
+  type: recoverability_drp
+  recent_backup_days: 7
+  missing_status: WARNING
+
+applies_to:
+  architectures: [standalone, rac]
+  open_modes: [READ WRITE]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la evidencia de recuperabilidad y preparación DRP para confirmar riesgos de restauración, continuidad o respaldo.
+  actions:
+    - Validar la evidencia recolectada contra el estándar operativo del ambiente.
+    - Confirmar si el hallazgo corresponde a una operación vigente, planificada o a una condición pendiente de corrección.
+    - Coordinar acciones con DBA, infraestructura y aplicación antes de modificar parámetros, archivos o políticas de respaldo.
+    - Repetir el health check después de la corrección y conservar evidencia del resultado.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, recuperabilidad, drp, respaldos]

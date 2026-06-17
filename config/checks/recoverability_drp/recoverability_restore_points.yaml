@@ -1,0 +1,29 @@
+check_id: recoverability_restore_points
+group_id: recoverability_drp
+title: Inventario de restore points
+description: Inventaría restore points registrados en la base.
+severity: INFO
+collector:
+  type: recoverability_drp
+  label: Inventario de restore points
+  source_view: v$restore_point
+evaluator:
+  type: recoverability_drp
+  warning_guaranteed_age_days: 30
+
+applies_to:
+  architectures: [standalone, rac]
+  open_modes: [READ WRITE]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la evidencia de recuperabilidad y preparación DRP para confirmar riesgos de restauración, continuidad o respaldo.
+  actions:
+    - Validar la evidencia recolectada contra el estándar operativo del ambiente.
+    - Confirmar si el hallazgo corresponde a una operación vigente, planificada o a una condición pendiente de corrección.
+    - Coordinar acciones con DBA, infraestructura y aplicación antes de modificar parámetros, archivos o políticas de respaldo.
+    - Repetir el health check después de la corrección y conservar evidencia del resultado.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, recuperabilidad, drp, respaldos]

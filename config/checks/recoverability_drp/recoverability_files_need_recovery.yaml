@@ -1,0 +1,28 @@
+check_id: recoverability_files_need_recovery
+group_id: recoverability_drp
+title: Archivos que requieren recuperación
+description: Detecta archivos registrados como pendientes de recuperación.
+severity: FAIL
+collector:
+  type: recoverability_drp
+  label: Archivos que requieren recuperación
+  source_view: v$recover_file
+evaluator:
+  type: recoverability_drp
+
+applies_to:
+  architectures: [standalone, rac]
+  open_modes: [READ WRITE]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la evidencia de recuperabilidad y preparación DRP para confirmar riesgos de restauración, continuidad o respaldo.
+  actions:
+    - Validar la evidencia recolectada contra el estándar operativo del ambiente.
+    - Confirmar si el hallazgo corresponde a una operación vigente, planificada o a una condición pendiente de corrección.
+    - Coordinar acciones con DBA, infraestructura y aplicación antes de modificar parámetros, archivos o políticas de respaldo.
+    - Repetir el health check después de la corrección y conservar evidencia del resultado.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, recuperabilidad, drp, respaldos]

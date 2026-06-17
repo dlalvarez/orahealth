@@ -32,6 +32,7 @@ GROUP_LABELS = {
     "os": "Sistema operativo",
     "alert_log": "Alert log",
     "security": "Seguridad Oracle",
+    "recoverability_drp": "Recuperabilidad y preparación DRP",
     "performance": "Rendimiento",
     "rac": "RAC",
     "dataguard": "Data Guard",
