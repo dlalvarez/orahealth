@@ -1,0 +1,10 @@
+group_id: recoverability_drp
+name: Recuperabilidad y preparación DRP
+description: Validaciones de recuperabilidad, configuración de respaldo lógico-operativa y preparación básica para escenarios DRP sin asumir existencia de bases remotas de recuperación.
+checks:
+  - recoverability_backup_mode_datafiles
+  - recoverability_files_need_recovery
+  - recoverability_block_change_tracking
+  - recoverability_backup_metadata_recent
+  - recoverability_controlfile_record_retention
+  - recoverability_restore_points

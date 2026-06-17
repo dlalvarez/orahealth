@@ -9,6 +9,7 @@ enabled_groups:
   - alert_log
   - oracle_resources
   - io_redo_archive
+  - recoverability_drp
 standards:
   - oracle_19c
   - development
