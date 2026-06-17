@@ -1,3 +1,4 @@
+from orahealthcheck.engine.runner import CheckRunner
 from orahealthcheck.evaluators import EVALUATORS
 from orahealthcheck.models import ResultStatus
 
@@ -15,11 +16,46 @@ def test_archivelog_generation_recent_handles_noarchivelog_and_thresholds():
 
 
 def test_archive_dest_status_and_errors_ignore_unconfigured_destinations():
-    rows = [{"status": "INACTIVE", "destination": None, "error": None}, {"status": "VALID", "destination": "USE_DB_RECOVERY_FILE_DEST", "valid_now": "YES"}]
+    rows = [
+        {"archive_dest_status": "INACTIVE", "archive_destination": None, "archive_dest_error": None},
+        {"archive_dest_status": "VALID", "archive_destination": "USE_DB_RECOVERY_FILE_DEST", "valid_now": "YES"},
+    ]
     assert evaluate("archive_dest_status", {"archivelog_mode": "ARCHIVELOG", "rows": rows}) == ResultStatus.PASS
     assert evaluate("archive_dest_errors", {"rows": rows}) == ResultStatus.PASS
-    rows[1]["error"] = "ORA-16038"
+    rows[1]["archive_dest_error"] = "ORA-16038"
     assert evaluate("archive_dest_errors", {"rows": rows}) == ResultStatus.FAIL
+
+
+def test_archive_dest_status_allows_null_valid_now_and_noarchivelog_without_false_fail():
+    rows = [{"archive_dest_status": "VALID", "archive_destination": "USE_DB_RECOVERY_FILE_DEST", "valid_now": None}]
+    assert evaluate("archive_dest_status", {"archivelog_mode": "ARCHIVELOG", "rows": rows}) == ResultStatus.PASS
+    assert evaluate("archive_dest_status", {"archivelog_mode": "NOARCHIVELOG", "rows": rows}) == ResultStatus.INFO
+
+
+def test_archive_dest_errors_detects_status_error_and_ignores_empty_inactive():
+    rows = [
+        {"archive_dest_status": "INACTIVE", "archive_destination": None, "archive_dest_error": None, "archive_dest_status_error": None},
+        {"archive_dest_status": "VALID", "archive_destination": "SERVICE=DG", "archive_dest_status_error": "ORA-12514"},
+    ]
+    assert evaluate("archive_dest_errors", {"rows": rows}) == ResultStatus.FAIL
+    assert evaluate("archive_dest_status", {"archivelog_mode": "ARCHIVELOG", "rows": [rows[0]]}) == ResultStatus.PASS
+
+
+def test_archive_dest_query_uses_valid_now_from_archive_dest():
+    class CaptureConnector:
+        queries = []
+
+        def query(self, sql):
+            self.queries.append(sql)
+            return []
+
+    CaptureConnector.queries = []
+    CheckRunner({})._discover_io_redo_archive_inventory(CaptureConnector(), {}, {"archivelog_mode": "ARCHIVELOG"})
+    archive_query = next(query for query in CaptureConnector.queries if "from v$archive_dest d" in query)
+    assert "d.valid_now" in archive_query
+    assert "s.valid_now" not in archive_query
+    assert "d.error as archive_dest_error" in archive_query
+    assert "s.error as archive_dest_status_error" in archive_query
 
 
 def test_fra_usage_advanced_thresholds_and_reclaimable_warning():

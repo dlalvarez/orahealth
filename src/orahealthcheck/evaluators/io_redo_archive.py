@@ -12,7 +12,7 @@ class IoRedoArchiveEvaluator:
             return ResultStatus.ERROR, "La evidencia de I/O, redo y archive no tiene una estructura válida"
         metric = evidence.get("metric") or config.get("metric")
         if evidence.get("collection_error"):
-            return self._status(config.get("collection_error_status", "INFO")), f"No se pudo recolectar evidencia para {metric}: {evidence.get('collection_error')}"
+            return self._configured_status(config.get("collection_error_status", "INFO")), f"No se pudo recolectar evidencia para {metric}: {evidence.get('collection_error')}"
         handler = getattr(self, f"_{metric}", None)
         if handler is None:
             return ResultStatus.ERROR, f"Métrica de I/O, redo y archive no soportada: {metric}"
@@ -29,24 +29,24 @@ class IoRedoArchiveEvaluator:
         return ResultStatus.INFO, "Generación reciente de archived logs recolectada como señal de capacidad"
 
     def _archive_dest_status(self, e, c):
-        if str(e.get("archivelog_mode", "")).upper() == "NOARCHIVELOG":
+        rows = [r for r in (e.get("rows") or []) if self._configured(r)]
+        if str(e.get("archivelog_mode", "")).upper() == "NOARCHIVELOG" and not self._destinations_with_errors(rows):
             return ResultStatus.INFO, "La base está en NOARCHIVELOG; los destinos de archivado se reportan solo como información"
-        rows = e.get("rows") or []
-        bad = [r for r in rows if self._configured(r) and (str(r.get("valid_now", "")).upper() == "NO" or self._text(r.get("error")))]
-        warn = [r for r in rows if self._configured(r) and str(r.get("status", "")).upper() in {"INACTIVE", "DEFERRED", "BAD PARAM"}]
+        bad = [r for r in rows if self._destination_has_error(r) or self._valid_now_no(r) or self._problematic_archive_status(r)]
         if bad:
-            return ResultStatus.FAIL, f"Se detectaron {len(bad)} destino(s) de archive activos u obligatorios con error o no válidos"
+            return ResultStatus.FAIL, f"Se detectaron {len(bad)} destino(s) de archive configurados con error, estado problemático o valid_now = NO"
+        warn = [r for r in rows if self._problematic_detail_status(r)]
         if warn:
-            return ResultStatus.WARNING, f"Se detectaron {len(warn)} destino(s) de archive configurados con estado que requiere revisión"
-        return ResultStatus.PASS, "Los destinos de archive configurados no presentan errores visibles"
+            return ResultStatus.WARNING, f"Se detectaron {len(warn)} destino(s) de archive con detalle de estado que requiere revisión"
+        return ResultStatus.PASS, "Los destinos de archive configurados están válidos y sin errores visibles"
 
     def _archive_dest_errors(self, e, c):
-        rows = [r for r in (e.get("rows") or []) if self._configured(r) and self._text(r.get("error"))]
+        rows = [r for r in (e.get("rows") or []) if self._configured(r) and self._destination_has_error(r)]
         if not rows:
             return ResultStatus.PASS, "No se detectaron errores explícitos en destinos de archive"
-        active = [r for r in rows if str(r.get("status", "")).upper() not in {"INACTIVE", "DEFERRED"}]
+        active = [r for r in rows if self._status(r) not in {"INACTIVE", "DEFERRED"}]
         if active:
-            return ResultStatus.FAIL, f"Se detectaron {len(active)} destino(s) de archive activos con error"
+            return ResultStatus.FAIL, f"Se detectaron {len(active)} destino(s) de archive activos o configurados con error"
         return ResultStatus.WARNING, f"Se detectaron {len(rows)} destino(s) de archive configurados con error en estado no activo"
 
     def _fra_usage_advanced(self, e, c):
@@ -68,7 +68,7 @@ class IoRedoArchiveEvaluator:
         if required and on:
             return ResultStatus.PASS, "Flashback Database está habilitado según el estándar configurado"
         if required:
-            return self._status(c.get("missing_status", "WARNING")), "Flashback Database es requerido por el estándar configurado y no está habilitado"
+            return self._configured_status(c.get("missing_status", "WARNING")), "Flashback Database es requerido por el estándar configurado y no está habilitado"
         return ResultStatus.INFO, "Estado de Flashback Database recolectado para inventario"
 
     def _flashback_log_usage(self, e, c):
@@ -139,7 +139,30 @@ class IoRedoArchiveEvaluator:
         return ResultStatus.PASS, f"{label} {value}% está dentro del umbral configurado"
 
     def _configured(self, row):
-        return bool(self._text(row.get("destination")) or self._text(row.get("error")) or str(row.get("status", "")).upper() not in {"INACTIVE", ""})
+        return bool(
+            self._text(row.get("archive_destination", row.get("destination")))
+            or self._text(row.get("archive_dest_error", row.get("error")))
+            or self._text(row.get("archive_dest_status_error"))
+            or self._status(row) not in {"INACTIVE", ""}
+        )
+
+    def _destination_has_error(self, row):
+        return bool(self._text(row.get("archive_dest_error", row.get("error"))) or self._text(row.get("archive_dest_status_error")))
+
+    def _destinations_with_errors(self, rows):
+        return [row for row in rows if self._destination_has_error(row)]
+
+    def _valid_now_no(self, row):
+        return str(row.get("valid_now") or "").upper() == "NO"
+
+    def _problematic_archive_status(self, row):
+        return self._status(row) in {"ERROR", "BAD PARAM", "ALTERNATE", "FULL"}
+
+    def _problematic_detail_status(self, row):
+        return str(row.get("archive_dest_status_detail", "") or "").upper() in {"ERROR", "BAD PARAM", "ALTERNATE", "FULL"}
+
+    def _status(self, row):
+        return str(row.get("archive_dest_status", row.get("status", "")) or "").upper()
 
     def _text(self, v):
         return str(v).strip() if v is not None and str(v).strip() else ""
@@ -152,7 +175,7 @@ class IoRedoArchiveEvaluator:
         except (TypeError, ValueError):
             return None
 
-    def _status(self, v):
+    def _configured_status(self, v):
         try:
             return ResultStatus(str(v).upper())
         except ValueError:

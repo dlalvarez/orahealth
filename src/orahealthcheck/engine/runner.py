@@ -916,11 +916,38 @@ class CheckRunner:
     def _discover_io_redo_archive_inventory(self, connector: Any, parameters: dict[str, Any], base_inventory: dict[str, Any]) -> dict[str, Any]:
         io: dict[str, Any] = self._default_io_redo_archive_inventory(base_inventory, parameters)
         io["archive_destinations"]["rows"] = self._query_rows(connector, "destinos de archive", """
-            select d.dest_id, d.status, d.destination, d.target, d.binding,
-                   s.valid_now, d.error, s.database_mode, s.recovery_mode
+            select d.dest_id,
+                   d.dest_name,
+                   d.status as archive_dest_status,
+                   s.status as archive_dest_status_detail,
+                   d.type as archive_dest_type,
+                   s.type as archive_dest_status_type,
+                   d.destination as archive_destination,
+                   d.target,
+                   d.binding,
+                   d.archiver,
+                   d.schedule,
+                   d.valid_now,
+                   d.valid_type,
+                   d.valid_role,
+                   d.error as archive_dest_error,
+                   s.error as archive_dest_status_error,
+                   d.db_unique_name,
+                   s.database_mode,
+                   s.recovery_mode,
+                   s.protection_mode,
+                   s.synchronization_status,
+                   s.synchronized,
+                   s.gap_status
             from v$archive_dest d
             left join v$archive_dest_status s on s.dest_id = d.dest_id
             where d.dest_id is not null
+              and (
+                   d.destination is not null
+                   or d.status not in ('INACTIVE')
+                   or d.error is not null
+                   or s.error is not null
+              )
             order by d.dest_id
         """)
         io["archivelog"]["recent"] = (self._query_one(connector, "generación reciente de archived logs", """
@@ -1036,7 +1063,7 @@ class CheckRunner:
             ev["warning_mb"] = check.evaluator.get("warning_archivelog_mb_24h")
             ev["fail_mb"] = check.evaluator.get("fail_archivelog_mb_24h")
         elif cid in {"archive_dest_status", "archive_dest_errors"}:
-            rows = [r for r in (io.get("archive_destinations",{}).get("rows") or []) if r.get("destination") or r.get("error") or str(r.get("status","")).upper() not in {"INACTIVE",""}]
+            rows = [r for r in (io.get("archive_destinations",{}).get("rows") or []) if self._archive_dest_configured(r)]
             ev.update({"rows": rows, "affected_count": len(rows)})
         elif cid in {"fra_usage_advanced", "fra_reclaimable_space"}:
             fra = io.get("fra",{}).get("recovery_file_dest") or {}
@@ -1084,6 +1111,17 @@ class CheckRunner:
             ev.update({"rows": rows, "affected_count": len(rows), "recent_unrecoverable_days": recent_days})
         return ev
 
+
+
+    def _archive_dest_configured(self, row: dict[str, Any]) -> bool:
+        destination = row.get("archive_destination", row.get("destination"))
+        status = str(row.get("archive_dest_status", row.get("status", "")) or "").upper()
+        return bool(
+            destination
+            or row.get("archive_dest_error", row.get("error"))
+            or row.get("archive_dest_status_error")
+            or status not in {"INACTIVE", ""}
+        )
 
     def _is_recent_datetime(self, value: Any, days: int) -> bool:
         if value is None:
