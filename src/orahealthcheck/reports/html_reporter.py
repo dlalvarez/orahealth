@@ -104,6 +104,7 @@ class HTMLReporter:
             "executive_report.html.j2": "executive_report.html",
             "technical_report.html.j2": "technical_report.html",
             "corrective_actions.html.j2": "corrective_actions.html",
+            "evidence_report.html.j2": "evidence_report.html",
         }
         for template_name, output_name in mapping.items():
             if self.env:
@@ -290,11 +291,15 @@ class HTMLReporter:
             return "".join(parts)
 
         style = """
-        <style>body{margin:0;background:#f4f7fb;color:#172033;font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:13px;line-height:1.35}.page{max-width:1440px;margin:auto;padding:20px 16px}.hero,section{background:#fff;border:1px solid #dfe7f1;border-radius:16px;box-shadow:0 8px 22px rgba(23,32,51,.07);padding:16px 18px;margin:16px 0}.hero{background:linear-gradient(135deg,#13213a,#234876);color:#fff;padding:20px 24px}.hero h1{font-size:1.55rem;margin:.2rem 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px}.card{background:#fff;border:1px solid #dfe7f1;border-radius:12px;padding:10px 12px;color:#172033}.card span{color:#637083;font-size:.74rem}.card strong{display:block;font-size:1.35rem;word-break:break-word}.badge{display:inline-flex;gap:5px;border-radius:999px;padding:4px 8px;font-weight:700;font-size:11px;white-space:nowrap}.PASS{color:#15803d;background:#dcfce7}.INFO{color:#1d4ed8;background:#dbeafe}.WARNING{color:#b45309;background:#fef3c7}.FAIL{color:#dc2626;background:#fee2e2}.CRITICAL{color:#7f1d1d;background:#fecaca}.ERROR{color:#581c87;background:#f3e8ff}.SKIPPED{color:#64748b;background:#f1f5f9}.table-wrap{overflow-x:auto;border:1px solid #dfe7f1;border-radius:12px;margin-top:10px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:7px 9px;border-bottom:1px solid #dfe7f1;text-align:left;vertical-align:top}th{background:#f8fafc;color:#475569;text-transform:uppercase;font-size:11px;letter-spacing:.05em}pre{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:10px;max-height:190px;overflow:auto;white-space:pre-wrap;font-size:11px;line-height:1.3}.positive{border-left:5px solid #15803d;background:#f0fdf4;padding:12px;border-radius:12px}article{padding:13px;border-top:1px solid #dfe7f1}li{margin:3px 0}@media(max-width:700px){.page{padding:14px 10px}.hero{padding:16px}th,td{padding:7px}}</style>
+        <style>body{margin:0;background:#f4f7fb;color:#172033;font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:13px;line-height:1.35}.page{max-width:1440px;margin:auto;padding:20px 16px}.hero,section{background:#fff;border:1px solid #dfe7f1;border-radius:16px;box-shadow:0 8px 22px rgba(23,32,51,.07);padding:16px 18px;margin:16px 0}.hero{background:linear-gradient(135deg,#13213a,#234876);color:#fff;padding:20px 24px}.hero h1{font-size:1.55rem;margin:.2rem 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px}.card{background:#fff;border:1px solid #dfe7f1;border-radius:12px;padding:10px 12px;color:#172033}.card span{color:#637083;font-size:.74rem}.card strong{display:block;font-size:1.35rem;word-break:break-word}.badge{display:inline-flex;gap:5px;border-radius:999px;padding:4px 8px;font-weight:700;font-size:11px;white-space:nowrap}.PASS{color:#15803d;background:#dcfce7}.INFO{color:#1d4ed8;background:#dbeafe}.WARNING{color:#b45309;background:#fef3c7}.FAIL{color:#dc2626;background:#fee2e2}.CRITICAL{color:#7f1d1d;background:#fecaca}.ERROR{color:#581c87;background:#f3e8ff}.SKIPPED{color:#64748b;background:#f1f5f9}.table-wrap{overflow-x:auto;border:1px solid #dfe7f1;border-radius:12px;margin-top:10px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:7px 9px;border-bottom:1px solid #dfe7f1;text-align:left;vertical-align:top}th{background:#f8fafc;color:#475569;text-transform:uppercase;font-size:11px;letter-spacing:.05em}pre{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:10px;max-height:190px;overflow:auto;white-space:pre-wrap;font-size:11px;line-height:1.3}.positive{border-left:5px solid #15803d;background:#f0fdf4;padding:12px;border-radius:12px}article{padding:13px;border-top:1px solid #dfe7f1}li{margin:3px 0}.evidence-item{border:1px solid #dfe7f1;border-radius:12px;margin:10px 0;background:#fff;overflow:hidden}.evidence-item summary{cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;background:#f8fafc}.evidence-item summary small{color:#637083;flex-basis:100%}.evidence-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:9px;padding:12px}.json-block{max-height:none}.no-evidence{border-left:5px solid #64748b;background:#f1f5f9;padding:10px;border-radius:10px;color:#64748b}@media(max-width:700px){.page{padding:14px 10px}.hero{padding:16px}th,td{padding:7px}}</style>
         """
-        title_by_output = {"executive_report.html": "Reporte Ejecutivo", "technical_report.html": "Reporte Técnico", "corrective_actions.html": "Acciones Correctivas"}
+        title_by_output = {"executive_report.html": "Reporte Ejecutivo", "technical_report.html": "Reporte Técnico", "corrective_actions.html": "Acciones Correctivas", "evidence_report.html": "Reporte de Evidencias Técnicas"}
         body = ["<!doctype html><html lang='es'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>", f"<title>OraHealthCheck {title_by_output.get(output_name, 'Reporte')} - {esc(target.target_id)}</title>", style, "</head><body><div class='page'>"]
-        body.append(f"<header class='hero'><div>OraHealthCheck</div><h1>{title_by_output.get(output_name, 'Reporte')}</h1><p>{esc(target.name)} · {esc(target.environment)} · {esc(generated_at)}</p></header>")
+        
+        if output_name == "evidence_report.html":
+            body.append("<header class='hero'><div>OraHealthCheck</div><h1>Reporte de Evidencias Técnicas</h1><p>Evidencia completa generada por cada validación ejecutada. Este reporte complementa el reporte técnico y conserva el detalle JSON sin sobrecargar la vista principal.</p></header>")
+        else:
+            body.append(f"<header class='hero'><div>OraHealthCheck</div><h1>{title_by_output.get(output_name, 'Reporte')}</h1><p>{esc(target.name)} · {esc(target.environment)} · {esc(generated_at)}</p></header>")
         body.append(info_section())
 
         if output_name == "executive_report.html":
@@ -329,10 +334,34 @@ class HTMLReporter:
                 body.append("</table></div>")
             body.append("</section><section><h2>Detalle de validaciones</h2>")
             for group_id, group_results in grouped_results.items():
-                body.append(f"<h3>{esc(self._group_label(group_id))} <small>{esc(group_id)}</small></h3><div class='table-wrap'><table><tr><th>check_id</th><th>Título</th><th>Grupo</th><th>Estado</th><th>Severidad</th><th>Mensaje</th><th>Evidencia</th><th>skipped_reason</th><th>error</th><th>duration_ms</th></tr>")
+                body.append(f"<h3>{esc(self._group_label(group_id))} <small>{esc(group_id)}</small></h3><div class='table-wrap'><table><tr><th>check_id</th><th>Título</th><th>Grupo</th><th>Estado</th><th>Severidad</th><th>Mensaje</th><th>skipped_reason</th><th>error</th><th>duration_ms</th></tr>")
                 for result in group_results:
-                    body.append(f"<tr><td>{esc(result.check_id)}</td><td>{esc(self._check_title(result.title))}</td><td>{esc(self._group_label(result.group_id))}</td><td>{badge(result.status.value)}</td><td>{esc(self._status_label(result.failure_severity))}</td><td>{esc(self._friendly_message(result.message))}</td><td><pre>{esc(self._pretty_json(result.evidence))}</pre></td><td>{esc(self._friendly_message(result.skipped_reason))}</td><td>{esc(result.error or '')}</td><td>{esc(result.duration_ms)}</td></tr>")
+                    body.append(f"<tr><td>{esc(result.check_id)}</td><td>{esc(self._check_title(result.title))}</td><td>{esc(self._group_label(result.group_id))}</td><td>{badge(result.status.value)}</td><td>{esc(self._status_label(result.failure_severity))}</td><td>{esc(self._friendly_message(result.message))}</td><td>{esc(self._friendly_message(result.skipped_reason))}</td><td>{esc(result.error or '')}</td><td>{esc(result.duration_ms)}</td></tr>")
                 body.append("</table></div>")
+            body.append("</section>")
+        elif output_name == "evidence_report.html":
+            body.append("<section><h2>Resumen Global</h2><div class='grid'>")
+            for label, value in (("Puntaje de Salud", summary.get("score")), ("Estado Global", badge(str(summary.get("global_status")))), ("Total de validaciones", summary.get("total_checks")), ("PASS", summary.get("PASS")), ("INFO", summary.get("INFO")), ("WARNING", summary.get("WARNING")), ("FAIL", summary.get("FAIL")), ("CRITICAL", summary.get("CRITICAL")), ("ERROR", summary.get("ERROR")), ("SKIPPED", summary.get("SKIPPED"))):
+                body.append(f"<div class='card'><span>{label}</span><strong>{value}</strong></div>")
+            body.append("</div></section><section><h2>Inventario Técnico</h2><h3>Inventario de Base de Datos</h3><div class='grid'>")
+            for item in database_inventory_items:
+                body.append(f"<div class='card'><span>{esc(item['label'])}</span><strong>{esc(item['value'])}</strong><small>{esc(item['technical_name'])}</small></div>")
+            body.append("</div></section><section><h2>Evidencias por grupo funcional</h2><p>Las evidencias se muestran colapsadas por defecto para facilitar la navegación. Despliegue cada validación para ver el JSON completo de evidencia asociado al resultado.</p>")
+            for group_id, group_results in grouped_results.items():
+                body.append(f"<h3>{esc(self._group_label(group_id))} <small>{esc(group_id)}</small> ({len(group_results)} validación(es))</h3>")
+                for result in group_results:
+                    msg = self._friendly_message(result.message or result.skipped_reason or result.error)
+                    body.append(f"<details class='evidence-item'><summary>{badge(result.status.value)} <strong>{esc(result.check_id)}</strong> <span>{esc(self._check_title(result.title))}</span> <small>{esc(msg)}</small></summary><div class='evidence-meta'><div><span>Grupo</span><strong>{esc(self._group_label(result.group_id))}</strong></div><div><span>group_id</span><strong>{esc(result.group_id)}</strong></div><div><span>Severidad</span><strong>{esc(self._status_label(result.failure_severity))}</strong></div><div><span>Duración</span><strong>{esc(result.duration_ms)} ms</strong></div></div>")
+                    if result.skipped_reason:
+                        body.append(f"<p><strong>skipped_reason:</strong> {esc(self._friendly_message(result.skipped_reason))}</p>")
+                    if result.error:
+                        body.append(f"<p><strong>error:</strong> {esc(result.error)}</p>")
+                    body.append("<h4>Evidencia completa</h4>")
+                    if result.evidence is None:
+                        body.append("<div class='no-evidence'>No hay evidencia estructurada para esta validación.</div>")
+                    else:
+                        body.append(f"<pre class='json-block'>{esc(self._pretty_json(result.evidence))}</pre>")
+                    body.append("</details>")
             body.append("</section>")
         else:
             body.append("<section><h2>Resumen de Estados</h2><div class='grid'>")

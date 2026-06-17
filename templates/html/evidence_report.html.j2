@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OraHealthCheck Reporte de Evidencias Técnicas - {{ target.target_id }}</title>
+  <style>
+    :root{--bg:#f4f7fb;--surface:#fff;--text:#172033;--muted:#637083;--line:#dfe7f1;--shadow:0 8px 22px rgba(23,32,51,.07);--pass:#15803d;--pass-bg:#dcfce7;--info:#1d4ed8;--info-bg:#dbeafe;--warning:#b45309;--warning-bg:#fef3c7;--fail:#dc2626;--fail-bg:#fee2e2;--critical:#7f1d1d;--critical-bg:#fecaca;--error:#581c87;--error-bg:#f3e8ff;--skipped:#64748b;--skipped-bg:#f1f5f9}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:13px;line-height:1.35}.page{max-width:1440px;margin:0 auto;padding:20px 16px}.hero{background:linear-gradient(135deg,#13213a,#234876);color:#fff;border-radius:18px;padding:20px 24px;box-shadow:var(--shadow)}.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:.72rem;opacity:.78}.hero h1{margin:.2rem 0;font-size:1.55rem}.hero p{margin:.35rem 0}.hero-grid,.cards,.inventory-grid,.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px}.hero-grid{margin-top:14px}.hero-item{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 12px}.hero-item span,.metric .label,.info-item span{display:block;color:inherit;opacity:.72;font-size:.72rem}.section{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px 18px;margin-top:16px}.section h2{margin:0 0 6px;font-size:1.25rem}.section h3{font-size:1rem;margin:12px 0 6px}.hint{color:var(--muted);font-size:.86rem;margin-top:0}.card,.metric,.info-item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 3px 12px rgba(23,32,51,.04)}.card .label{color:var(--muted);font-size:.74rem}.card .value{font-size:1.35rem;font-weight:800}.metric strong,.info-item strong{display:block;margin-top:2px;word-break:break-word}.badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 8px;font-weight:700;font-size:11px;white-space:nowrap;border:1px solid transparent}.badge.PASS{color:var(--pass);background:var(--pass-bg);border-color:#bbf7d0}.badge.INFO{color:var(--info);background:var(--info-bg);border-color:#bfdbfe}.badge.WARNING{color:var(--warning);background:var(--warning-bg);border-color:#fde68a}.badge.FAIL{color:var(--fail);background:var(--fail-bg);border-color:#fecaca}.badge.CRITICAL{color:var(--critical);background:var(--critical-bg);border-color:#fca5a5}.badge.ERROR{color:var(--error);background:var(--error-bg);border-color:#e9d5ff}.badge.SKIPPED{color:var(--skipped);background:var(--skipped-bg);border-color:#e2e8f0}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-top:10px}table{width:100%;border-collapse:collapse;background:#fff;font-size:12px}th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f8fafc;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:.05em}tr:last-child td{border-bottom:0}.group-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding:10px 12px;border-radius:12px;background:#eef4ff;border:1px solid #d8e5ff}.group-title h3{margin:0}.json-block{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:10px;max-height:190px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.3}.message{min-width:170px}.evidence-item{border:1px solid var(--line);border-radius:12px;margin:10px 0;background:#fff;overflow:hidden}.evidence-item summary{cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;background:#f8fafc}.evidence-item summary small{color:var(--muted);flex-basis:100%;margin-left:2px}.evidence-item[open] summary{border-bottom:1px solid var(--line)}.evidence-body{padding:12px 14px}.evidence-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:9px;margin-bottom:12px}.evidence-meta div{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}.evidence-meta span{display:block;color:var(--muted);font-size:.72rem}.json-block{max-height:none}.no-evidence{border-left:5px solid var(--skipped);background:var(--skipped-bg);padding:10px;border-radius:10px;color:var(--muted)}.muted{color:var(--muted)}@media(max-width:700px){.page{padding:14px 10px}.hero{padding:16px}th,td{padding:7px}.json-block{max-width:72vw}}
+  </style>
+</head>
+<body>
+{% macro badge(status) -%}
+  <span class="badge {{ status }}">{% if status == 'PASS' %}🟢{% elif status == 'INFO' %}🔵{% elif status == 'WARNING' %}🟡{% elif status == 'FAIL' %}🔴{% elif status == 'CRITICAL' %}🛑{% elif status == 'ERROR' %}🟣{% else %}⚪{% endif %} {{ status }} / {{ status | status_label }}</span>
+{%- endmacro %}
+<div class="page">
+  <header class="hero"><div class="eyebrow">OraHealthCheck</div><h1>Reporte de Evidencias Técnicas</h1><p>Evidencia completa generada por cada validación ejecutada. Este reporte complementa el reporte técnico y conserva el detalle JSON sin sobrecargar la vista principal.</p><div class="hero-grid"><div class="hero-item"><span>ID del target</span><strong>{{ target.target_id }}</strong></div><div class="hero-item"><span>Nombre del target</span><strong>{{ target.name }}</strong></div><div class="hero-item"><span>Ambiente</span><strong>{{ target.environment }}</strong></div><div class="hero-item"><span>Arquitectura esperada</span><strong>{{ target.expected_architecture }}</strong></div><div class="hero-item"><span>Perfil</span><strong>{{ target.profile }}</strong></div><div class="hero-item"><span>Fecha/hora de ejecución</span><strong>{{ generated_at }}</strong></div></div></header>
+
+  <section class="section"><h2>Información del target</h2><h3>Datos generales</h3><div class="info-grid">{% for item in target_info.general %}<div class="info-item"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>{% endfor %}</div>{% if target_info.database %}<h3>Datos de base de datos</h3><div class="info-grid">{% for item in target_info.database %}<div class="info-item"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>{% endfor %}</div>{% endif %}{% if target_info.operating_system %}<h3>Datos del servidor / sistema operativo</h3><div class="info-grid">{% for item in target_info.operating_system %}<div class="info-item"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>{% endfor %}</div>{% endif %}</section>
+
+  <section class="section"><h2>Resumen Global</h2><p class="hint">SKIPPED / Omitido significa que la validación no se ejecutó porque no cumplía aplicabilidad, configuración o fuentes de datos requeridas. Severidad indica el nivel configurado cuando una validación detecta incumplimiento.</p><div class="cards"><div class="card"><div class="label">Puntaje de Salud</div><div class="value">{{ summary.score }}</div></div><div class="card"><div class="label">Estado Global</div><div class="value" style="font-size:1.1rem">{{ badge(summary.global_status) }}</div></div><div class="card"><div class="label">Total de validaciones</div><div class="value">{{ summary.total_checks }}</div></div><div class="card"><div class="label">Correcto</div><div class="value">{{ summary.PASS }}</div></div><div class="card"><div class="label">Informativo</div><div class="value">{{ summary.INFO }}</div></div><div class="card"><div class="label">Advertencia</div><div class="value">{{ summary.WARNING }}</div></div><div class="card"><div class="label">Fallo</div><div class="value">{{ summary.FAIL }}</div></div><div class="card"><div class="label">Crítico</div><div class="value">{{ summary.CRITICAL }}</div></div><div class="card"><div class="label">Error</div><div class="value">{{ summary.ERROR }}</div></div><div class="card"><div class="label">Omitido</div><div class="value">{{ summary.SKIPPED }}</div></div></div></section>
+
+  <section class="section">
+    <h2>Inventario Técnico</h2>
+    <h3>Inventario de Base de Datos</h3>
+    <div class="inventory-grid">{% for item in database_inventory_items %}<div class="metric"><span class="label">{{ item.label }}</span><strong>{{ item.value }}</strong><small class="muted">{{ item.technical_name }}</small></div>{% endfor %}</div>
+    <h3>Inventario del Sistema Operativo</h3>
+    <div class="inventory-grid"><div class="metric"><span class="label">Plataforma</span><strong>{{ os_inventory_enriched.platform }}</strong></div>{% if os_inventory_enriched.distribution %}<div class="metric"><span class="label">Distribución</span><strong>{{ os_inventory_enriched.distribution }}</strong></div>{% endif %}<div class="metric"><span class="label">CPU</span><strong>{{ os_inventory_enriched.cpu_summary }}</strong></div><div class="metric"><span class="label">Memoria</span><strong>{{ os_inventory_enriched.memory_summary }}</strong></div><div class="metric"><span class="label">Filesystems</span><strong>{{ os_inventory_enriched.filesystems_summary }}</strong></div></div>
+    {% if os_inventory_enriched.filesystems %}<div class="table-wrap"><table><thead><tr><th>Filesystem</th><th>Mount</th><th>Uso (%)</th></tr></thead><tbody>{% for fs in os_inventory_enriched.filesystems %}<tr><td>{{ fs.filesystem }}</td><td>{{ fs.mount }}</td><td>{{ fs.used_pct }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+  </section>
+
+  <section class="section">
+    <h2>Evidencias por grupo funcional</h2>
+    <p class="hint">Las evidencias se muestran colapsadas por defecto para facilitar la navegación. Despliegue cada validación para ver el JSON completo de evidencia asociado al resultado.</p>
+    {% for group_id, group_results in grouped_results.items() %}
+      <div class="group-title"><h3>{{ group_id | group_label }}</h3><span>{{ group_results|length }} validación(es) · <small>{{ group_id }}</small></span></div>
+      {% for result in group_results %}
+        <details class="evidence-item">
+          <summary>
+            {{ badge(result.status.value) }}
+            <strong>{{ result.check_id }}</strong>
+            <span>{{ result.title | check_title }}</span>
+            {% set short_message = result.message or result.skipped_reason or result.error %}{% if short_message %}<small>{{ short_message | friendly_message }}</small>{% endif %}
+          </summary>
+          <div class="evidence-body">
+            <div class="evidence-meta">
+              <div><span>check_id</span><strong>{{ result.check_id }}</strong></div>
+              <div><span>Título</span><strong>{{ result.title | check_title }}</strong></div>
+              <div><span>Grupo</span><strong>{{ result.group_id | group_label }}</strong></div>
+              <div><span>group_id</span><strong>{{ result.group_id }}</strong></div>
+              <div><span>Estado</span><strong>{{ result.status.value }} / {{ result.status.value | status_label }}</strong></div>
+              <div><span>Severidad</span><strong>{{ result.failure_severity | status_label }}</strong></div>
+              <div><span>Duración</span><strong>{{ result.duration_ms }} ms</strong></div>
+              {% if result.skipped_reason %}<div><span>skipped_reason</span><strong>{{ result.skipped_reason | friendly_message }}</strong></div>{% endif %}
+              {% if result.error %}<div><span>error</span><strong>{{ result.error }}</strong></div>{% endif %}
+            </div>
+            {% if result.message %}<p><strong>Mensaje:</strong> {{ result.message | friendly_message }}</p>{% endif %}
+            <h4>Evidencia completa</h4>
+            {% if result.evidence is not none %}<pre class="json-block">{{ result.evidence | pretty_json }}</pre>{% else %}<div class="no-evidence">No hay evidencia estructurada para esta validación.</div>{% endif %}
+          </div>
+        </details>
+      {% endfor %}
+    {% endfor %}
+  </section>
+</div>
+</body>
+</html>

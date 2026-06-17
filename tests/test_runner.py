@@ -19,6 +19,7 @@ def test_runner_generates_required_files(tmp_path):
         "executive_report.html",
         "technical_report.html",
         "corrective_actions.html",
+        "evidence_report.html",
         "inventory.json",
         "evidence.json",
         "execution.log",
@@ -45,7 +46,7 @@ def test_reports_do_not_show_legacy_english_storage_text(tmp_path):
     output = _run_example(tmp_path)
     combined_html = "\n".join(
         (output / report_name).read_text(encoding="utf-8")
-        for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html"]
+        for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html", "evidence_report.html"]
     )
 
     assert "Porcentaje de uso activo de tablespaces temporales" in combined_html
@@ -63,7 +64,7 @@ def test_reports_do_not_show_legacy_english_storage_text(tmp_path):
 def test_reports_use_compact_professional_css(tmp_path):
     output = _run_example(tmp_path)
 
-    for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html"]:
+    for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html", "evidence_report.html"]:
         html = (output / report_name).read_text(encoding="utf-8")
         assert 'font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif' in html
         assert "font-size:13px" in html
@@ -76,7 +77,7 @@ def test_reports_use_compact_professional_css(tmp_path):
     assert "max-height:190px" in technical_html
 
 
-def test_technical_report_contains_inventory_grouped_checks_and_evidence(tmp_path):
+def test_technical_report_contains_inventory_grouped_checks_without_evidence_column(tmp_path):
     output = _run_example(tmp_path)
     html = (output / "technical_report.html").read_text(encoding="utf-8")
 
@@ -85,7 +86,9 @@ def test_technical_report_contains_inventory_grouped_checks_and_evidence(tmp_pat
     assert "Inventario de Base de Datos" in html
     assert "Inventario del Sistema Operativo" in html
     assert "Configuración general" in html
-    assert "<pre" in html
+    assert "<th>Evidencia</th>" not in html
+    assert ">Evidencia<" not in html
+    assert "<pre" not in html
     assert "duration_ms" in html
     assert "Mínimo porcentaje libre en tablespaces" in html
     assert "CPU</span><strong>N/D" not in html
@@ -113,7 +116,8 @@ def test_technical_report_omits_remediation_column_and_text(tmp_path):
     assert "Revisar alert log, trazas y monitoreo de aplicación" not in technical_html
     assert "La base de datos no está operando en modo ARCHIVELOG" not in technical_html
     assert "Confirmar con el negocio y el equipo DBA" not in technical_html
-    assert "<pre" in technical_html
+    assert "<th>Evidencia</th>" not in technical_html
+    assert "<pre" not in technical_html
     assert "duration_ms" in technical_html
     assert "skipped_reason" in technical_html
     assert "error" in technical_html
@@ -166,11 +170,52 @@ def test_reports_show_password_env_but_never_real_password(tmp_path):
 
     output = CheckRunner(config).run_target("example_standalone")
 
-    for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html"]:
+    for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html", "evidence_report.html"]:
         html = (output / report_name).read_text(encoding="utf-8")
         assert "ORA_EXAMPLE_PASSWORD" in html
         assert "super_secret_password" not in html
 
+
+
+def test_evidence_report_contains_target_summary_groups_and_collapsed_details(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    config["checks"]["open_cursors"].collector["type"] = "unsupported"
+
+    output = CheckRunner(config).run_target("example_standalone")
+    html = (output / "evidence_report.html").read_text(encoding="utf-8")
+
+    assert "Reporte de Evidencias Técnicas" in html
+    assert "Información del target" in html
+    assert "example_standalone" in html
+    assert "Resumen Global" in html
+    assert "Puntaje de Salud" in html
+    assert "Inventario Técnico" in html
+    assert "Evidencias por grupo funcional" in html
+    assert "Configuración general" in html
+    assert "<details" in html and "evidence-item" in html
+    assert "database_status" in html
+    assert "SKIPPED / Omitido" in html
+    assert "ERROR / Error" in html
+    assert "skipped_reason" in html
+    assert "La versión Oracle" in html
+    assert "error" in html
+    assert "Tipo de colector no soportado: unsupported" in html
+    assert "Evidencia completa" in html
+    assert "No hay evidencia estructurada para esta validación." in html
+    assert "Acciones recomendadas" not in html
+    assert "Requiere ventana" not in html
+
+
+def test_evidence_report_includes_pass_info_and_complete_json(tmp_path):
+    output = _run_example(tmp_path)
+    html = (output / "evidence_report.html").read_text(encoding="utf-8")
+
+    assert "PASS / Correcto" in html
+    assert "INFO / Informativo" in html
+    assert "Evidencia completa" in html
+    assert "<pre" in html
 
 
 def test_evidence_json_has_minimum_structure(tmp_path):
