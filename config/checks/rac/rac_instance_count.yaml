@@ -1,0 +1,30 @@
+check_id: rac_instance_count
+group_id: rac
+title: Cantidad de instancias RAC
+description: Valida la cantidad de instancias RAC visibles contra el mínimo configurado.
+severity: WARNING
+collector:
+  type: rac
+  label: Cantidad de instancias RAC
+  source_view: gv$instance
+evaluator:
+  type: rac
+  min_instances: 2
+applicability:
+  requires_feature: oracle_rac
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la configuración RAC indicada por la evidencia cuando la validación aplique y reporte una condición anómala.
+  actions:
+    - Confirmar el estado de la configuración RAC con el equipo DBA antes de ejecutar cambios.
+    - Revisar la evidencia recolectada y validar si corresponde a mantenimiento, degradación o incidente.
+    - Planificar cualquier ajuste mediante procedimiento aprobado y ventana de mantenimiento si corresponde.
+    - Repetir el health check después de la corrección para confirmar el estado operativo.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, rac]

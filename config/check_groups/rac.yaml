@@ -1,0 +1,11 @@
+group_id: rac
+name: Oracle RAC básico
+description: Validaciones básicas de Oracle RAC ejecutadas solo cuando la base está configurada como RAC.
+checks:
+  - rac_cluster_database_parameter
+  - rac_instances_status
+  - rac_instance_count
+  - rac_threads_status
+  - rac_undo_configuration_basic
+  - rac_services_basic
+  - rac_interconnect_info

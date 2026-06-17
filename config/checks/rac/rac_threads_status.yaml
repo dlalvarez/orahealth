@@ -1,0 +1,29 @@
+check_id: rac_threads_status
+group_id: rac
+title: Estado de threads redo RAC
+description: Valida que los threads redo RAC visibles estén habilitados y consistentes.
+severity: WARNING
+collector:
+  type: rac
+  label: Estado de threads redo RAC
+  source_view: gv$thread
+evaluator:
+  type: rac
+applicability:
+  requires_feature: oracle_rac
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la configuración RAC indicada por la evidencia cuando la validación aplique y reporte una condición anómala.
+  actions:
+    - Confirmar el estado de la configuración RAC con el equipo DBA antes de ejecutar cambios.
+    - Revisar la evidencia recolectada y validar si corresponde a mantenimiento, degradación o incidente.
+    - Planificar cualquier ajuste mediante procedimiento aprobado y ventana de mantenimiento si corresponde.
+    - Repetir el health check después de la corrección para confirmar el estado operativo.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, rac]
