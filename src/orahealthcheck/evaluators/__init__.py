@@ -5,6 +5,7 @@ from .oracle_config import OracleConfigEvaluator
 from .oracle_security import OracleSecurityEvaluator
 from .oracle_resources import OracleResourcesEvaluator
 from .io_redo_archive import IoRedoArchiveEvaluator
+from .multitenant import MultitenantEvaluator
 from .recoverability_drp import RecoverabilityDrpEvaluator
 from .rac import RacEvaluator
 from .regex import RegexEvaluator
@@ -22,6 +23,7 @@ EVALUATORS = {
     "oracle_security": OracleSecurityEvaluator(),
     "oracle_resources": OracleResourcesEvaluator(),
     "io_redo_archive": IoRedoArchiveEvaluator(),
+    "multitenant": MultitenantEvaluator(),
     "recoverability_drp": RecoverabilityDrpEvaluator(),
     "rac": RacEvaluator(),
     "row_count_threshold": RowCountThresholdEvaluator(),

@@ -11,6 +11,7 @@ enabled_groups:
   - io_redo_archive
   - recoverability_drp
   - rac
+  - multitenant
 standards:
   - oracle_19c
   - development

@@ -1,0 +1,7 @@
+group_id: multitenant
+name: Multitenant / CDB-PDB básico
+description: Validaciones básicas de Oracle Multitenant ejecutadas solo cuando la base está configurada como CDB.
+checks:
+  - multitenant_pdb_inventory
+  - multitenant_pdb_open_state
+  - multitenant_pdb_restricted_mode
