@@ -340,9 +340,15 @@ class HTMLReporter:
             icon = {"PASS": "🟢", "INFO": "🔵", "WARNING": "🟡", "FAIL": "🔴", "CRITICAL": "🛑", "ERROR": "🟣", "SKIPPED": "⚪"}.get(status, "⚪")
             return f'<span class="badge {esc(status)}">{icon} {esc(status)} / {esc(self._status_label(status))}</span>'
 
-        def features_section() -> str:
+        def features_section(compact: bool = False) -> str:
             if not oracle_feature_items:
                 return ""
+            if compact:
+                parts = ["<section><h2>Características Oracle detectadas</h2><p>Estas características corresponden a capacidades o configuraciones detectadas durante el inventario. No representan hallazgos ni afectan el puntaje de salud.</p><div class='table-wrap'><table><tr><th>Característica</th><th>Detectado</th><th>Estado</th></tr>"]
+                for item in oracle_feature_items:
+                    parts.append(f"<tr><td>{esc(item['name'])}</td><td>{esc(item['detected'])}</td><td>{esc(item['status'])}</td></tr>")
+                parts.append("</table></div></section>")
+                return "".join(parts)
             parts = ["<h3>Características Oracle detectadas</h3><p>Estas características corresponden a capacidades o configuraciones detectadas durante el inventario. No representan hallazgos ni afectan el puntaje de salud.</p><div class='table-wrap'><table><tr><th>Característica</th><th>Estado</th><th>Detectado</th><th>Fuente</th><th>Valor</th><th>Razón</th></tr>"]
             for item in oracle_feature_items:
                 parts.append(f"<tr><td>{esc(item['name'])}<br><small>{esc(item['feature_id'])}</small></td><td>{esc(item['status'])}</td><td>{esc(item['detected'])}</td><td>{esc(item['source'])}</td><td>{esc(item['value'])}</td><td>{esc(item['reason'])}</td></tr>")
@@ -376,6 +382,7 @@ class HTMLReporter:
         body.append(info_section())
 
         if output_name == "executive_report.html":
+            body.append(features_section(compact=True))
             body.append("<section><h2>Resumen Ejecutivo</h2><p>El puntaje inicia en 100 y disminuye ante hallazgos de riesgo.</p><div class='grid'>")
             for label, value in (("Puntaje de Salud", summary.get("score")), ("Estado Global", badge(str(summary.get("global_status")))), ("Total de validaciones", summary.get("total_checks")), ("PASS", summary.get("PASS")), ("WARNING", summary.get("WARNING")), ("FAIL", summary.get("FAIL")), ("ERROR", summary.get("ERROR")), ("SKIPPED", summary.get("SKIPPED"))):
                 body.append(f"<div class='card'><span>{label}</span><strong>{value}</strong></div>")
@@ -440,6 +447,7 @@ class HTMLReporter:
                     body.append("</details>")
             body.append("</section>")
         else:
+            body.append(features_section(compact=True))
             body.append("<section><h2>Resumen de Estados</h2><div class='grid'>")
             for label, value in (("Puntaje de Salud", summary.get("score")), ("Estado Global", badge(str(summary.get("global_status")))), ("WARNING", summary.get("WARNING")), ("FAIL", summary.get("FAIL")), ("CRITICAL", summary.get("CRITICAL")), ("ERROR", summary.get("ERROR"))):
                 body.append(f"<div class='card'><span>{label}</span><strong>{value}</strong></div>")
