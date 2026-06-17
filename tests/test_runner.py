@@ -1035,6 +1035,9 @@ def test_oracle_features_are_rendered_in_all_html_reports(tmp_path):
     for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html", "evidence_report.html"]:
         html = (output / report_name).read_text(encoding="utf-8")
         assert "Características Oracle detectadas" in html
+        assert "ESTADO DE DETECCIÓN" in html
+        assert "<th>Detectado</th>" not in html
+        assert "<th>DETECTADO</th>" not in html
         assert "Estas características corresponden a capacidades o configuraciones detectadas durante el inventario" in html
         for expected in ["Oracle RAC", "Multitenant / CDB", "Configuración con bases standby", "FRA configurada", "Flashback Database"]:
             assert expected in html
@@ -1063,10 +1066,18 @@ def test_oracle_feature_labels_status_booleans_and_missing_fields_do_not_break_r
     mock_inventory["fra_configured"] = True
     mock_inventory["fra_space_limit"] = 1024
     mock_inventory["flashback_on"] = "UNKNOWN"
+    config["targets"]["example_standalone"].features["future_unknown"] = {"status": "unknown"}
+    config["targets"]["example_standalone"].features["sysdba"] = True
     output = CheckRunner(config).run_target("example_standalone")
     for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html", "evidence_report.html"]:
         html = (output / report_name).read_text(encoding="utf-8")
         assert "Características Oracle detectadas" in html
+        assert "ESTADO DE DETECCIÓN" in html
+        assert "<th>Detectado</th>" not in html
+        assert "<th>DETECTADO</th>" not in html
+        assert "Diagnostic Pack" in html
+        assert "AWR" in html
+        assert "Conexión SYSDBA" in html
         assert "Detectado" in html
         assert "No detectado" in html
         assert "Desconocido" in html
@@ -1100,4 +1111,11 @@ def test_oracle_feature_renderer_handles_absent_and_incomplete_features():
     assert by_id["future_feature"]["source"] == "-"
     assert by_id["future_feature"]["value"] == "unknown"
     assert by_id["future_feature"]["reason"] == "-"
+    assert by_id["flag_only"]["status"] == "Detectado"
+    assert by_id["flag_only"]["value"] == "Sí"
     assert by_id["flag_only"]["detected"] == "Sí"
+
+    false_item = reporter._oracle_feature_items({"features": {"diagnostic_pack": False}})[0]
+    assert false_item["name"] == "Diagnostic Pack"
+    assert false_item["status"] == "No detectado"
+    assert false_item["value"] == "No"

@@ -205,7 +205,12 @@ class HTMLReporter:
         return [self._oracle_feature_item(feature_id, data) for feature_id, data in features.items()]
 
     def _oracle_feature_item(self, feature_id: str, data: Any) -> dict[str, Any]:
-        feature = data if isinstance(data, dict) else {"detected": data}
+        if isinstance(data, dict):
+            feature = data
+        elif isinstance(data, bool):
+            feature = {"detected": data, "status": "detected" if data else "not_detected", "value": data}
+        else:
+            feature = {"detected": data}
         return {
             "feature_id": feature_id,
             "name": FEATURE_LABELS.get(feature_id, feature_id.replace("_", " ").title()),
@@ -344,14 +349,14 @@ class HTMLReporter:
             if not oracle_feature_items:
                 return ""
             if compact:
-                parts = ["<section><h2>Características Oracle detectadas</h2><p>Estas características corresponden a capacidades o configuraciones detectadas durante el inventario. No representan hallazgos ni afectan el puntaje de salud.</p><div class='table-wrap'><table><tr><th>Característica</th><th>Detectado</th><th>Estado</th></tr>"]
+                parts = ["<section><h2>Características Oracle detectadas</h2><p>Estas características corresponden a capacidades o configuraciones detectadas durante el inventario. No representan hallazgos ni afectan el puntaje de salud.</p><div class='table-wrap'><table><tr><th>Característica</th><th>ESTADO DE DETECCIÓN</th><th>Fuente</th><th>Valor</th><th>Razón</th></tr>"]
                 for item in oracle_feature_items:
-                    parts.append(f"<tr><td>{esc(item['name'])}</td><td>{esc(item['detected'])}</td><td>{esc(item['status'])}</td></tr>")
+                    parts.append(f"<tr><td>{esc(item['name'])}</td><td>{esc(item['status'])}</td><td>{esc(item['source'])}</td><td>{esc(item['value'])}</td><td>{esc(item['reason'])}</td></tr>")
                 parts.append("</table></div></section>")
                 return "".join(parts)
-            parts = ["<h3>Características Oracle detectadas</h3><p>Estas características corresponden a capacidades o configuraciones detectadas durante el inventario. No representan hallazgos ni afectan el puntaje de salud.</p><div class='table-wrap'><table><tr><th>Característica</th><th>Estado</th><th>Detectado</th><th>Fuente</th><th>Valor</th><th>Razón</th></tr>"]
+            parts = ["<h3>Características Oracle detectadas</h3><p>Estas características corresponden a capacidades o configuraciones detectadas durante el inventario. No representan hallazgos ni afectan el puntaje de salud.</p><div class='table-wrap'><table><tr><th>Característica</th><th>ESTADO DE DETECCIÓN</th><th>Fuente</th><th>Valor</th><th>Razón</th></tr>"]
             for item in oracle_feature_items:
-                parts.append(f"<tr><td>{esc(item['name'])}<br><small>{esc(item['feature_id'])}</small></td><td>{esc(item['status'])}</td><td>{esc(item['detected'])}</td><td>{esc(item['source'])}</td><td>{esc(item['value'])}</td><td>{esc(item['reason'])}</td></tr>")
+                parts.append(f"<tr><td>{esc(item['name'])}<br><small>{esc(item['feature_id'])}</small></td><td>{esc(item['status'])}</td><td>{esc(item['source'])}</td><td>{esc(item['value'])}</td><td>{esc(item['reason'])}</td></tr>")
             parts.append("</table></div>")
             return "".join(parts)
 

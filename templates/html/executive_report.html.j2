@@ -39,7 +39,7 @@
   <section class="section">
     <h2>Características Oracle detectadas</h2>
     <p class="hint">Estas características corresponden a capacidades o configuraciones detectadas durante el inventario. No representan hallazgos ni afectan el puntaje de salud.</p>
-    <div class="table-wrap"><table><thead><tr><th>Característica</th><th>Detectado</th><th>Estado</th></tr></thead><tbody>{% for item in oracle_feature_items %}<tr><td><strong>{{ item.name }}</strong></td><td>{{ item.detected }}</td><td><span class="badge INFO">{{ item.status }}</span></td></tr>{% endfor %}</tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Característica</th><th>ESTADO DE DETECCIÓN</th><th>Fuente</th><th>Valor</th><th>Razón</th></tr></thead><tbody>{% for item in oracle_feature_items %}<tr><td><strong>{{ item.name }}</strong></td><td><span class="badge INFO">{{ item.status }}</span></td><td>{{ item.source }}</td><td>{{ item.value }}</td><td>{{ item.reason }}</td></tr>{% endfor %}</tbody></table></div>
   </section>
   {% endif %}
 
