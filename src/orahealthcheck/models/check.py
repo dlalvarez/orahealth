@@ -12,6 +12,7 @@ class Check:
     collector: dict[str, Any] = field(default_factory=dict)
     evaluator: dict[str, Any] = field(default_factory=dict)
     applies_to: dict[str, Any] = field(default_factory=dict)
+    applicability: dict[str, Any] = field(default_factory=dict)
     remediation: dict[str, Any] = field(default_factory=dict)
     tags: list[str] = field(default_factory=list)
     references: list[str] = field(default_factory=list)
@@ -33,6 +34,7 @@ class Check:
             collector=data.get("collector", {}),
             evaluator=data.get("evaluator", {}),
             applies_to=data.get("applies_to", {}),
+            applicability=data.get("applicability", {}),
             remediation=data.get("remediation", {}),
             tags=data.get("tags", []),
             references=data.get("references", []),

@@ -88,11 +88,12 @@ class CheckRunner:
         db.setdefault("oracle_resources", self._default_oracle_resources_inventory(db.get("parameters", {}), healthy_defaults="mock_inventory" in target.database))
         db.setdefault("io_redo_archive", self._default_io_redo_archive_inventory(db, db.get("parameters", {})))
         db.setdefault("recoverability_drp", self._default_recoverability_drp_inventory(db.get("parameters", {}), healthy_defaults="mock_inventory" in target.database))
+        features = self._detect_oracle_features_from_inventory(db)
         os_data = {"platform": target.operating_system.get("platform", "linux")}
         if target.operating_system.get("use_local_discovery", False):
             adapter = LinuxAdapter(LocalConnector()) if os_data["platform"] == "linux" else AIXAdapter(LocalConnector())
             os_data.update({"os_info": adapter.get_os_info(), "cpu": adapter.get_cpu_info(), "memory": adapter.get_memory_info()})
-        return Inventory(target.target_id, target.expected_architecture, target.environment, db, os_data, target.features)
+        return Inventory(target.target_id, target.expected_architecture, target.environment, db, os_data, {**features, **target.features})
 
     def _discover_oracle_inventory(self, target: Target) -> dict[str, Any]:
         connection_id = target.database.get("primary_connection")
@@ -108,7 +109,11 @@ class CheckRunner:
                   open_mode,
                   database_role as role,
                   log_mode as archivelog_mode,
-                  force_logging
+                  force_logging,
+                  cdb,
+                  protection_mode,
+                  protection_level,
+                  flashback_on
                 from v$database
             """))
             inventory.update(self._query_one(connector, "instance status", """
@@ -145,6 +150,7 @@ class CheckRunner:
                   'pga_aggregate_limit',
                   'db_flashback_retention_target',
                   'control_file_record_keep_time'
+                  ,'cluster_database'
                 )
             """)
             if parameter_rows:
@@ -179,9 +185,95 @@ class CheckRunner:
             inventory.update(self._discover_oracle_resources_inventory(connector, inventory.get("parameters", {})))
             inventory.update(self._discover_io_redo_archive_inventory(connector, inventory.get("parameters", {}), inventory))
             inventory.update(self._discover_recoverability_drp_inventory(connector, inventory.get("parameters", {})))
+            inventory.update(self._discover_oracle_feature_signals(connector))
             return inventory
         finally:
             connector.close()
+
+    def _discover_oracle_feature_signals(self, connector: Any) -> dict[str, Any]:
+        signals: dict[str, Any] = {}
+        fra = self._query_one(connector, "FRA para detección de características", """
+            select space_limit as fra_space_limit
+            from v$recovery_file_dest
+        """)
+        if fra:
+            signals.update(fra)
+        remote_destinations = self._query_rows(connector, "destinos remotos de archive para bases standby", """
+            select dest_id, status, target, destination
+            from v$archive_dest
+            where status <> 'INACTIVE'
+              and target = 'STANDBY'
+        """)
+        if remote_destinations:
+            signals["remote_archive_destinations"] = remote_destinations
+        return signals
+
+    def _detect_oracle_features_from_inventory(self, database: dict[str, Any]) -> dict[str, Any]:
+        parameters = database.get("parameters", {}) if isinstance(database.get("parameters"), dict) else {}
+        cluster_value = str((parameters.get("cluster_database") or {}).get("value", "FALSE")).upper()
+        rac_detected = cluster_value == "TRUE"
+
+        cdb_value = str(database.get("cdb", "NO")).upper()
+        multitenant_detected = cdb_value == "YES"
+
+        database_role = str(database.get("role", database.get("database_role", "PRIMARY"))).upper()
+        standby_roles = {"PHYSICAL STANDBY", "LOGICAL STANDBY", "SNAPSHOT STANDBY"}
+        remote_archive_destinations = database.get("remote_archive_destinations") or []
+        standby_detected = database_role in standby_roles or bool(remote_archive_destinations)
+
+        fra_space_limit = database.get("fra_space_limit")
+        if fra_space_limit is None:
+            fra_space_limit = database.get("recovery_file_dest_size")
+        if fra_space_limit is None and isinstance(database.get("storage"), dict):
+            fra_space_limit = (database["storage"].get("fra") or {}).get("space_limit") or (database["storage"].get("fra") or {}).get("recovery_file_dest_size")
+        fra_detected = bool(database.get("fra_configured")) or self._safe_number(fra_space_limit) > 0
+
+        flashback_value = str(database.get("flashback_on", "NO")).upper()
+        return {
+            "oracle_rac": {
+                "detected": rac_detected,
+                "status": "detected" if rac_detected else "not_detected",
+                "source": "V$PARAMETER.CLUSTER_DATABASE",
+                "value": cluster_value,
+                "reason": f"cluster_database = {cluster_value}",
+            },
+            "multitenant": {
+                "detected": multitenant_detected,
+                "status": "detected" if multitenant_detected else "not_detected",
+                "source": "V$DATABASE.CDB",
+                "value": cdb_value,
+                "reason": "La base de datos está configurada como CDB." if multitenant_detected else "La base de datos no está configurada como CDB.",
+            },
+            "standby_configuration": {
+                "detected": standby_detected,
+                "status": "detected" if standby_detected else "not_detected",
+                "source": "V$DATABASE.DATABASE_ROLE / V$ARCHIVE_DEST",
+                "database_role": database_role,
+                "protection_mode": database.get("protection_mode"),
+                "protection_level": database.get("protection_level"),
+                "reason": "Configuración de bases standby detectada." if standby_detected else "No se detectaron señales locales de configuración con bases standby.",
+            },
+            "fra_configured": {
+                "detected": fra_detected,
+                "status": "detected" if fra_detected else "not_detected",
+                "source": "V$RECOVERY_FILE_DEST",
+                "space_limit": self._safe_number(fra_space_limit),
+                "reason": "FRA configurada." if fra_detected else "FRA no configurada o space_limit = 0.",
+            },
+            "flashback_database": {
+                "detected": flashback_value == "YES",
+                "status": "detected" if flashback_value == "YES" else "not_detected",
+                "source": "V$DATABASE.FLASHBACK_ON",
+                "value": flashback_value,
+                "reason": "Flashback Database está habilitado." if flashback_value == "YES" else "Flashback Database no está habilitado.",
+            },
+        }
+
+    def _safe_number(self, value: Any) -> float:
+        try:
+            return float(value or 0)
+        except (TypeError, ValueError):
+            return 0
 
 
     def _discover_schema_objects_inventory(self, connector: Any) -> dict[str, Any]:
@@ -1316,12 +1408,24 @@ class CheckRunner:
         if not applicable:
             duration_ms = int((time.monotonic() - start) * 1000)
             logging.info("Check %s skipped: %s duration_ms=%s", check.check_id, reason, duration_ms)
+            evidence = None
+            required_feature = (check.applicability or {}).get("requires_feature")
+            if required_feature:
+                feature = inventory.features.get(required_feature, {}) if isinstance(inventory.features, dict) else {}
+                evidence = {
+                    "required_feature": required_feature,
+                    "feature_detected": feature.get("detected") if isinstance(feature, dict) else None,
+                    "feature_status": feature.get("status") if isinstance(feature, dict) else "missing",
+                    "feature_reason": feature.get("reason") if isinstance(feature, dict) else "La característica requerida no existe en el inventario.",
+                }
             return Result(
                 check_id=check.check_id,
                 group_id=check.group_id,
                 status=ResultStatus.SKIPPED,
                 title=check.title,
                 failure_severity=check.failure_severity,
+                message="La validación no aplica para este target." if required_feature else None,
+                evidence=evidence,
                 skipped_reason=reason,
                 duration_ms=duration_ms,
             )
