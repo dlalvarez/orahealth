@@ -351,7 +351,7 @@ Implement checks for:
 - Corruption messages.
 - Archive errors.
 - Redo errors.
-- Data Guard errors when found.
+- Standby database errors when found.
 - ASM errors when found.
 
 ### Phase 2 acceptance criteria
@@ -675,7 +675,7 @@ Implement checks for:
 - Available space for patching.
 - Invalid objects before maintenance.
 - CRS state before maintenance.
-- Data Guard state before maintenance.
+- Standby database state before maintenance when applicable.
 - ASM state before maintenance.
 - Open PDBs before maintenance if applicable.
 

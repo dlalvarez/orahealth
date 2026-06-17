@@ -19,9 +19,9 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: FORCE LOGGING ayuda a garantizar recuperabilidad y consistencia para Data Guard, replicación y operaciones que podrían usar NOLOGGING.
+  summary: FORCE LOGGING ayuda a mejorar la recuperabilidad y consistencia ante operaciones que podrían usar NOLOGGING, replicación o configuraciones con bases standby cuando apliquen.
   actions:
-    - Confirmar si la base participa o participará en Data Guard, replicación o una estrategia estricta de recuperación.
+    - Confirmar si la base participa o participará en replicación, configuraciones con bases standby o una estrategia estricta de recuperación.
     - Revisar procesos de carga masiva, mantenimiento o ETL que usan NOLOGGING y coordinar el impacto operativo.
     - Evaluar el incremento esperado en generación de redo y capacidad de archive/FRA.
     - Habilitar FORCE LOGGING si el estándar de recuperabilidad lo exige, coordinando con los equipos afectados.

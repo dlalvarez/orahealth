@@ -18,7 +18,7 @@ remediation:
   summary: Uso de flashback logs puede afectar recuperabilidad, capacidad, continuidad operativa o tiempos de respaldo si no se controla según el estándar.
   actions:
     - Revisar la evidencia recolectada y confirmar si corresponde a operación normal, batch planificado o incidente.
-    - Validar espacio, retención, configuración Oracle, respaldos RMAN y dependencias de Data Guard cuando aplique.
+    - Validar espacio, retención, configuración Oracle, respaldos RMAN y dependencias de recuperación o bases standby cuando aplique.
     - Coordinar la acción correctiva con DBA, infraestructura y aplicación antes de modificar parámetros o archivos.
     - Ejecutar cambios mediante procedimientos aprobados y evitar borrados manuales de archivos administrados por RMAN/FRA.
     - Repetir el health check y validar alert.log, reportes y evidencia posterior al ajuste.

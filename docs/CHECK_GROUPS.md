@@ -327,7 +327,7 @@ custom
 
 ### Purpose
 
-Analyze Oracle alert logs and trace files to detect critical errors, warnings, corruption symptoms, space issues, Data Guard issues, ASM issues, and operational instability.
+Analyze Oracle alert logs and trace files to detect critical errors, warnings, corruption symptoms, space issues, standby database issues, ASM issues, and operational instability.
 
 ### Checks to include
 
