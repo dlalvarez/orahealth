@@ -89,6 +89,7 @@ class CheckRunner:
         db.setdefault("io_redo_archive", self._default_io_redo_archive_inventory(db, db.get("parameters", {})))
         db.setdefault("recoverability_drp", self._default_recoverability_drp_inventory(db.get("parameters", {}), healthy_defaults="mock_inventory" in target.database))
         db.setdefault("rac", self._default_rac_inventory(db.get("parameters", {})))
+        db.setdefault("multitenant", self._default_multitenant_inventory())
         features = self._detect_oracle_features_from_inventory(db)
         os_data = {"platform": target.operating_system.get("platform", "linux")}
         if target.operating_system.get("use_local_discovery", False):
@@ -187,6 +188,7 @@ class CheckRunner:
             inventory.update(self._discover_io_redo_archive_inventory(connector, inventory.get("parameters", {}), inventory))
             inventory.update(self._discover_recoverability_drp_inventory(connector, inventory.get("parameters", {})))
             inventory.update(self._discover_rac_inventory(connector, inventory.get("parameters", {})))
+            inventory.update(self._discover_multitenant_inventory(connector, inventory.get("cdb")))
             inventory.update(self._discover_oracle_feature_signals(connector))
             return inventory
         finally:
@@ -1207,6 +1209,44 @@ class CheckRunner:
             ev.update({"rows": rows, "interconnect_count": len(rows), "collection_error": rac.get("interconnects_error")})
         return ev
 
+    def _default_multitenant_inventory(self) -> dict[str, Any]:
+        return {
+            "pdbs": [],
+        }
+
+    def _discover_multitenant_inventory(self, connector: Any, cdb: Any) -> dict[str, Any]:
+        multitenant = self._default_multitenant_inventory()
+        if str(cdb or "NO").upper() != "YES":
+            return {"multitenant": multitenant}
+        rows, error = self._query_rows_with_error(connector, "PDBs Multitenant", """
+            select c.con_id,
+                   c.name,
+                   c.open_mode,
+                   c.restricted,
+                   p.status
+            from v$containers c
+            left join v$pdbs p on p.con_id = c.con_id
+            where c.con_id > 1
+            order by c.con_id
+        """, log_warning=False)
+        multitenant["pdbs"] = rows
+        if error:
+            multitenant["pdbs_error"] = error
+        return {"multitenant": multitenant}
+
+    def _build_multitenant_evidence(self, check: Check, database: dict[str, Any]) -> dict[str, Any]:
+        multitenant = database.get("multitenant") if isinstance(database.get("multitenant"), dict) else self._default_multitenant_inventory()
+        rows = multitenant.get("pdbs") or []
+        return {
+            "metric": check.check_id,
+            "label": check.collector.get("label", check.title),
+            "source": check.collector.get("source_view", "inventario Multitenant"),
+            "required_feature": "multitenant",
+            "rows": rows,
+            "pdb_count": len(rows),
+            "collection_error": multitenant.get("pdbs_error"),
+        }
+
     def _default_recoverability_drp_inventory(self, parameters: dict[str, Any] | None = None, healthy_defaults: bool = False) -> dict[str, Any]:
         parameters = parameters if isinstance(parameters, dict) else {}
         control_keep = self._parameter_value(parameters, "control_file_record_keep_time")
@@ -1570,6 +1610,8 @@ class CheckRunner:
             return self._build_recoverability_drp_evidence(check, inventory.database)
         if ctype == "rac":
             return self._build_rac_evidence(check, inventory.database)
+        if ctype == "multitenant":
+            return self._build_multitenant_evidence(check, inventory.database)
         if ctype == "oracle_metric":
             field = collector["field"]
             return self._build_oracle_config_evidence(

@@ -1,0 +1,27 @@
+check_id: multitenant_pdb_restricted_mode
+group_id: multitenant
+title: PDBs de aplicación en modo restringido
+description: Detecta PDBs de aplicación abiertas en modo restringido para revisión operativa.
+severity: WARNING
+collector:
+  type: multitenant
+  label: PDBs de aplicación en modo restringido
+  source_view: v$containers
+evaluator:
+  type: multitenant
+applicability:
+  requires_feature: multitenant
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar si el modo restringido de una PDB de aplicación corresponde a una ventana operativa o mantenimiento autorizado.
+  actions:
+    - Confirmar si existe mantenimiento activo que justifique el modo restringido.
+    - Si no corresponde, coordinar con el equipo DBA la reapertura normal de la PDB mediante procedimiento aprobado.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, multitenant, pdb]

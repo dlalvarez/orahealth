@@ -1,0 +1,28 @@
+check_id: multitenant_pdb_open_state
+group_id: multitenant
+title: Estado básico de PDBs de aplicación
+description: Valida de forma prudente que las PDBs de aplicación visibles estén abiertas en un modo razonable para operación normal.
+severity: WARNING
+collector:
+  type: multitenant
+  label: Estado básico de PDBs de aplicación
+  source_view: v$containers / v$pdbs
+evaluator:
+  type: multitenant
+applicability:
+  requires_feature: multitenant
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar PDBs de aplicación que no aparezcan abiertas en un modo esperado para operación normal.
+  actions:
+    - Excluir cambios planificados o ventanas de mantenimiento antes de tomar acciones correctivas.
+    - Confirmar con el dueño de la aplicación si la PDB debe estar READ WRITE, READ ONLY u otro modo operativo.
+    - Abrir o corregir la PDB únicamente mediante procedimiento DBA aprobado cuando corresponda.
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, multitenant, pdb]

@@ -1,0 +1,27 @@
+check_id: multitenant_pdb_inventory
+group_id: multitenant
+title: Inventario básico de PDBs
+description: Lista las PDBs detectadas en una CDB con CON_ID, modo de apertura, estado y modo restringido.
+severity: INFO
+collector:
+  type: multitenant
+  label: Inventario básico de PDBs
+  source_view: v$containers / v$pdbs
+evaluator:
+  type: multitenant
+applicability:
+  requires_feature: multitenant
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar el inventario de PDBs como evidencia operativa; este check no penaliza el puntaje por sí mismo.
+  actions:
+    - Confirmar que las PDBs listadas corresponden al inventario esperado del ambiente.
+    - Validar con el equipo DBA cualquier PDB inesperada, faltante o con estado que requiera revisión.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, multitenant, pdb]
