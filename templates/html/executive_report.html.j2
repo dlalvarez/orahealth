@@ -35,6 +35,14 @@
     {% if target_info.operating_system %}<h3>Datos del servidor / sistema operativo</h3><div class="info-grid">{% for item in target_info.operating_system %}<div class="info-item"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>{% endfor %}</div>{% endif %}
   </section>
 
+  {% if oracle_feature_items %}
+  <section class="section">
+    <h2>Características Oracle detectadas</h2>
+    <p class="hint">Estas características corresponden a capacidades o configuraciones detectadas durante el inventario. No representan hallazgos ni afectan el puntaje de salud.</p>
+    <div class="table-wrap"><table><thead><tr><th>Característica</th><th>ESTADO DE DETECCIÓN</th><th>Fuente</th><th>Valor</th><th>Razón</th></tr></thead><tbody>{% for item in oracle_feature_items %}<tr><td><strong>{{ item.name }}</strong></td><td><span class="badge INFO">{{ item.status }}</span></td><td>{{ item.source }}</td><td>{{ item.value }}</td><td>{{ item.reason }}</td></tr>{% endfor %}</tbody></table></div>
+  </section>
+  {% endif %}
+
   <section class="section">
     <h2>Resumen Ejecutivo</h2>
     <p class="hint">El puntaje inicia en 100 y disminuye cuando se encuentran Advertencia, Fallo, Crítico o Error. El estado global resalta el mayor riesgo operativo observado.</p>

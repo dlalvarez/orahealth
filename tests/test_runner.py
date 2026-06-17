@@ -4,7 +4,7 @@ from pathlib import Path
 
 from orahealthcheck.config_loader import ConfigLoader, ConfigValidator
 from orahealthcheck.engine import CheckRunner
-from orahealthcheck.models import Check
+from orahealthcheck.models import Check, Inventory, Target
 
 
 def _run_example(tmp_path):
@@ -1029,3 +1029,93 @@ def test_new_schema_objects_visible_text_is_spanish():
         assert check.remediation["summary"]
         assert len(check.remediation["actions"]) >= 5
         assert check.remediation["owner"] == "DBA"
+
+def test_oracle_features_are_rendered_in_all_html_reports(tmp_path):
+    output = _run_example(tmp_path)
+    for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html", "evidence_report.html"]:
+        html = (output / report_name).read_text(encoding="utf-8")
+        assert "Características Oracle detectadas" in html
+        assert "ESTADO DE DETECCIÓN" in html
+        assert "<th>Detectado</th>" not in html
+        assert "<th>DETECTADO</th>" not in html
+        assert "Estas características corresponden a capacidades o configuraciones detectadas durante el inventario" in html
+        for expected in ["Oracle RAC", "Multitenant / CDB", "Configuración con bases standby", "FRA configurada", "Flashback Database"]:
+            assert expected in html
+        assert "No representan hallazgos ni afectan el puntaje de salud" in html
+
+
+def test_oracle_features_are_inventory_context_not_corrective_actions(tmp_path):
+    output = _run_example(tmp_path)
+    corrective_html = (output / "corrective_actions.html").read_text(encoding="utf-8")
+    features_position = corrective_html.index("Características Oracle detectadas")
+    actions_position = corrective_html.index("Acciones correctivas")
+
+    assert features_position < actions_position
+    assert "Oracle RAC" in corrective_html[:actions_position]
+    assert "No se requieren acciones correctivas" in corrective_html
+
+
+def test_oracle_feature_labels_status_booleans_and_missing_fields_do_not_break_reports(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    mock_inventory = config["targets"]["example_standalone"].database["mock_inventory"]
+    mock_inventory["parameters"]["cluster_database"] = {"value": "TRUE", "display_value": "TRUE"}
+    mock_inventory["cdb"] = "NO"
+    mock_inventory["database_role"] = "PRIMARY"
+    mock_inventory["fra_configured"] = True
+    mock_inventory["fra_space_limit"] = 1024
+    mock_inventory["flashback_on"] = "UNKNOWN"
+    config["targets"]["example_standalone"].features["future_unknown"] = {"status": "unknown"}
+    config["targets"]["example_standalone"].features["sysdba"] = True
+    output = CheckRunner(config).run_target("example_standalone")
+    for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html", "evidence_report.html"]:
+        html = (output / report_name).read_text(encoding="utf-8")
+        assert "Características Oracle detectadas" in html
+        assert "ESTADO DE DETECCIÓN" in html
+        assert "<th>Detectado</th>" not in html
+        assert "<th>DETECTADO</th>" not in html
+        assert "Diagnostic Pack" in html
+        assert "AWR" in html
+        assert "Conexión SYSDBA" in html
+        assert "Detectado" in html
+        assert "No detectado" in html
+        assert "Desconocido" in html
+        assert ">Sí<" in html
+        assert ">No<" in html
+        assert "Configuración con bases standby" in html
+
+
+def test_all_reports_generate_when_oracle_features_are_absent(tmp_path):
+    reporter = __import__("orahealthcheck.reports.html_reporter", fromlist=["HTMLReporter"]).HTMLReporter(Path("templates/html"))
+    target = Target("no_features", "No Features", "test", "standalone", "standalone_basic")
+    inventory = Inventory("no_features", "standalone", "test", database={"status": "OPEN"}, operating_system={"platform": "linux"}, features={})
+
+    reporter.generate(tmp_path, target, inventory, [], {"score": 100, "global_status": "PASS"})
+
+    for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html", "evidence_report.html"]:
+        html = (tmp_path / report_name).read_text(encoding="utf-8")
+        assert "OraHealthCheck" in html
+        assert "Características Oracle detectadas" not in html
+
+
+def test_oracle_feature_renderer_handles_absent_and_incomplete_features():
+    reporter = __import__("orahealthcheck.reports.html_reporter", fromlist=["HTMLReporter"]).HTMLReporter(Path("templates/html"))
+    assert reporter._oracle_feature_items({}) == []
+
+    items = reporter._oracle_feature_items({"features": {"future_feature": {"status": "unknown"}, "flag_only": True}})
+    by_id = {item["feature_id"]: item for item in items}
+    assert by_id["future_feature"]["name"] == "Future Feature"
+    assert by_id["future_feature"]["status"] == "Desconocido"
+    assert by_id["future_feature"]["detected"] == "No disponible"
+    assert by_id["future_feature"]["source"] == "-"
+    assert by_id["future_feature"]["value"] == "unknown"
+    assert by_id["future_feature"]["reason"] == "-"
+    assert by_id["flag_only"]["status"] == "Detectado"
+    assert by_id["flag_only"]["value"] == "Sí"
+    assert by_id["flag_only"]["detected"] == "Sí"
+
+    false_item = reporter._oracle_feature_items({"features": {"diagnostic_pack": False}})[0]
+    assert false_item["name"] == "Diagnostic Pack"
+    assert false_item["status"] == "No detectado"
+    assert false_item["value"] == "No"

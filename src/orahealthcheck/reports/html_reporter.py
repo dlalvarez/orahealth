@@ -66,6 +66,25 @@ DB_INVENTORY_FIELDS = (
     ("fra_used_pct", "Uso de FRA"),
 )
 
+FEATURE_LABELS = {
+    "oracle_rac": "Oracle RAC",
+    "multitenant": "Multitenant / CDB",
+    "standby_configuration": "Configuración con bases standby",
+    "fra_configured": "FRA configurada",
+    "flashback_database": "Flashback Database",
+    "diagnostic_pack": "Diagnostic Pack",
+    "awr": "AWR",
+    "sysdba": "Conexión SYSDBA",
+}
+
+FEATURE_STATUS_LABELS = {
+    "detected": "Detectado",
+    "not_detected": "No detectado",
+    "unknown": "Desconocido",
+    "skipped": "Omitido",
+    "error": "Error",
+}
+
 
 class HTMLReporter:
     def __init__(self, template_dir: Path) -> None:
@@ -93,6 +112,7 @@ class HTMLReporter:
             "inventory": inventory_dict,
             "target_info": self._target_info(target, inventory_dict, generated_at, config),
             "database_inventory_items": self._database_inventory_items(inventory_dict),
+            "oracle_feature_items": self._oracle_feature_items(inventory_dict),
             "os_inventory_enriched": self._os_inventory_enriched(inventory_dict, results),
             "results": self._sort_results(results),
             "grouped_results": grouped_results,
@@ -177,6 +197,53 @@ class HTMLReporter:
     def _database_inventory_items(self, inventory: dict[str, Any]) -> list[dict[str, Any]]:
         database = inventory.get("database", {})
         return [{"label": label, "technical_name": key, "value": database.get(key, "N/D")} for key, label in DB_INVENTORY_FIELDS]
+
+    def _oracle_feature_items(self, inventory: dict[str, Any]) -> list[dict[str, Any]]:
+        features = inventory.get("features", {})
+        if not isinstance(features, dict):
+            return []
+        return [self._oracle_feature_item(feature_id, data) for feature_id, data in features.items()]
+
+    def _oracle_feature_item(self, feature_id: str, data: Any) -> dict[str, Any]:
+        if isinstance(data, dict):
+            feature = data
+        elif isinstance(data, bool):
+            feature = {"detected": data, "status": "detected" if data else "not_detected", "value": data}
+        else:
+            feature = {"detected": data}
+        return {
+            "feature_id": feature_id,
+            "name": FEATURE_LABELS.get(feature_id, feature_id.replace("_", " ").title()),
+            "status": self._feature_status_label(feature.get("status")),
+            "detected": self._feature_detected_label(feature),
+            "source": self._feature_text(feature.get("source"), "-"),
+            "value": self._feature_value(feature),
+            "reason": self._feature_text(feature.get("reason"), "-"),
+        }
+
+    def _feature_status_label(self, status: Any) -> str:
+        if status is None or status == "":
+            return "Desconocido"
+        status_text = str(status)
+        return FEATURE_STATUS_LABELS.get(status_text.lower(), status_text.replace("_", " ").title())
+
+    def _feature_detected_label(self, feature: dict[str, Any]) -> str:
+        if "detected" not in feature:
+            return "No disponible"
+        return self._feature_text(feature.get("detected"), "No disponible")
+
+    def _feature_value(self, feature: dict[str, Any]) -> str:
+        for key in ("value", "database_role", "space_limit", "protection_mode", "status"):
+            if key in feature and feature.get(key) not in (None, ""):
+                return self._feature_text(feature.get(key), "-")
+        return "-"
+
+    def _feature_text(self, value: Any, default: str) -> str:
+        if value is None or value == "":
+            return default
+        if isinstance(value, bool):
+            return "Sí" if value else "No"
+        return str(value)
 
     def _os_inventory_enriched(self, inventory: dict[str, Any], results: list[Result]) -> dict[str, Any]:
         os_data = dict(inventory.get("operating_system", {}))
@@ -265,6 +332,7 @@ class HTMLReporter:
         target_info: dict[str, list[dict[str, Any]]],
         database_inventory_items: list[dict[str, Any]],
         os_inventory_enriched: dict[str, Any],
+        oracle_feature_items: list[dict[str, Any]],
         grouped_results: dict[str, list[Result]],
         corrective_actions: dict[str, list[Result]],
         generated_at: str,
@@ -276,6 +344,21 @@ class HTMLReporter:
         def badge(status: str) -> str:
             icon = {"PASS": "🟢", "INFO": "🔵", "WARNING": "🟡", "FAIL": "🔴", "CRITICAL": "🛑", "ERROR": "🟣", "SKIPPED": "⚪"}.get(status, "⚪")
             return f'<span class="badge {esc(status)}">{icon} {esc(status)} / {esc(self._status_label(status))}</span>'
+
+        def features_section(compact: bool = False) -> str:
+            if not oracle_feature_items:
+                return ""
+            if compact:
+                parts = ["<section><h2>Características Oracle detectadas</h2><p>Estas características corresponden a capacidades o configuraciones detectadas durante el inventario. No representan hallazgos ni afectan el puntaje de salud.</p><div class='table-wrap'><table><tr><th>Característica</th><th>ESTADO DE DETECCIÓN</th><th>Fuente</th><th>Valor</th><th>Razón</th></tr>"]
+                for item in oracle_feature_items:
+                    parts.append(f"<tr><td>{esc(item['name'])}</td><td>{esc(item['status'])}</td><td>{esc(item['source'])}</td><td>{esc(item['value'])}</td><td>{esc(item['reason'])}</td></tr>")
+                parts.append("</table></div></section>")
+                return "".join(parts)
+            parts = ["<h3>Características Oracle detectadas</h3><p>Estas características corresponden a capacidades o configuraciones detectadas durante el inventario. No representan hallazgos ni afectan el puntaje de salud.</p><div class='table-wrap'><table><tr><th>Característica</th><th>ESTADO DE DETECCIÓN</th><th>Fuente</th><th>Valor</th><th>Razón</th></tr>"]
+            for item in oracle_feature_items:
+                parts.append(f"<tr><td>{esc(item['name'])}<br><small>{esc(item['feature_id'])}</small></td><td>{esc(item['status'])}</td><td>{esc(item['source'])}</td><td>{esc(item['value'])}</td><td>{esc(item['reason'])}</td></tr>")
+            parts.append("</table></div>")
+            return "".join(parts)
 
         def info_section() -> str:
             parts = ["<section><h2>Información del target</h2>"]
@@ -304,6 +387,7 @@ class HTMLReporter:
         body.append(info_section())
 
         if output_name == "executive_report.html":
+            body.append(features_section(compact=True))
             body.append("<section><h2>Resumen Ejecutivo</h2><p>El puntaje inicia en 100 y disminuye ante hallazgos de riesgo.</p><div class='grid'>")
             for label, value in (("Puntaje de Salud", summary.get("score")), ("Estado Global", badge(str(summary.get("global_status")))), ("Total de validaciones", summary.get("total_checks")), ("PASS", summary.get("PASS")), ("WARNING", summary.get("WARNING")), ("FAIL", summary.get("FAIL")), ("ERROR", summary.get("ERROR")), ("SKIPPED", summary.get("SKIPPED"))):
                 body.append(f"<div class='card'><span>{label}</span><strong>{value}</strong></div>")
@@ -328,6 +412,7 @@ class HTMLReporter:
             for label, value in (("Plataforma", os_inventory_enriched.get("platform")), ("CPU", os_inventory_enriched.get("cpu_summary")), ("Memoria", os_inventory_enriched.get("memory_summary")), ("Filesystems", os_inventory_enriched.get("filesystems_summary"))):
                 body.append(f"<div class='card'><span>{label}</span><strong>{esc(value)}</strong></div>")
             body.append("</div>")
+            body.append(features_section())
             if os_inventory_enriched.get("filesystems"):
                 body.append("<div class='table-wrap'><table><tr><th>Filesystem</th><th>Mount</th><th>Uso (%)</th></tr>")
                 for fs in os_inventory_enriched["filesystems"]:
@@ -347,7 +432,9 @@ class HTMLReporter:
             body.append("</div></section><section><h2>Inventario Técnico</h2><h3>Inventario de Base de Datos</h3><div class='grid'>")
             for item in database_inventory_items:
                 body.append(f"<div class='card'><span>{esc(item['label'])}</span><strong>{esc(item['value'])}</strong><small>{esc(item['technical_name'])}</small></div>")
-            body.append("</div></section><section><h2>Evidencias por grupo funcional</h2><p>Las evidencias se muestran colapsadas por defecto para facilitar la navegación. Despliegue cada validación para ver el JSON completo de evidencia asociado al resultado.</p>")
+            body.append("</div>")
+            body.append(features_section())
+            body.append("</section><section><h2>Evidencias por grupo funcional</h2><p>Las evidencias se muestran colapsadas por defecto para facilitar la navegación. Despliegue cada validación para ver el JSON completo de evidencia asociado al resultado.</p>")
             for group_id, group_results in grouped_results.items():
                 body.append(f"<h3>{esc(self._group_label(group_id))} <small>{esc(group_id)}</small> ({len(group_results)} validación(es))</h3>")
                 for result in group_results:
@@ -365,6 +452,7 @@ class HTMLReporter:
                     body.append("</details>")
             body.append("</section>")
         else:
+            body.append(features_section(compact=True))
             body.append("<section><h2>Resumen de Estados</h2><div class='grid'>")
             for label, value in (("Puntaje de Salud", summary.get("score")), ("Estado Global", badge(str(summary.get("global_status")))), ("WARNING", summary.get("WARNING")), ("FAIL", summary.get("FAIL")), ("CRITICAL", summary.get("CRITICAL")), ("ERROR", summary.get("ERROR"))):
                 body.append(f"<div class='card'><span>{label}</span><strong>{value}</strong></div>")
