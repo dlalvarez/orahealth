@@ -6,6 +6,7 @@ from .oracle_security import OracleSecurityEvaluator
 from .oracle_resources import OracleResourcesEvaluator
 from .io_redo_archive import IoRedoArchiveEvaluator
 from .recoverability_drp import RecoverabilityDrpEvaluator
+from .rac import RacEvaluator
 from .regex import RegexEvaluator
 from .schema_objects import SchemaObjectsEvaluator
 from .row_count_threshold import RowCountThresholdEvaluator
@@ -22,6 +23,7 @@ EVALUATORS = {
     "oracle_resources": OracleResourcesEvaluator(),
     "io_redo_archive": IoRedoArchiveEvaluator(),
     "recoverability_drp": RecoverabilityDrpEvaluator(),
+    "rac": RacEvaluator(),
     "row_count_threshold": RowCountThresholdEvaluator(),
     "regex": RegexEvaluator(),
     "schema_objects": SchemaObjectsEvaluator(),

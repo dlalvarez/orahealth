@@ -88,6 +88,7 @@ class CheckRunner:
         db.setdefault("oracle_resources", self._default_oracle_resources_inventory(db.get("parameters", {}), healthy_defaults="mock_inventory" in target.database))
         db.setdefault("io_redo_archive", self._default_io_redo_archive_inventory(db, db.get("parameters", {})))
         db.setdefault("recoverability_drp", self._default_recoverability_drp_inventory(db.get("parameters", {}), healthy_defaults="mock_inventory" in target.database))
+        db.setdefault("rac", self._default_rac_inventory(db.get("parameters", {})))
         features = self._detect_oracle_features_from_inventory(db)
         os_data = {"platform": target.operating_system.get("platform", "linux")}
         if target.operating_system.get("use_local_discovery", False):
@@ -185,6 +186,7 @@ class CheckRunner:
             inventory.update(self._discover_oracle_resources_inventory(connector, inventory.get("parameters", {})))
             inventory.update(self._discover_io_redo_archive_inventory(connector, inventory.get("parameters", {}), inventory))
             inventory.update(self._discover_recoverability_drp_inventory(connector, inventory.get("parameters", {})))
+            inventory.update(self._discover_rac_inventory(connector, inventory.get("parameters", {})))
             inventory.update(self._discover_oracle_feature_signals(connector))
             return inventory
         finally:
@@ -1129,6 +1131,82 @@ class CheckRunner:
         """)
         return {"io_redo_archive": io}
 
+    def _default_rac_inventory(self, parameters: dict[str, Any] | None = None) -> dict[str, Any]:
+        parameters = parameters if isinstance(parameters, dict) else {}
+        return {
+            "cluster_database": self._parameter_value(parameters, "cluster_database"),
+            "instances": [],
+            "threads": [],
+            "services": [],
+            "undo_by_instance": [],
+            "interconnects": [],
+        }
+
+    def _discover_rac_inventory(self, connector: Any, parameters: dict[str, Any]) -> dict[str, Any]:
+        rac = self._default_rac_inventory(parameters)
+        if str(rac.get("cluster_database") or "FALSE").upper() != "TRUE":
+            return {"rac": rac}
+        rac["instances"] = self._query_rows(connector, "instancias RAC visibles", """
+            select inst_id, instance_number, instance_name, host_name, status, database_status,
+                   active_state, startup_time, version, thread# as thread_number
+            from gv$instance
+            order by inst_id
+        """)
+        rac["threads"] = self._query_rows(connector, "threads redo RAC", """
+            select inst_id, thread# as thread_number, status, enabled, instance
+            from gv$thread
+            order by thread#
+        """)
+        rac["undo_by_instance"] = self._query_rows(connector, "UNDO por instancia RAC", """
+            select inst_id, name, value
+            from gv$parameter
+            where name = 'undo_tablespace'
+            order by inst_id
+        """)
+        rows, error = self._query_rows_with_error(connector, "servicios RAC", """
+            select inst_id, name, network_name, creation_date, pdb
+            from gv$services
+            order by inst_id, name
+        """, log_warning=False)
+        rac["services"] = rows
+        if error:
+            rac["services_error"] = error
+        rows, error = self._query_rows_with_error(connector, "interconnect RAC", """
+            select inst_id, name, ip_address, is_public, source
+            from gv$cluster_interconnects
+            order by inst_id, name
+        """, log_warning=False)
+        rac["interconnects"] = rows
+        if error:
+            rac["interconnects_error"] = error
+        return {"rac": rac}
+
+    def _build_rac_evidence(self, check: Check, database: dict[str, Any]) -> dict[str, Any]:
+        rac = database.get("rac") if isinstance(database.get("rac"), dict) else self._default_rac_inventory(database.get("parameters", {}))
+        cid = check.check_id
+        ev = {"metric": cid, "label": check.collector.get("label", check.title), "source": check.collector.get("source_view", "inventario RAC")}
+        ev.update({k: v for k, v in check.evaluator.items() if k != "type"})
+        ev["required_feature"] = "oracle_rac"
+        ev["cluster_database"] = rac.get("cluster_database")
+        if cid == "rac_cluster_database_parameter":
+            return ev
+        if cid in {"rac_instances_status", "rac_instance_count"}:
+            rows = rac.get("instances") or []
+            ev.update({"rows": rows, "instance_count": len(rows)})
+        elif cid == "rac_threads_status":
+            rows = rac.get("threads") or []
+            ev.update({"rows": rows, "thread_count": len(rows)})
+        elif cid == "rac_undo_configuration_basic":
+            rows = rac.get("undo_by_instance") or []
+            ev.update({"rows": rows, "instance_count": len(rows)})
+        elif cid == "rac_services_basic":
+            rows = rac.get("services") or []
+            ev.update({"rows": rows, "service_count": len(rows), "collection_error": rac.get("services_error")})
+        elif cid == "rac_interconnect_info":
+            rows = rac.get("interconnects") or []
+            ev.update({"rows": rows, "interconnect_count": len(rows), "collection_error": rac.get("interconnects_error")})
+        return ev
+
     def _default_recoverability_drp_inventory(self, parameters: dict[str, Any] | None = None, healthy_defaults: bool = False) -> dict[str, Any]:
         parameters = parameters if isinstance(parameters, dict) else {}
         control_keep = self._parameter_value(parameters, "control_file_record_keep_time")
@@ -1490,6 +1568,8 @@ class CheckRunner:
             return self._build_io_redo_archive_evidence(check, inventory.database)
         if ctype == "recoverability_drp":
             return self._build_recoverability_drp_evidence(check, inventory.database)
+        if ctype == "rac":
+            return self._build_rac_evidence(check, inventory.database)
         if ctype == "oracle_metric":
             field = collector["field"]
             return self._build_oracle_config_evidence(

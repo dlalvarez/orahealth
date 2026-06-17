@@ -34,7 +34,7 @@ GROUP_LABELS = {
     "security": "Seguridad Oracle",
     "recoverability_drp": "Recuperabilidad y preparación DRP",
     "performance": "Rendimiento",
-    "rac": "RAC",
+    "rac": "Oracle RAC básico",
     "dataguard": "Bases standby / Data Guard",
     "asm": "ASM",
     "capacity": "Capacidad",
