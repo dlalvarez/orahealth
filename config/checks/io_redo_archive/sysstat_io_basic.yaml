@@ -1,0 +1,28 @@
+check_id: sysstat_io_basic
+group_id: io_redo_archive
+title: Estadísticas básicas acumuladas de I/O
+description: Recolecta contadores acumulados de I/O desde inicio de instancia usando v$sysstat.
+severity: INFO
+collector:
+  type: io_redo_archive
+  label: Estadísticas básicas acumuladas de I/O
+  source_view: v$sysstat
+evaluator:
+  type: io_redo_archive
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Estadísticas básicas acumuladas de I/O puede afectar recuperabilidad, capacidad, continuidad operativa o tiempos de respaldo si no se controla según el estándar.
+  actions:
+    - Revisar la evidencia recolectada y confirmar si corresponde a operación normal, batch planificado o incidente.
+    - Validar espacio, retención, configuración Oracle, respaldos RMAN y dependencias de Data Guard cuando aplique.
+    - Coordinar la acción correctiva con DBA, infraestructura y aplicación antes de modificar parámetros o archivos.
+    - Ejecutar cambios mediante procedimientos aprobados y evitar borrados manuales de archivos administrados por RMAN/FRA.
+    - Repetir el health check y validar alert.log, reportes y evidencia posterior al ajuste.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, io, redo, archive, fra]

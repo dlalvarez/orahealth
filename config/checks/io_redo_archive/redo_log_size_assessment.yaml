@@ -1,0 +1,29 @@
+check_id: redo_log_size_assessment
+group_id: io_redo_archive
+title: Evaluación de tamaño de redo logs
+description: Inventaría tamaños de grupos redo y advierte si el tamaño mínimo está bajo el estándar.
+severity: INFO
+collector:
+  type: io_redo_archive
+  label: Evaluación de tamaño de redo logs
+  source_view: v$log
+evaluator:
+  type: io_redo_archive
+  warning_min_redo_mb: 256
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Evaluación de tamaño de redo logs puede afectar recuperabilidad, capacidad, continuidad operativa o tiempos de respaldo si no se controla según el estándar.
+  actions:
+    - Revisar la evidencia recolectada y confirmar si corresponde a operación normal, batch planificado o incidente.
+    - Validar espacio, retención, configuración Oracle, respaldos RMAN y dependencias de Data Guard cuando aplique.
+    - Coordinar la acción correctiva con DBA, infraestructura y aplicación antes de modificar parámetros o archivos.
+    - Ejecutar cambios mediante procedimientos aprobados y evitar borrados manuales de archivos administrados por RMAN/FRA.
+    - Repetir el health check y validar alert.log, reportes y evidencia posterior al ajuste.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, io, redo, archive, fra]

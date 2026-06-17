@@ -4,6 +4,7 @@ from .not_empty_fail import NotEmptyFailEvaluator
 from .oracle_config import OracleConfigEvaluator
 from .oracle_security import OracleSecurityEvaluator
 from .oracle_resources import OracleResourcesEvaluator
+from .io_redo_archive import IoRedoArchiveEvaluator
 from .regex import RegexEvaluator
 from .schema_objects import SchemaObjectsEvaluator
 from .row_count_threshold import RowCountThresholdEvaluator
@@ -18,6 +19,7 @@ EVALUATORS = {
     "oracle_config": OracleConfigEvaluator(),
     "oracle_security": OracleSecurityEvaluator(),
     "oracle_resources": OracleResourcesEvaluator(),
+    "io_redo_archive": IoRedoArchiveEvaluator(),
     "row_count_threshold": RowCountThresholdEvaluator(),
     "regex": RegexEvaluator(),
     "schema_objects": SchemaObjectsEvaluator(),

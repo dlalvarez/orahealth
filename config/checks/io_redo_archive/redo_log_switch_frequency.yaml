@@ -1,0 +1,31 @@
+check_id: redo_log_switch_frequency
+group_id: io_redo_archive
+title: Frecuencia reciente de cambios de redo log
+description: Calcula frecuencia de log switches recientes usando vistas estándar no licenciadas.
+severity: INFO
+collector:
+  type: io_redo_archive
+  label: Frecuencia reciente de cambios de redo log
+  source_view: v$log_history
+evaluator:
+  type: io_redo_archive
+  lookback_hours: 24
+  warning_switches_per_hour: 6
+  fail_switches_per_hour: 20
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Frecuencia reciente de cambios de redo log puede afectar recuperabilidad, capacidad, continuidad operativa o tiempos de respaldo si no se controla según el estándar.
+  actions:
+    - Revisar la evidencia recolectada y confirmar si corresponde a operación normal, batch planificado o incidente.
+    - Validar espacio, retención, configuración Oracle, respaldos RMAN y dependencias de Data Guard cuando aplique.
+    - Coordinar la acción correctiva con DBA, infraestructura y aplicación antes de modificar parámetros o archivos.
+    - Ejecutar cambios mediante procedimientos aprobados y evitar borrados manuales de archivos administrados por RMAN/FRA.
+    - Repetir el health check y validar alert.log, reportes y evidencia posterior al ajuste.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, io, redo, archive, fra]

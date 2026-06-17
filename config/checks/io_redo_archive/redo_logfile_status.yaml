@@ -1,0 +1,28 @@
+check_id: redo_logfile_status
+group_id: io_redo_archive
+title: Estado de miembros redo
+description: Detecta miembros redo inválidos, stale o eliminados.
+severity: WARNING
+collector:
+  type: io_redo_archive
+  label: Estado de miembros redo
+  source_view: v$logfile
+evaluator:
+  type: io_redo_archive
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Estado de miembros redo puede afectar recuperabilidad, capacidad, continuidad operativa o tiempos de respaldo si no se controla según el estándar.
+  actions:
+    - Revisar la evidencia recolectada y confirmar si corresponde a operación normal, batch planificado o incidente.
+    - Validar espacio, retención, configuración Oracle, respaldos RMAN y dependencias de Data Guard cuando aplique.
+    - Coordinar la acción correctiva con DBA, infraestructura y aplicación antes de modificar parámetros o archivos.
+    - Ejecutar cambios mediante procedimientos aprobados y evitar borrados manuales de archivos administrados por RMAN/FRA.
+    - Repetir el health check y validar alert.log, reportes y evidencia posterior al ajuste.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, io, redo, archive, fra]

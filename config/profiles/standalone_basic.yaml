@@ -8,6 +8,7 @@ enabled_groups:
   - os
   - alert_log
   - oracle_resources
+  - io_redo_archive
 standards:
   - oracle_19c
   - development
