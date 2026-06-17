@@ -1,0 +1,19 @@
+group_id: io_redo_archive
+name: I/O, redo, archive y FRA
+description: Checks operativos no licenciados para redo, archived logs, FRA, flashback, I/O básico y recuperabilidad.
+checks:
+  - archivelog_generation_recent
+  - archive_dest_status
+  - archive_dest_errors
+  - fra_usage_advanced
+  - fra_reclaimable_space
+  - flashback_status
+  - flashback_log_usage
+  - redo_log_switch_frequency
+  - redo_log_size_assessment
+  - redo_log_status
+  - redo_logfile_status
+  - sysstat_io_basic
+  - filestat_io_basic
+  - nologging_objects_basic
+  - unrecoverable_datafiles
