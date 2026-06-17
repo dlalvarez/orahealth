@@ -19,7 +19,7 @@ remediation:
     - Confirmar si FRA es obligatoria para el ambiente y la estrategia de backups.
     - Definir db_recovery_file_dest en una ubicación con capacidad suficiente.
     - Definir db_recovery_file_dest_size de acuerdo con retención RMAN, archived logs y flashback.
-    - Validar integración con RMAN y Data Guard antes de habilitar cambios.
+    - Validar integración con RMAN, políticas de recuperación y configuraciones con bases standby cuando apliquen antes de habilitar cambios.
     - Documentar excepción si el ambiente usa una estrategia distinta sin FRA.
   owner: DBA
   requires_window: false

@@ -35,7 +35,7 @@ GROUP_LABELS = {
     "recoverability_drp": "Recuperabilidad y preparación DRP",
     "performance": "Rendimiento",
     "rac": "RAC",
-    "dataguard": "Data Guard",
+    "dataguard": "Bases standby / Data Guard",
     "asm": "ASM",
     "capacity": "Capacidad",
     "patching": "Parches",
