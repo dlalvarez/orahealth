@@ -8,7 +8,9 @@ class AlertLogEvaluator:
         if not isinstance(evidence, dict):
             return ResultStatus.ERROR, "La evidencia del alert log no tiene el formato esperado"
         if evidence.get("available") is False:
-            return ResultStatus.ERROR, evidence.get("message", "No se encontró muestra de alert log para evaluar")
+            if evidence.get("status") == "error":
+                return ResultStatus.ERROR, evidence.get("message", "Error técnico al acceder al alert log")
+            return ResultStatus.SKIPPED, evidence.get("message", "No fue posible acceder al alert log con las fuentes configuradas")
 
         count = int(evidence.get("occurrences", 0) or 0)
         mode = config.get("mode", "fail_on_match")

@@ -342,7 +342,11 @@ Analizar la muestra de alert log disponible en el inventario para detectar famil
 
 ### Alcance y evidencia
 
-Los checks usan la muestra `alert_log_excerpt` disponible en el inventario. La evidencia incluye patrón detectado, conteos, líneas de muestra, límite aplicado y marca de truncamiento cuando existen más ocurrencias que líneas reportadas. La ventana avanzada por timestamp queda para una fase posterior.
+Los checks consumen una estructura común de eventos de alert log. La recolección intenta primero `V$DIAG_ALERT_EXT`; si esa fuente no está disponible por privilegios o versión, intenta ubicar el archivo `alert_<INSTANCE_NAME>.log` bajo `Diag Trace` con `V$DIAG_INFO`; si tampoco es posible, calcula una ruta de fallback con `diagnostic_dest`, `DB_UNIQUE_NAME` o `DB_NAME` e `INSTANCE_NAME`.
+
+Si no hay privilegios sobre `V$DIAG_ALERT_EXT` ni conexión OS/SSH/local para leer el archivo, los checks quedan `SKIPPED` con explicación y no penalizan score. Si existe conexión OS/SSH/local y la lectura del archivo calculado falla por permisos, ruta, timeout o comando, el resultado es `ERROR` técnico.
+
+La evidencia incluye fuente usada, patrón detectado, conteos, timestamps cuando están disponibles, líneas o mensajes de muestra, límite aplicado y marca de truncamiento cuando existen más ocurrencias que líneas reportadas. `X$DBGALERTEXT` no se usa por defecto porque es una tabla fija interna y puede requerir privilegios altos; podrá documentarse como alternativa avanzada futura, pero no es dependencia del grupo `alert_log`.
 
 Los textos relacionados con standby, MRP, RFS o FAL se reportan solo como coincidencias textuales dentro del resumen informativo. Este grupo no evalúa la salud de Data Guard; esa validación corresponde al grupo futuro `dataguard` cuando esté implementado y aplique.
 

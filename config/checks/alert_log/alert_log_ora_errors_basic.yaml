@@ -3,14 +3,17 @@ group_id: alert_log
 title: Alert log sin errores ORA críticos en la muestra
 severity: CRITICAL
 collector:
-  type: inventory
+  type: alert_log_family
   source: database
-  field: alert_log_excerpt
+  field: alert_log
+  family: alert_log_ora_errors_basic
+  max_samples: 5
+  patterns:
+    - "ORA-(00600|07445)"
 evaluator:
-  type: regex
-  pattern: "ORA-(00600|07445)"
-  mode: must_not_match
+  type: alert_log_family
   failure_status: CRITICAL
+  mode: fail_on_match
 applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
