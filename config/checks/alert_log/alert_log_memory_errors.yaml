@@ -1,0 +1,30 @@
+check_id: alert_log_memory_errors
+group_id: alert_log
+title: Errores de memoria en alert log
+description: Detecta patrones específicos de errores de memoria en alert log dentro de la muestra de alert log recolectada.
+severity: FAIL
+collector:
+  type: alert_log_family
+  source: database
+  field: alert_log_excerpt
+  family: alert_log_memory_errors
+  max_samples: 5
+  patterns:
+    - "ORA-04031"
+    - "ORA-04030"
+evaluator:
+  type: alert_log_family
+  failure_status: FAIL
+  mode: fail_on_match
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Se detectaron errores de memoria en la muestra del alert log.
+  actions:
+    - Revisar presión de memoria, SGA, PGA, shared pool, parámetros relacionados y carga concurrente; correlacionar con checks de memoria existentes.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, alert_log]

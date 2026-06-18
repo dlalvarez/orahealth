@@ -1,5 +1,12 @@
 group_id: alert_log
-name: Alert Log
-description: Checks básicos de errores en alert log.
+name: Registro alert log
+description: Checks de familias de errores y resumen preventivo del alert log.
 checks:
   - alert_log_ora_errors_basic
+  - alert_log_internal_errors
+  - alert_log_memory_errors
+  - alert_log_space_errors
+  - alert_log_snapshot_undo_errors
+  - alert_log_corruption_errors
+  - alert_log_redo_archive_errors
+  - alert_log_recent_summary

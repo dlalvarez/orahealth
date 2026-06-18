@@ -1,0 +1,55 @@
+check_id: alert_log_recent_summary
+group_id: alert_log
+title: Resumen reciente del alert log
+description: Resume eventos operativos relevantes encontrados en la muestra de alert log recolectada sin penalizar el score.
+severity: INFO
+collector:
+  type: alert_log_family
+  source: database
+  field: alert_log_excerpt
+  family: resumen_reciente
+  max_samples: 8
+  summary: true
+  patterns:
+    - "ORA-00600"
+    - "ORA-07445"
+    - "ORA-04031"
+    - "ORA-04030"
+    - "ORA-00257"
+    - "ORA-01652"
+    - "ORA-01653"
+    - "ORA-01654"
+    - "ORA-01555"
+    - "ORA-01578"
+    - "ORA-01110"
+    - "block corruption"
+    - "media corruption"
+    - "corrupt block"
+    - "archive error"
+    - "archiver error"
+    - "checkpoint not complete"
+    - "redo log error"
+    - "log file switch"
+    - "cannot allocate new log"
+    - "standby"
+    - '\bMRP[0-9A-Z]*\b'
+    - '\bRFS[0-9A-Z]*\b'
+    - '\bFAL\b'
+    - "ASM"
+    - "diskgroup"
+    - "I/O error"
+evaluator:
+  type: alert_log_family
+  mode: info
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Check informativo; no genera acción correctiva por sí mismo.
+  actions:
+    - Revisar el detalle técnico solo si el resumen muestra eventos que requieran seguimiento operativo.
+  owner: DBA
+  requires_window: false
+  outage_risk: none
+tags: [oracle, alert_log]

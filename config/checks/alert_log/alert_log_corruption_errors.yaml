@@ -1,0 +1,34 @@
+check_id: alert_log_corruption_errors
+group_id: alert_log
+title: Errores de corrupción o recovery en alert log
+description: Detecta patrones específicos de errores de corrupción o recovery en alert log dentro de la muestra de alert log recolectada.
+severity: CRITICAL
+collector:
+  type: alert_log_family
+  source: database
+  field: alert_log_excerpt
+  family: alert_log_corruption_errors
+  max_samples: 5
+  patterns:
+    - "ORA-01578"
+    - "ORA-01110"
+    - "block corruption"
+    - "media corruption"
+    - "corrupt block"
+    - "DBVERIFY"
+evaluator:
+  type: alert_log_family
+  failure_status: CRITICAL
+  mode: fail_on_match
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Se detectaron mensajes compatibles con corrupción o recovery en la muestra del alert log.
+  actions:
+    - Preservar evidencia, identificar datafile/bloque si aparece, validar con RMAN validate o herramientas permitidas por operación, revisar backups y escalar según procedimiento interno sin tomar acciones destructivas.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, alert_log]

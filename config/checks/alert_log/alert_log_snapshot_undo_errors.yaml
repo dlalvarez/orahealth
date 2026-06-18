@@ -1,0 +1,29 @@
+check_id: alert_log_snapshot_undo_errors
+group_id: alert_log
+title: Errores snapshot/UNDO en alert log
+description: Detecta patrones específicos de errores snapshot/undo en alert log dentro de la muestra de alert log recolectada.
+severity: WARNING
+collector:
+  type: alert_log_family
+  source: database
+  field: alert_log_excerpt
+  family: alert_log_snapshot_undo_errors
+  max_samples: 5
+  patterns:
+    - "ORA-01555"
+evaluator:
+  type: alert_log_family
+  failure_status: WARNING
+  mode: fail_on_match
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Se detectaron errores snapshot/UNDO en la muestra del alert log.
+  actions:
+    - Revisar UNDO retention, tamaño de UNDO, consultas largas, procesos batch y actividad del periodo.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, alert_log]

@@ -1,6 +1,7 @@
 import copy
 import json
 import logging
+import re
 import time
 from datetime import date, datetime
 from decimal import Decimal
@@ -1585,6 +1586,8 @@ class CheckRunner:
     def _collect(self, check: Check, inventory: Inventory) -> Any:
         collector = check.collector
         ctype = collector.get("type", "inventory")
+        if ctype == "alert_log_family":
+            return self._build_alert_log_evidence(check, inventory.database)
         if ctype == "inventory":
             source = collector.get("source", "database")
             field = collector.get("field")
@@ -1629,6 +1632,84 @@ class CheckRunner:
         raise ValueError(f"Tipo de colector no soportado: {ctype}")
 
 
+
+    def _build_alert_log_evidence(self, check: Check, database: dict[str, Any]) -> dict[str, Any]:
+        collector = check.collector
+        field = collector.get("field", "alert_log_excerpt")
+        source = collector.get("source_view", field)
+        text_value = database.get(field)
+        if text_value is None:
+            return {
+                "available": False,
+                "source": source,
+                "field": field,
+                "message": "No se encontró muestra de alert log para evaluar",
+            }
+
+        text = text_value if isinstance(text_value, str) else str(text_value)
+        patterns = collector.get("patterns", [])
+        max_samples = int(collector.get("max_samples", 5) or 5)
+        matches: list[dict[str, Any]] = []
+        counts_by_pattern: dict[str, int] = {str(pattern): 0 for pattern in patterns}
+        counts_by_family = {
+            "internos": 0,
+            "memoria": 0,
+            "espacio": 0,
+            "undo_snapshot": 0,
+            "corrupcion_recovery": 0,
+            "redo_archive": 0,
+            "texto_standby": 0,
+            "asm_storage": 0,
+        }
+
+        family_patterns = {
+            "internos": [r"ORA-00600", r"ORA-07445"],
+            "memoria": [r"ORA-04031", r"ORA-04030"],
+            "espacio": [r"ORA-00257", r"ORA-01652", r"ORA-01653", r"ORA-01654"],
+            "undo_snapshot": [r"ORA-01555"],
+            "corrupcion_recovery": [r"ORA-01578", r"ORA-01110", r"block corruption", r"media corruption", r"corrupt block", r"DBVERIFY"],
+            "redo_archive": [r"archive error", r"archiver error", r"\bARC[0-9A-Z]*\b", r"\bLGWR\b", r"checkpoint not complete", r"redo log error", r"log file switch", r"cannot allocate new log"],
+            "texto_standby": [r"standby", r"\bMRP[0-9A-Z]*\b", r"\bRFS[0-9A-Z]*\b", r"\bFAL\b"],
+            "asm_storage": [r"ASM", r"diskgroup", r"I/O error"],
+        }
+
+        for line_number, line in enumerate(text.splitlines() or [text], start=1):
+            for pattern in patterns:
+                pattern_text = str(pattern)
+                if re.search(pattern_text, line, re.IGNORECASE):
+                    counts_by_pattern[pattern_text] = counts_by_pattern.get(pattern_text, 0) + 1
+                    if len(matches) < max_samples:
+                        matches.append({"linea": line_number, "patron": pattern_text, "texto": line.strip()})
+            if collector.get("summary"):
+                for family, family_regexes in family_patterns.items():
+                    if any(re.search(family_pattern, line, re.IGNORECASE) for family_pattern in family_regexes):
+                        counts_by_family[family] += 1
+
+        occurrences = sum(counts_by_pattern.values())
+        truncated = occurrences > len(matches)
+        message = (
+            f"Se detectaron {occurrences} ocurrencias en la muestra del alert log"
+            if occurrences else
+            "No se detectaron eventos de esta familia en la muestra del alert log"
+        )
+        evidence: dict[str, Any] = {
+            "available": True,
+            "source": source,
+            "field": field,
+            "family": collector.get("family", check.check_id),
+            "occurrences": occurrences,
+            "patterns": patterns,
+            "counts_by_pattern": counts_by_pattern,
+            "sample_lines": matches,
+            "sample_limit": max_samples,
+            "truncated": truncated,
+            "message": message,
+            "scope_note": "Se analiza la muestra de alert log disponible en el inventario; una ventana configurable por timestamp queda fuera de esta fase.",
+        }
+        if collector.get("summary"):
+            evidence["counts_by_family"] = counts_by_family
+            evidence["standby_note"] = "Se reportan solo coincidencias textuales con procesos o términos de standby; este check no evalúa la salud de Data Guard."
+        return evidence
 
     def _build_oracle_resources_evidence(self, check: Check, database: dict[str, Any]) -> dict[str, Any]:
         resources = database.get("oracle_resources") if isinstance(database.get("oracle_resources"), dict) else self._default_oracle_resources_inventory(database.get("parameters", {}))

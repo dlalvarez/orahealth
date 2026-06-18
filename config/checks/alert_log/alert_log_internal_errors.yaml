@@ -1,0 +1,30 @@
+check_id: alert_log_internal_errors
+group_id: alert_log
+title: Errores internos Oracle en alert log
+description: Detecta patrones específicos de errores internos oracle en alert log dentro de la muestra de alert log recolectada.
+severity: CRITICAL
+collector:
+  type: alert_log_family
+  source: database
+  field: alert_log_excerpt
+  family: alert_log_internal_errors
+  max_samples: 5
+  patterns:
+    - "ORA-00600"
+    - "ORA-07445"
+evaluator:
+  type: alert_log_family
+  failure_status: CRITICAL
+  mode: fail_on_match
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Se detectaron errores internos Oracle en la muestra del alert log.
+  actions:
+    - Revisar alert log completo y trazas asociadas; validar bugs conocidos, eventos recientes y escalar a soporte Oracle si aplica; preservar evidencias antes de limpiar archivos.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, alert_log]
