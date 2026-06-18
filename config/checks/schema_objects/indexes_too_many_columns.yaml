@@ -1,0 +1,29 @@
+check_id: indexes_too_many_columns
+group_id: schema_objects
+title: Índices con demasiadas columnas
+description: Detecta índices de aplicación con cantidad de columnas superior al umbral conservador configurado.
+severity: WARNING
+collector:
+  type: oracle_schema_objects
+  field: indexes_too_many_columns
+  label: Índices con demasiadas columnas
+  source_view: DBA_INDEXES + DBA_IND_COLUMNS
+evaluator:
+  type: schema_objects
+  status_when_found: WARNING
+  warning: 8
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar selectividad y uso del índice antes de mantener o rediseñar el acceso.
+  actions:
+    - Revisar la evidencia del check y confirmar si corresponde a objeto o usuario de aplicación.
+    - Planificar la corrección en ventana controlada si el cambio puede afectar disponibilidad o DML.
+    - Documentar excepciones funcionales justificadas para evitar falsos positivos recurrentes.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]

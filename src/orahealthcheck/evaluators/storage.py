@@ -49,6 +49,16 @@ class StorageEvaluator:
             if str(evidence.get("status")).upper() != "ONLINE":
                 return ResultStatus.WARNING, f"El estado del tablespace UNDO es {evidence.get('status')}"
             return ResultStatus.PASS, "La información del tablespace UNDO y undo_retention fue recolectada"
+        if metric in {"users_system_default_tablespace", "users_missing_default_tablespace", "users_missing_temp_tablespace", "dictionary_managed_tablespaces"}:
+            count = int(evidence.get("affected_count") or 0)
+            if count:
+                return self._configured_status(config.get("status_when_found", "WARNING")), self._found_message(metric, count)
+            return ResultStatus.PASS, self._pass_message(metric)
+        if metric == "users_system_temp_tablespace":
+            count = int(evidence.get("affected_count") or 0)
+            if count:
+                return self._configured_status(config.get("status_when_found", "FAIL")), f"Se detectaron {count} usuario(s) con SYSTEM como tablespace temporal"
+            return ResultStatus.PASS, "No se detectaron usuarios con SYSTEM como tablespace temporal"
         if metric == "fra_configured":
             configured = bool(evidence.get("fra_configured"))
             if configured:
@@ -60,6 +70,24 @@ class StorageEvaluator:
                 return ResultStatus.SKIPPED, evidence.get("message") or "FRA no está configurada"
             return self._high_threshold(evidence.get("used_pct", evidence.get("fra_used_pct")), config, "El uso de FRA")
         return ResultStatus.ERROR, f"Métrica de storage no soportada: {metric}"
+
+    def _found_message(self, metric: Any, count: int) -> str:
+        messages = {
+            "users_system_default_tablespace": f"Se detectaron {count} usuario(s) abiertos de aplicación con SYSTEM como tablespace por defecto",
+            "users_missing_default_tablespace": f"Se detectaron {count} usuario(s) sin tablespace por defecto válido",
+            "users_missing_temp_tablespace": f"Se detectaron {count} usuario(s) sin tablespace temporal válido",
+            "dictionary_managed_tablespaces": f"Se detectaron {count} tablespace(s) administrados por diccionario",
+        }
+        return messages.get(str(metric), f"Se detectaron {count} hallazgo(s) de storage")
+
+    def _pass_message(self, metric: Any) -> str:
+        messages = {
+            "users_system_default_tablespace": "No se detectaron usuarios abiertos de aplicación con SYSTEM como tablespace por defecto",
+            "users_missing_default_tablespace": "No se detectaron usuarios sin tablespace por defecto válido",
+            "users_missing_temp_tablespace": "No se detectaron usuarios sin tablespace temporal válido",
+            "dictionary_managed_tablespaces": "No se detectaron tablespaces administrados por diccionario",
+        }
+        return messages.get(str(metric), "No se detectaron hallazgos de storage")
 
     def _high_threshold(self, raw_value: Any, config: dict[str, Any], label: str) -> tuple[ResultStatus, str]:
         value = self._numeric(raw_value)

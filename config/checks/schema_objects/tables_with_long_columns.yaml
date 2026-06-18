@@ -1,0 +1,28 @@
+check_id: tables_with_long_columns
+group_id: schema_objects
+title: Tablas con columnas LONG o LONG RAW
+description: Detecta columnas LONG o LONG RAW en tablas de aplicación.
+severity: WARNING
+collector:
+  type: oracle_schema_objects
+  field: tables_with_long_columns
+  label: Tablas con columnas LONG o LONG RAW
+  source_view: DBA_TAB_COLUMNS
+evaluator:
+  type: schema_objects
+  status_when_found: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Evaluar migración a CLOB, BLOB u otro tipo moderno, validando compatibilidad de la aplicación.
+  actions:
+    - Revisar la evidencia del check y confirmar si corresponde a objeto o usuario de aplicación.
+    - Planificar la corrección en ventana controlada si el cambio puede afectar disponibilidad o DML.
+    - Documentar excepciones funcionales justificadas para evitar falsos positivos recurrentes.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]

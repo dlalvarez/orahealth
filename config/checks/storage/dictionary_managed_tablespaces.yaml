@@ -1,0 +1,28 @@
+check_id: dictionary_managed_tablespaces
+group_id: storage
+title: Tablespaces administrados por diccionario
+description: Detecta tablespaces con EXTENT_MANAGEMENT igual a DICTIONARY.
+severity: WARNING
+collector:
+  type: oracle_storage
+  field: dictionary_managed_tablespaces
+  label: Tablespaces administrados por diccionario
+  source_view: DBA_TABLESPACES
+evaluator:
+  type: storage
+  status_when_found: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar tablespaces legacy y planear migración a administración local cuando aplique.
+  actions:
+    - Revisar la evidencia del check y confirmar si corresponde a objeto o usuario de aplicación.
+    - Planificar la corrección en ventana controlada si el cambio puede afectar disponibilidad o DML.
+    - Documentar excepciones funcionales justificadas para evitar falsos positivos recurrentes.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, storage]

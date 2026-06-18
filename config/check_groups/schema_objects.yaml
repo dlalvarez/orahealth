@@ -13,3 +13,7 @@ checks:
   - locked_table_statistics
   - recyclebin_objects
   - invalid_synonyms
+  - tables_without_primary_key
+  - foreign_keys_without_index
+  - tables_with_long_columns
+  - indexes_too_many_columns
