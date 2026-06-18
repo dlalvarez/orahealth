@@ -392,3 +392,32 @@ targets:
     assert exit_code == 0
     assert "example_standalone\tExample Standalone Database\tstandalone_basic" in captured.out
     assert "lab_standalone\tLab Standalone\tstandalone_basic" in captured.out
+
+
+def test_run_accepts_optional_profile_override(monkeypatch, capsys):
+    calls = []
+
+    class DummyRunner:
+        def __init__(self, config):
+            self.config = config
+
+        def run_target(self, target_id, profile_id=None):
+            calls.append((target_id, profile_id))
+            return Path("output/prueba")
+
+    monkeypatch.setattr("orahealthcheck.cli.CheckRunner", DummyRunner)
+
+    exit_code = main(["run", "--target", "example_standalone", "--profile", "production_readiness"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert calls == [("example_standalone", "production_readiness")]
+    assert "Salida generada: output/prueba" in captured.out
+
+
+def test_run_rejects_unknown_profile(capsys):
+    exit_code = main(["run", "--target", "example_standalone", "--profile", "perfil_inexistente"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "Perfil desconocido: perfil_inexistente" in captured.err
