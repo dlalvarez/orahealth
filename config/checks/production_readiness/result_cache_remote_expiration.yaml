@@ -1,0 +1,27 @@
+check_id: result_cache_remote_expiration
+group_id: production_readiness
+title: Expiración de result cache para objetos remotos reportada
+severity: INFO
+collector:
+  type: oracle_parameter
+  parameter: result_cache_remote_expiration
+evaluator:
+  type: oracle_config
+  expected_policy: expected_result_cache_remote_expiration
+  report_status: INFO
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: result_cache_remote_expiration controla expiración de resultados asociados a objetos remotos; debe alinearse con consistencia esperada y estándar productivo.
+  actions:
+    - Revisar si existen consultas a objetos remotos que usen result cache.
+    - Confirmar el valor esperado por estándar antes de modificarlo.
+    - Documentar la decisión considerando consistencia de datos y rendimiento.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, production_readiness, parameter]

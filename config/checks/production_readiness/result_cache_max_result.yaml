@@ -1,0 +1,27 @@
+check_id: result_cache_max_result
+group_id: production_readiness
+title: Tamaño máximo por resultado en result cache reportado
+severity: INFO
+collector:
+  type: oracle_parameter
+  parameter: result_cache_max_result
+evaluator:
+  type: oracle_config
+  expected_policy: expected_result_cache_max_result
+  report_status: INFO
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: result_cache_max_result limita cuánto puede ocupar un resultado individual dentro del result cache; debe revisarse según estándar y patrón de uso.
+  actions:
+    - Comparar el valor con la línea base productiva aprobada.
+    - Validar impacto en memoria y comportamiento de consultas antes de modificarlo.
+    - Documentar el valor como evidencia de preparación productiva.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, production_readiness, parameter]

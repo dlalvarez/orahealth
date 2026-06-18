@@ -1,0 +1,6 @@
+profile_id: production_readiness
+description: Perfil mínimo para ejecutar únicamente checks de preparación productiva.
+enabled_groups:
+  - production_readiness
+standards:
+  - oracle_19c

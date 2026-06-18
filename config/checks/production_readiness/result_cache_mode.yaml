@@ -1,0 +1,27 @@
+check_id: result_cache_mode
+group_id: production_readiness
+title: Modo de result cache reportado para preparación productiva
+severity: INFO
+collector:
+  type: oracle_parameter
+  parameter: result_cache_mode
+evaluator:
+  type: oracle_config
+  expected_policy: expected_result_cache_mode
+  report_status: INFO
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: result_cache_mode controla el uso del result cache; no existe un valor universal y debe alinearse con el estándar y el comportamiento de la aplicación.
+  actions:
+    - Confirmar si la aplicación y el estándar productivo permiten uso automático o manual de result cache.
+    - Validar impacto funcional y de memoria antes de cambiar el valor.
+    - Documentar el criterio usado para la configuración vigente.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, production_readiness, parameter]

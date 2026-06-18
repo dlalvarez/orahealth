@@ -1,0 +1,28 @@
+check_id: optimizer_use_invisible_indexes
+group_id: production_readiness
+title: Uso global de índices invisibles deshabilitado
+severity: WARNING
+collector:
+  type: oracle_parameter
+  parameter: optimizer_use_invisible_indexes
+evaluator:
+  type: oracle_config
+  disallowed_values: [TRUE]
+  failure_status: WARNING
+  report_status: PASS
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: optimizer_use_invisible_indexes habilitado globalmente puede hacer que el optimizador use índices invisibles fuera de una prueba controlada.
+  actions:
+    - Confirmar si existe una prueba controlada que justifique usar índices invisibles globalmente.
+    - Revertir el parámetro a FALSE si no corresponde al estándar productivo.
+    - Revisar planes SQL afectados y validar rendimiento después del cambio.
+    - Documentar cualquier excepción temporal con responsable y fecha de cierre.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, production_readiness, parameter]

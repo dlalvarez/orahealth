@@ -38,10 +38,11 @@ class CheckRunner:
         self.applicability = ApplicabilityEngine()
         self.oracle_connector_factory = oracle_connector_factory
 
-    def run_target(self, target_id: str) -> Path:
+    def run_target(self, target_id: str, profile_id: str | None = None) -> Path:
         run_start = time.monotonic()
         target: Target = self.config["targets"][target_id]
-        profile = self.config["profiles"][target.profile]
+        selected_profile_id = profile_id or target.profile
+        profile = self.config["profiles"][selected_profile_id]
         base_output = self.config["settings"].get("app", {}).get("default_output_dir", "output")
         output_dir = ensure_dir(Path(base_output) / f"{target_id}_{timestamp()}")
         self._configure_logging(output_dir)
@@ -93,12 +94,37 @@ class CheckRunner:
         db.setdefault("rac", self._default_rac_inventory(db.get("parameters", {})))
         db.setdefault("multitenant", self._default_multitenant_inventory())
         db.setdefault("alert_log", self._default_alert_log_inventory(db))
+        if "mock_inventory" in target.database:
+            db["parameters"] = self._with_default_mock_parameters(db.get("parameters", {}))
         features = self._detect_oracle_features_from_inventory(db)
         os_data = {"platform": target.operating_system.get("platform", "linux")}
         if target.operating_system.get("use_local_discovery", False):
             adapter = LinuxAdapter(LocalConnector()) if os_data["platform"] == "linux" else AIXAdapter(LocalConnector())
             os_data.update({"os_info": adapter.get_os_info(), "cpu": adapter.get_cpu_info(), "memory": adapter.get_memory_info()})
         return Inventory(target.target_id, target.expected_architecture, target.environment, db, os_data, {**features, **target.features})
+
+
+    def _with_default_mock_parameters(self, parameters: Any) -> dict[str, Any]:
+        existing = parameters if isinstance(parameters, dict) else {}
+        defaults = {
+            "plsql_optimize_level": "2",
+            "plsql_code_type": "INTERPRETED",
+            "plsql_debug": "FALSE",
+            "sql_trace": "FALSE",
+            "timed_statistics": "TRUE",
+            "timed_os_statistics": "0",
+            "result_cache_mode": "MANUAL",
+            "result_cache_max_result": "5%",
+            "result_cache_remote_expiration": "0",
+            "db_ultra_safe": "OFF",
+            "optimizer_capture_sql_plan_baselines": "FALSE",
+            "optimizer_use_invisible_indexes": "FALSE",
+        }
+        normalized_defaults = {
+            name: {"name": name, "value": value, "display_value": value}
+            for name, value in defaults.items()
+        }
+        return {**normalized_defaults, **existing}
 
     def _discover_oracle_inventory(self, target: Target) -> dict[str, Any]:
         connection_id = target.database.get("primary_connection")
@@ -158,7 +184,19 @@ class CheckRunner:
                   'db_flashback_retention_target',
                   'control_file_record_keep_time',
                   'diagnostic_dest',
-                  'cluster_database'
+                  'cluster_database',
+                  'plsql_optimize_level',
+                  'plsql_code_type',
+                  'plsql_debug',
+                  'sql_trace',
+                  'timed_statistics',
+                  'timed_os_statistics',
+                  'result_cache_mode',
+                  'result_cache_max_result',
+                  'result_cache_remote_expiration',
+                  'db_ultra_safe',
+                  'optimizer_capture_sql_plan_baselines',
+                  'optimizer_use_invisible_indexes'
                 )
             """)
             if parameter_rows:

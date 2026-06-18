@@ -1,0 +1,27 @@
+check_id: plsql_optimize_level
+group_id: production_readiness
+title: Nivel de optimización PL/SQL alineado al estándar productivo
+severity: WARNING
+collector:
+  type: oracle_parameter
+  parameter: plsql_optimize_level
+evaluator:
+  type: oracle_config
+  expected_policy: expected_plsql_optimize_level
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: El parámetro plsql_optimize_level define el nivel de optimización usado al compilar PL/SQL; un valor no alineado puede afectar rendimiento o comportamiento esperado del código compilado.
+  actions:
+    - Revisar el estándar de compilación PL/SQL aprobado para el ambiente productivo.
+    - Ajustar plsql_optimize_level solo si el cambio está aprobado y corresponde al estándar vigente.
+    - Validar el impacto sobre objetos PL/SQL y recompilar objetos cuando el procedimiento operativo lo requiera.
+    - Probar el cambio en un ambiente no productivo antes de aplicarlo en producción.
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, production_readiness, parameter]

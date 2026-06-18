@@ -1,0 +1,28 @@
+check_id: sql_trace
+group_id: production_readiness
+title: SQL trace global deshabilitado
+severity: WARNING
+collector:
+  type: oracle_parameter
+  parameter: sql_trace
+evaluator:
+  type: oracle_config
+  disallowed_values: [TRUE]
+  failure_status: WARNING
+  report_status: PASS
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: sql_trace habilitado globalmente puede generar overhead y archivos de traza excesivos; en producción debe usarse trazabilidad controlada y acotada.
+  actions:
+    - Confirmar si hay una investigación activa que requiera sql_trace global.
+    - Deshabilitar sql_trace global si no existe una justificación operativa vigente.
+    - Preferir trazas controladas por sesión, servicio, módulo o evento cuando sea necesario diagnosticar un caso puntual.
+    - Revisar consumo de filesystem asociado a archivos de traza después del cambio.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, production_readiness, parameter]

@@ -22,6 +22,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("list-checks")
     run = sub.add_parser("run")
     run.add_argument("--target", required=True)
+    run.add_argument("--profile", help="Perfil opcional para esta ejecución; no modifica el target configurado")
     return parser
 
 
@@ -45,10 +46,13 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{item.check_id}\t{item.group_id}\t{item.title}")
         elif args.command == "run":
             if args.target not in config["targets"]:
-                print(f"Unknown target: {args.target}", file=sys.stderr)
+                print(f"Target desconocido: {args.target}", file=sys.stderr)
                 return 2
-            output_dir = CheckRunner(config).run_target(args.target)
-            print(f"Output generated: {output_dir}")
+            if args.profile and args.profile not in config["profiles"]:
+                print(f"Perfil desconocido: {args.profile}", file=sys.stderr)
+                return 2
+            output_dir = CheckRunner(config).run_target(args.target, profile_id=args.profile)
+            print(f"Salida generada: {output_dir}")
         return 0
     except ConfigSyntaxError as exc:
         print(f"Configuration syntax error:\n{exc}", file=sys.stderr)

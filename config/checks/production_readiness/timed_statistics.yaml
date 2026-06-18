@@ -1,0 +1,27 @@
+check_id: timed_statistics
+group_id: production_readiness
+title: Estadísticas temporizadas reportadas para preparación productiva
+severity: INFO
+collector:
+  type: oracle_parameter
+  parameter: timed_statistics
+evaluator:
+  type: oracle_config
+  expected_policy: expected_timed_statistics
+  report_status: INFO
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: timed_statistics controla la recolección de estadísticas de tiempo; en versiones modernas suele ser útil para diagnóstico básico y debe revisarse contra el estándar vigente.
+  actions:
+    - Confirmar el valor esperado por la organización para la versión Oracle y la carga de trabajo.
+    - Evitar deshabilitar estadísticas de tiempo sin evaluar impacto en observabilidad operativa.
+    - Documentar el valor como parte de la línea base productiva.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, production_readiness, parameter]

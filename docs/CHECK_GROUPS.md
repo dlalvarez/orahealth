@@ -1495,3 +1495,77 @@ multitenant
 ```
 
 Estos grupos no eliminan ni reemplazan la lista original de grupos requeridos. Se conservan porque documentan funcionalidad ya implementada y serán reconciliados documentalmente con el roadmap y las fases futuras según `docs/IMPLEMENTATION_STATUS.md`.
+
+---
+
+## Actualización Fase 3A - Grupo production_readiness
+
+Se crea/inicia el grupo formal `production_readiness` para checks conservadores de preparación productiva que todavía no estaban cubiertos por otros grupos.
+
+El grupo contiene inicialmente checks basados en `V$PARAMETER` para:
+
+```text
+plsql_optimize_level
+plsql_code_type
+plsql_debug
+sql_trace
+timed_statistics
+timed_os_statistics
+result_cache_mode
+result_cache_max_result
+result_cache_remote_expiration
+db_ultra_safe
+optimizer_capture_sql_plan_baselines
+optimizer_use_invisible_indexes
+```
+
+No se movieron ni duplicaron checks existentes. Checks como `archivelog_mode`, `force_logging`, `audit_trail`, `audit_trail_security`, `recyclebin`, `flashback_status`, `remote_login_passwordfile` y `sec_case_sensitive_logon` permanecen en los grupos donde fueron creados originalmente.
+
+Esta fase no agrega AWR, ASH, `DBA_HIST%`, Diagnostic Pack, Tuning Pack, SQLite ni repositorio histórico interno.
+
+---
+
+## Actualización Fase 3A - Perfiles standalone y separación topología/almacenamiento
+
+Se agrega el perfil `standalone_all` para ejecutar una revisión amplia de bases standalone con todos los grupos ya implementados y razonablemente aplicables a esa topología. Este perfil incluye `production_readiness` para evitar omisiones por configuración de perfiles cuando se requiere una evaluación amplia.
+
+Diferencia conceptual de perfiles:
+
+```text
+standalone_basic:
+  Perfil básico y liviano para health check general de una base standalone.
+  No pretende ejecutar todos los checks existentes.
+
+standalone_all:
+  Perfil amplio para ejecutar los grupos ya implementados y razonablemente aplicables a una base standalone.
+  Incluye production_readiness.
+  Debe entenderse como standalone sobre filesystem o standalone sobre ASM.
+  No significa filesystem-only.
+
+production_readiness:
+  Perfil especializado que ejecuta únicamente checks de preparación productiva.
+```
+
+OraHealthCheck separa topología de base de datos y tipo de almacenamiento.
+
+Topología:
+
+- `standalone`.
+- `rac`.
+
+Almacenamiento:
+
+- ASM.
+- filesystem.
+
+Reglas conceptuales para fases futuras:
+
+- Una base standalone puede estar sobre filesystem o sobre ASM.
+- ASM no implica RAC.
+- RAC moderno debe asumirse como ASM.
+- Los checks ASM no deben depender de que la base sea RAC.
+- Los checks RAC sí deben depender de que la base sea RAC.
+- Cuando exista el grupo ASM, debe poder aplicarse tanto a standalone con ASM como a RAC con ASM.
+- El caso RAC sobre filesystem se considera histórico o legacy y no es el objetivo principal del diseño moderno del proyecto.
+
+Esta actualización no crea el grupo `asm`, no agrega checks ASM, no agrega checks RAC y no modifica `config/targets.yaml` ni `standalone_basic`.
