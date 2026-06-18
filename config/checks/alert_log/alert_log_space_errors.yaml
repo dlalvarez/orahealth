@@ -1,0 +1,32 @@
+check_id: alert_log_space_errors
+group_id: alert_log
+title: Errores de espacio en alert log
+description: Detecta patrones específicos de errores de espacio en alert log dentro de la muestra de alert log recolectada.
+severity: FAIL
+collector:
+  type: alert_log_family
+  source: database
+  field: alert_log_excerpt
+  family: alert_log_space_errors
+  max_samples: 5
+  patterns:
+    - "ORA-00257"
+    - "ORA-01652"
+    - "ORA-01653"
+    - "ORA-01654"
+evaluator:
+  type: alert_log_family
+  failure_status: FAIL
+  mode: fail_on_match
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: Se detectaron errores de espacio en la muestra del alert log.
+  actions:
+    - Revisar FRA, destinos de archive, tablespaces, TEMP y segmentos que no pudieron extender; liberar o ampliar espacio y validar con checks de storage e io_redo_archive.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, alert_log]

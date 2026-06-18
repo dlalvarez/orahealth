@@ -1,3 +1,4 @@
+from .alert_log import AlertLogEvaluator
 from .empty_result_pass import EmptyResultPassEvaluator
 from .expected_value import ExpectedValueEvaluator
 from .not_empty_fail import NotEmptyFailEvaluator
@@ -15,6 +16,7 @@ from .threshold import ThresholdEvaluator
 from .storage import StorageEvaluator
 
 EVALUATORS = {
+    "alert_log_family": AlertLogEvaluator(),
     "threshold": ThresholdEvaluator(),
     "expected_value": ExpectedValueEvaluator(),
     "empty_result_pass": EmptyResultPassEvaluator(),

@@ -260,7 +260,7 @@ def test_evidence_json_has_minimum_structure(tmp_path):
     assert set(evidence) == {"summary", "results"}
     assert evidence["summary"]["global_status"]
     assert isinstance(evidence["summary"]["score"], int)
-    assert len(evidence["results"]) == 101
+    assert len(evidence["results"]) == 108
     first_result = evidence["results"][0]
     assert {"check_id", "group_id", "status", "failure_severity", "evidence", "duration_ms"}.issubset(first_result)
     assert isinstance(first_result["duration_ms"], int)
@@ -273,8 +273,8 @@ def test_execution_log_contains_run_metadata(tmp_path):
     assert "Target: example_standalone" in log_text
     assert "Profile: standalone_basic" in log_text
     assert "Enabled groups:" in log_text
-    assert "Loaded checks (101):" in log_text
-    assert "Executed checks (87):" in log_text
+    assert "Loaded checks (108):" in log_text
+    assert "Executed checks (94):" in log_text
     assert "Skipped checks (14):" in log_text
     assert "Status summary:" in log_text
     assert f"Output directory: {output}" in log_text
