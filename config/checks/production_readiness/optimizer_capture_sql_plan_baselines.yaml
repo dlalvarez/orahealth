@@ -1,0 +1,28 @@
+check_id: optimizer_capture_sql_plan_baselines
+group_id: production_readiness
+title: Captura automática de SQL Plan Baselines gobernada
+severity: WARNING
+collector:
+  type: oracle_parameter
+  parameter: optimizer_capture_sql_plan_baselines
+evaluator:
+  type: oracle_config
+  disallowed_values: [TRUE]
+  failure_status: WARNING
+  report_status: PASS
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: optimizer_capture_sql_plan_baselines habilitado globalmente puede capturar baselines sin gobierno operativo; en producción debe responder a una política explícita.
+  actions:
+    - Confirmar si existe una política aprobada para captura automática de SQL Plan Baselines.
+    - Deshabilitar la captura automática si no hay gobierno, seguimiento y limpieza definidos.
+    - Revisar baselines existentes y su impacto antes de cambiar la estrategia.
+    - Documentar excepciones temporales y fecha de reversa cuando aplique.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, production_readiness, parameter]

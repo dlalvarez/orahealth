@@ -1,0 +1,27 @@
+check_id: timed_os_statistics
+group_id: production_readiness
+title: Estadísticas temporizadas de sistema operativo reportadas
+severity: INFO
+collector:
+  type: oracle_parameter
+  parameter: timed_os_statistics
+evaluator:
+  type: oracle_config
+  expected_policy: expected_timed_os_statistics
+  report_status: INFO
+  failure_status: WARNING
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: timed_os_statistics define el intervalo de estadísticas temporizadas de sistema operativo; valores no alineados pueden generar overhead o información insuficiente.
+  actions:
+    - Revisar el valor contra el estándar productivo y la política de diagnóstico básico.
+    - Ajustar solo si existe una definición aprobada para el ambiente.
+    - Documentar la razón del valor configurado y monitorear impacto si se modifica.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, production_readiness, parameter]

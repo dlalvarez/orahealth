@@ -158,7 +158,19 @@ class CheckRunner:
                   'db_flashback_retention_target',
                   'control_file_record_keep_time',
                   'diagnostic_dest',
-                  'cluster_database'
+                  'cluster_database',
+                  'plsql_optimize_level',
+                  'plsql_code_type',
+                  'plsql_debug',
+                  'sql_trace',
+                  'timed_statistics',
+                  'timed_os_statistics',
+                  'result_cache_mode',
+                  'result_cache_max_result',
+                  'result_cache_remote_expiration',
+                  'db_ultra_safe',
+                  'optimizer_capture_sql_plan_baselines',
+                  'optimizer_use_invisible_indexes'
                 )
             """)
             if parameter_rows:

@@ -1495,3 +1495,30 @@ multitenant
 ```
 
 Estos grupos no eliminan ni reemplazan la lista original de grupos requeridos. Se conservan porque documentan funcionalidad ya implementada y serán reconciliados documentalmente con el roadmap y las fases futuras según `docs/IMPLEMENTATION_STATUS.md`.
+
+---
+
+## Actualización Fase 3A - Grupo production_readiness
+
+Se crea/inicia el grupo formal `production_readiness` para checks conservadores de preparación productiva que todavía no estaban cubiertos por otros grupos.
+
+El grupo contiene inicialmente checks basados en `V$PARAMETER` para:
+
+```text
+plsql_optimize_level
+plsql_code_type
+plsql_debug
+sql_trace
+timed_statistics
+timed_os_statistics
+result_cache_mode
+result_cache_max_result
+result_cache_remote_expiration
+db_ultra_safe
+optimizer_capture_sql_plan_baselines
+optimizer_use_invisible_indexes
+```
+
+No se movieron ni duplicaron checks existentes. Checks como `archivelog_mode`, `force_logging`, `audit_trail`, `audit_trail_security`, `recyclebin`, `flashback_status`, `remote_login_passwordfile` y `sec_case_sensitive_logon` permanecen en los grupos donde fueron creados originalmente.
+
+Esta fase no agrega AWR, ASH, `DBA_HIST%`, Diagnostic Pack, Tuning Pack, SQLite ni repositorio histórico interno.

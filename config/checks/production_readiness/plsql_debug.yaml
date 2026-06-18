@@ -1,0 +1,28 @@
+check_id: plsql_debug
+group_id: production_readiness
+title: Debug PL/SQL deshabilitado globalmente
+severity: WARNING
+collector:
+  type: oracle_parameter
+  parameter: plsql_debug
+evaluator:
+  type: oracle_config
+  disallowed_values: [TRUE]
+  failure_status: WARNING
+  report_status: PASS
+  missing_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  requires:
+    database_connection: true
+remediation:
+  summary: plsql_debug habilitado globalmente puede dejar código compilado con información de depuración y no suele corresponder a una línea base productiva normal.
+  actions:
+    - Confirmar si existe una investigación activa que justifique debugging PL/SQL global.
+    - Deshabilitar plsql_debug si no corresponde al estándar productivo.
+    - Revisar y recompilar objetos PL/SQL compilados con debug cuando aplique.
+    - Validar el cambio en ambiente no productivo antes de producción.
+  owner: DBA
+  requires_window: true
+  outage_risk: medium
+tags: [oracle, production_readiness, parameter]
