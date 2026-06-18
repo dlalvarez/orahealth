@@ -155,10 +155,20 @@ Esta ruta no reemplaza el roadmap original. Lo realinea con el estado actual ya 
 - Todo texto visible debe estar en español.
 - “Data Guard” solo debe usarse para temas reales de standby/primary-standby.
 
-## 8. Actualización Fase 3A - Production Readiness básico
+## 10. Actualización Fase 3A - Production Readiness básico
 
 La Fase 3A inicia formalmente el grupo `production_readiness` con una primera tanda conservadora de checks basados en `V$PARAMETER`. Esta fase agrega únicamente checks nuevos propios de preparación productiva y no mueve, renombra ni duplica checks existentes.
 
 Checks relacionados con preparación productiva que ya existían en otros grupos, como `archivelog_mode`, `force_logging`, `audit_trail`, `audit_trail_security`, `recyclebin`, `flashback_status`, `remote_login_passwordfile` y `sec_case_sensitive_logon`, se conservan en sus grupos originales. La cobertura relacionada se documenta como existente, pero no se recrea bajo `production_readiness`.
 
 El alcance de esta fase no introduce AWR, ASH, `DBA_HIST%`, Diagnostic Pack, Tuning Pack, repositorio histórico interno ni SQLite. Tampoco crea grupos ajenos al alcance ni modifica `config/targets.yaml`.
+
+## 11. Actualización Fase 3A - Perfil standalone_all y matriz conceptual ASM/RAC
+
+Se agrega el perfil `standalone_all` como perfil amplio para bases standalone. A diferencia de `standalone_basic`, que sigue siendo un perfil básico y liviano, `standalone_all` incluye todos los grupos ya implementados y razonablemente aplicables a una base standalone, incluyendo `production_readiness`. El perfil especializado `production_readiness` se conserva para ejecutar únicamente checks de preparación productiva.
+
+`standalone_basic` no se modifica y no se agrega `production_readiness` a ese perfil. `config/targets.yaml` tampoco se modifica, por lo que ningún target existente cambia su perfil por defecto.
+
+La documentación conceptual queda alineada con Oracle moderno: OraHealthCheck separa topología de base de datos (`standalone` o `rac`) y tipo de almacenamiento (ASM o filesystem). Una base standalone puede usar filesystem o ASM; ASM no implica RAC; RAC moderno debe asumirse como ASM. Cuando exista el grupo ASM, sus checks deberán poder aplicar tanto a standalone con ASM como a RAC con ASM, sin depender de que la base sea RAC.
+
+Esta fase no implementa checks ASM nuevos, no implementa checks RAC nuevos, no crea grupos futuros como `asm`, `performance`, `capacity` o `patching`, y no mueve ni duplica checks existentes.
