@@ -337,7 +337,7 @@ Analizar la muestra de alert log disponible en el inventario para detectar famil
 - `alert_log_space_errors`: detecta ORA-00257, ORA-01652, ORA-01653 y ORA-01654 con severidad `FAIL`.
 - `alert_log_snapshot_undo_errors`: detecta ORA-01555 con severidad `WARNING`.
 - `alert_log_corruption_errors`: detecta ORA-01578, ORA-01110 y textos de corrupción o DBVERIFY con severidad `CRITICAL`.
-- `alert_log_redo_archive_errors`: detecta errores de archive, archiver, ARC, LGWR, checkpoint, switches y asignación de redo con severidad `FAIL`.
+- `alert_log_redo_archive_errors`: detecta errores de archive, archiver, ARC/LGWR con error o fallo, checkpoint incompleto, archival required, ORA-00257 y asignación anómala de redo; los switches normales no generan hallazgo.
 - `alert_log_recent_summary`: resumen `INFO` con conteos por familia; no penaliza score ni genera acción correctiva por sí mismo.
 
 ### Alcance y evidencia

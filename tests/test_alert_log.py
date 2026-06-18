@@ -151,3 +151,60 @@ def test_discover_alert_log_sin_privilegios_y_sin_os_retorna_skipped():
     assert alert_log["available"] is False
     assert alert_log["status"] == "skipped"
     assert "ORA-01031" in alert_log["diag_alert_error"]
+
+
+def _config_check(check_id):
+    from orahealthcheck.config_loader.loader import ConfigLoader
+    return ConfigLoader("config").load_checks()[check_id]
+
+
+def _evaluate_configured_check(check, text):
+    runner = _runner()
+    alert_log = {"available": True, "source": "v$diag_alert_ext", "events": [{"message_text": line, "source": "v$diag_alert_ext"} for line in text.splitlines()]}
+    evidence = runner._collect(check, Inventory("t", "standalone", "test", {"alert_log": alert_log}, {}))
+    status, message = EVALUATORS[check.evaluator["type"]].evaluate(evidence, check.evaluator)
+    return status, message, evidence
+
+
+def test_redo_archive_switch_normal_no_es_hallazgo():
+    check = _config_check("alert_log_redo_archive_errors")
+    status, message, evidence = _evaluate_configured_check(check, "Thread 1 advanced to log sequence 202 (LGWR switch)")
+
+    assert status == ResultStatus.PASS
+    assert message == "No se encontraron errores de redo/archive en el alert log dentro de la muestra evaluada."
+    assert evidence["occurrences"] == 0
+
+
+def test_redo_archive_cannot_allocate_aislado_es_warning():
+    check = _config_check("alert_log_redo_archive_errors")
+    status, _, evidence = _evaluate_configured_check(check, "Thread 1 cannot allocate new log, sequence 202")
+
+    assert status == ResultStatus.WARNING
+    assert evidence["counts_by_pattern"]["cannot allocate new log"] == 1
+    assert evidence["occurrences"] == 1
+
+
+def test_redo_archive_cannot_allocate_con_checkpoint_es_fail():
+    check = _config_check("alert_log_redo_archive_errors")
+    text = "Thread 1 cannot allocate new log, sequence 202\nCheckpoint not complete"
+    status, _, evidence = _evaluate_configured_check(check, text)
+
+    assert status == ResultStatus.FAIL
+    assert evidence["counts_by_pattern"]["cannot allocate new log"] == 1
+    assert evidence["counts_by_pattern"]["checkpoint not complete"] == 1
+
+
+def test_redo_archive_ora_00257_es_critical():
+    check = _config_check("alert_log_redo_archive_errors")
+    status, _, evidence = _evaluate_configured_check(check, "ORA-00257: archiver error. Connect internal only, until freed.")
+
+    assert status == ResultStatus.CRITICAL
+    assert evidence["counts_by_pattern"]["ORA-00257"] == 1
+
+
+def test_alert_log_recent_summary_cuenta_switch_normal_como_informativo():
+    check = _config_check("alert_log_recent_summary")
+    status, _, evidence = _evaluate_configured_check(check, "Thread 1 advanced to log sequence 202 (LGWR switch)")
+
+    assert status == ResultStatus.INFO
+    assert evidence["occurrences"] >= 1

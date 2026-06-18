@@ -1845,7 +1845,7 @@ class CheckRunner:
         message = (
             f"Se detectaron {occurrences} ocurrencias en el alert log dentro de la muestra evaluada"
             if occurrences else
-            "No se encontraron patrones de esta familia en el alert log dentro de la muestra evaluada."
+            collector.get("no_match_message", "No se encontraron patrones de esta familia en el alert log dentro de la muestra evaluada.")
         )
         evidence: dict[str, Any] = {
             "available": True,

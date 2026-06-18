@@ -1,7 +1,7 @@
 check_id: alert_log_redo_archive_errors
 group_id: alert_log
 title: Errores de redo/archive en alert log
-description: Detecta patrones específicos de errores de redo/archive en alert log dentro de la muestra de alert log recolectada.
+description: Detecta condiciones anómalas de redo/archive en alert log sin tratar switches normales de redo como errores.
 severity: FAIL
 collector:
   type: alert_log_family
@@ -9,19 +9,46 @@ collector:
   field: alert_log_excerpt
   family: alert_log_redo_archive_errors
   max_samples: 5
+  no_match_message: No se encontraron errores de redo/archive en el alert log dentro de la muestra evaluada.
   patterns:
-    - "archive error"
-    - "archiver error"
-    - '\bARC[0-9A-Z]*\b'
-    - '\bLGWR\b'
-    - "checkpoint not complete"
-    - "redo log error"
-    - "log file switch"
     - "cannot allocate new log"
+    - "checkpoint not complete"
+    - "checkpoint incomplete"
+    - "archival required"
+    - "archive destination full"
+    - "archiver error"
+    - "archive error"
+    - '\bARC[0-9A-Z]*:.*error'
+    - '\bARC[0-9A-Z]*:.*failed'
+    - '\bLGWR\b.*error'
+    - '\bLGWR\b.*failed'
+    - "redo log error"
+    - "log file switch.*checkpoint incomplete"
+    - "log file switch.*archival required"
+    - "ORA-00257"
 evaluator:
   type: alert_log_family
   failure_status: FAIL
   mode: fail_on_match
+  severity_rules:
+    critical_patterns:
+      - "ORA-00257"
+      - "archive destination full"
+    fail_patterns:
+      - "checkpoint not complete"
+      - "checkpoint incomplete"
+      - "archival required"
+      - "archiver error"
+      - "archive error"
+      - '\bARC[0-9A-Z]*:.*error'
+      - '\bARC[0-9A-Z]*:.*failed'
+      - '\bLGWR\b.*error'
+      - '\bLGWR\b.*failed'
+      - "redo log error"
+      - "log file switch.*checkpoint incomplete"
+      - "log file switch.*archival required"
+    cannot_allocate_pattern: "cannot allocate new log"
+    cannot_allocate_fail_threshold: 2
 applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
