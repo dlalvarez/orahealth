@@ -435,6 +435,18 @@ El grupo `storage` actual incluye estos checks implementados:
 
 Estos checks reutilizan una estructura de inventario `database.storage` con detalles de tablespaces, datafiles, tempfiles, uso temporal, FRA y UNDO. La implementación evita vistas AWR y Diagnostic Pack, mantiene compatibilidad con `example_standalone` y conserva las remediaciones únicamente en `corrective_actions.html`.
 
+### Implementado en Fase 2P
+
+La Fase 2P agrega una primera tanda conservadora de gaps de almacenamiento del roadmap inicial, sin crear grupos nuevos ni modificar `config/targets.yaml`:
+
+- `users_system_default_tablespace` — detecta usuarios abiertos de aplicación con `SYSTEM` como tablespace por defecto, excluyendo cuentas internas mantenidas por Oracle.
+- `users_system_temp_tablespace` — detecta usuarios con `SYSTEM` como tablespace temporal.
+- `users_missing_default_tablespace` — validación defensiva para usuarios sin tablespace por defecto existente.
+- `users_missing_temp_tablespace` — validación defensiva para usuarios sin tablespace temporal existente.
+- `dictionary_managed_tablespaces` — detecta tablespaces con `EXTENT_MANAGEMENT = 'DICTIONARY'`.
+
+Permanecen pendientes para fases posteriores fragmentación avanzada, objetos sin posibilidad de extender y análisis de crecimiento de segmentos.
+
 ### Typical collectors
 
 ```text
@@ -538,6 +550,17 @@ Validate schema design, object health, indexing, constraints, statistics, partit
 - Invalid objects.
 - Package bodies without package specification.
 - Invalid dependencies.
+
+### Implementado en Fase 2P
+
+La Fase 2P agrega una primera tanda conservadora de gaps de objetos de esquema del roadmap inicial, reutilizando filtros de esquemas internos y evitando consultas a tablas de negocio:
+
+- `tables_without_primary_key` — detecta tablas de aplicación no temporales sin llave primaria.
+- `foreign_keys_without_index` — detecta llaves foráneas habilitadas sin índice compatible en las columnas iniciales y en el mismo orden.
+- `tables_with_long_columns` — detecta columnas `LONG` o `LONG RAW` en tablas de aplicación.
+- `indexes_too_many_columns` — detecta índices de aplicación que superan el umbral conservador de columnas configurado en el check.
+
+Permanecen pendientes para fases posteriores índices redundantes, particionamiento avanzado, row chaining avanzado y validaciones complejas de fragmentación o crecimiento.
 
 ### Typical collectors
 

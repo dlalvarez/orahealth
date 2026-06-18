@@ -12,3 +12,8 @@ checks:
   - undo_tablespace_status
   - fra_configured
   - fra_usage
+  - users_system_default_tablespace
+  - users_system_temp_tablespace
+  - users_missing_default_tablespace
+  - users_missing_temp_tablespace
+  - dictionary_managed_tablespaces

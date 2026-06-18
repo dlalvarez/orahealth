@@ -1,0 +1,28 @@
+check_id: foreign_keys_without_index
+group_id: schema_objects
+title: Llaves foráneas sin índice compatible
+description: Detecta constraints referenciales habilitadas cuyas columnas iniciales no coinciden con un índice compatible.
+severity: WARNING
+collector:
+  type: oracle_schema_objects
+  field: foreign_keys_without_index
+  label: Llaves foráneas sin índice compatible
+  source_view: DBA_CONSTRAINTS + DBA_CONS_COLUMNS + DBA_IND_COLUMNS + DBA_INDEXES
+evaluator:
+  type: schema_objects
+  status_when_found: WARNING
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Evaluar creación de índice sobre columnas de la llave foránea, validando impacto en DML y bloqueos.
+  actions:
+    - Revisar la evidencia del check y confirmar si corresponde a objeto o usuario de aplicación.
+    - Planificar la corrección en ventana controlada si el cambio puede afectar disponibilidad o DML.
+    - Documentar excepciones funcionales justificadas para evitar falsos positivos recurrentes.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, schema_objects]

@@ -36,7 +36,15 @@ class SchemaObjectsEvaluator:
                 return ResultStatus.FAIL, f"Se detectaron {count} restricción(es) deshabilitada(s), incluyendo llaves primarias o únicas"
             return self._configured_status(config.get("status_when_found", "WARNING")), f"Se detectaron {count} restricción(es) deshabilitada(s)"
 
-        if metric in {"disabled_triggers", "stale_table_statistics", "missing_table_statistics", "locked_table_statistics", "invalid_synonyms"}:
+        if metric == "indexes_too_many_columns":
+            threshold = int(config.get("warning", config.get("max_columns", 8)) or 8)
+            affected = [row for row in rows if isinstance(row, dict) and int(row.get("column_count") or 0) > threshold]
+            affected_count = len(affected)
+            if affected_count:
+                return self._configured_status(config.get("status_when_found", "WARNING")), f"Se detectaron {affected_count} índice(s) con más de {threshold} columnas"
+            return ResultStatus.PASS, f"No se detectaron índices con más de {threshold} columnas"
+
+        if metric in {"disabled_triggers", "stale_table_statistics", "missing_table_statistics", "locked_table_statistics", "invalid_synonyms", "tables_without_primary_key", "foreign_keys_without_index", "tables_with_long_columns"}:
             return self._threshold_or_status(count, config, self._found_message(metric, count))
 
         if metric == "recyclebin_objects":
@@ -82,6 +90,10 @@ class SchemaObjectsEvaluator:
             "locked_table_statistics": "No se detectaron tablas con estadísticas bloqueadas",
             "recyclebin_objects": "No se detectaron objetos en la papelera de reciclaje para esquemas de aplicación",
             "invalid_synonyms": "No se detectaron sinónimos locales apuntando a objetos inexistentes",
+            "tables_without_primary_key": "No se detectaron tablas de aplicación sin llave primaria",
+            "foreign_keys_without_index": "No se detectaron llaves foráneas habilitadas sin índice compatible",
+            "tables_with_long_columns": "No se detectaron columnas LONG ni LONG RAW en tablas de aplicación",
+            "indexes_too_many_columns": "No se detectaron índices con cantidad excesiva de columnas",
         }
         return messages.get(str(metric), "No se detectaron hallazgos")
 
@@ -92,5 +104,8 @@ class SchemaObjectsEvaluator:
             "missing_table_statistics": f"Se detectaron {count} tabla(s) sin estadísticas",
             "locked_table_statistics": f"Se detectaron {count} tabla(s) con estadísticas bloqueadas",
             "invalid_synonyms": f"Se detectaron {count} sinónimo(s) local(es) con destino inexistente",
+            "tables_without_primary_key": f"Se detectaron {count} tabla(s) de aplicación sin llave primaria",
+            "foreign_keys_without_index": f"Se detectaron {count} llave(s) foránea(s) habilitada(s) sin índice compatible",
+            "tables_with_long_columns": f"Se detectaron {count} columna(s) LONG o LONG RAW en tablas de aplicación",
         }
         return messages.get(str(metric), f"Se detectaron {count} hallazgo(s)")

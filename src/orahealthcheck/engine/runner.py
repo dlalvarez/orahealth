@@ -616,6 +616,103 @@ class CheckRunner:
         """)
         schema_objects["recyclebin_objects"] = recyclebin_rows
         schema_objects["recyclebin_total_mb"] = round(sum(float(row.get("space_mb") or 0) for row in recyclebin_rows), 2)
+
+        schema_objects["tables_without_primary_key"] = self._query_schema_rows(connector, "tablas de aplicación sin llave primaria", """
+            select t.owner, t.table_name, t.tablespace_name, t.temporary, t.nested, t.dropped, u.oracle_maintained
+            from dba_tables t
+            left join dba_users u on u.username = t.owner
+            where nvl(u.oracle_maintained, 'N') = 'N'
+              and nvl(t.temporary, 'N') = 'N'
+              and nvl(t.nested, 'NO') = 'NO'
+              and nvl(t.dropped, 'NO') = 'NO'
+              and not exists (
+                select 1 from dba_constraints c
+                where c.owner = t.owner and c.table_name = t.table_name and c.constraint_type = 'P'
+              )
+            order by t.owner, t.table_name
+        """, """
+            select t.owner, t.table_name, t.tablespace_name, t.temporary, t.nested, t.dropped, null as oracle_maintained
+            from dba_tables t
+            where t.owner not in ({internal_schemas})
+              and nvl(t.temporary, 'N') = 'N'
+              and nvl(t.nested, 'NO') = 'NO'
+              and nvl(t.dropped, 'NO') = 'NO'
+              and not exists (
+                select 1 from dba_constraints c
+                where c.owner = t.owner and c.table_name = t.table_name and c.constraint_type = 'P'
+              )
+            order by t.owner, t.table_name
+        """)
+        schema_objects["foreign_keys_without_index"] = self._query_schema_rows(connector, "llaves foráneas sin índice compatible", """
+            with fk_cols as (
+              select owner, constraint_name, table_name,
+                     listagg(column_name, ',') within group (order by position) as fk_columns,
+                     count(*) as column_count
+              from dba_cons_columns
+              group by owner, constraint_name, table_name
+            ), idx_cols as (
+              select index_owner, index_name, table_owner, table_name,
+                     listagg(column_name, ',') within group (order by column_position) as leading_columns
+              from dba_ind_columns
+              group by index_owner, index_name, table_owner, table_name
+            )
+            select c.owner, c.constraint_name, c.table_name, fc.fk_columns, fc.column_count, c.status, c.validated, u.oracle_maintained
+            from dba_constraints c
+            join fk_cols fc on fc.owner = c.owner and fc.constraint_name = c.constraint_name
+            join dba_tables t on t.owner = c.owner and t.table_name = c.table_name
+            left join dba_users u on u.username = c.owner
+            where c.constraint_type = 'R'
+              and c.status = 'ENABLED'
+              and nvl(u.oracle_maintained, 'N') = 'N'
+              and nvl(t.temporary, 'N') = 'N'
+              and not exists (
+                select 1 from idx_cols i
+                where i.table_owner = c.owner and i.table_name = c.table_name
+                  and substr(i.leading_columns || ',', 1, length(fc.fk_columns || ',')) = fc.fk_columns || ','
+              )
+            order by c.owner, c.table_name, c.constraint_name
+        """, """
+            with fk_cols as (
+              select owner, constraint_name, table_name, listagg(column_name, ',') within group (order by position) as fk_columns, count(*) as column_count from dba_cons_columns group by owner, constraint_name, table_name
+            ), idx_cols as (
+              select index_owner, index_name, table_owner, table_name, listagg(column_name, ',') within group (order by column_position) as leading_columns from dba_ind_columns group by index_owner, index_name, table_owner, table_name
+            )
+            select c.owner, c.constraint_name, c.table_name, fc.fk_columns, fc.column_count, c.status, c.validated, null as oracle_maintained
+            from dba_constraints c join fk_cols fc on fc.owner = c.owner and fc.constraint_name = c.constraint_name join dba_tables t on t.owner = c.owner and t.table_name = c.table_name
+            where c.constraint_type = 'R' and c.status = 'ENABLED' and c.owner not in ({internal_schemas}) and nvl(t.temporary, 'N') = 'N'
+              and not exists (select 1 from idx_cols i where i.table_owner = c.owner and i.table_name = c.table_name and substr(i.leading_columns || ',', 1, length(fc.fk_columns || ',')) = fc.fk_columns || ',')
+            order by c.owner, c.table_name, c.constraint_name
+        """)
+        schema_objects["tables_with_long_columns"] = self._query_schema_rows(connector, "columnas LONG o LONG RAW en tablas de aplicación", """
+            select c.owner, c.table_name, c.column_name, c.data_type, u.oracle_maintained
+            from dba_tab_columns c
+            join dba_tables t on t.owner = c.owner and t.table_name = c.table_name
+            left join dba_users u on u.username = c.owner
+            where c.data_type in ('LONG', 'LONG RAW')
+              and nvl(u.oracle_maintained, 'N') = 'N'
+              and nvl(t.temporary, 'N') = 'N'
+            order by c.owner, c.table_name, c.column_id
+        """, """
+            select c.owner, c.table_name, c.column_name, c.data_type, null as oracle_maintained
+            from dba_tab_columns c join dba_tables t on t.owner = c.owner and t.table_name = c.table_name
+            where c.data_type in ('LONG', 'LONG RAW') and c.owner not in ({internal_schemas}) and nvl(t.temporary, 'N') = 'N'
+            order by c.owner, c.table_name, c.column_id
+        """)
+        schema_objects["indexes_too_many_columns"] = self._query_schema_rows(connector, "índices con demasiadas columnas", """
+            select i.owner, i.index_name, i.table_owner, i.table_name, count(c.column_name) as column_count, i.index_type, i.status, u.oracle_maintained
+            from dba_indexes i
+            join dba_ind_columns c on c.index_owner = i.owner and c.index_name = i.index_name
+            left join dba_users u on u.username = i.owner
+            where nvl(u.oracle_maintained, 'N') = 'N'
+            group by i.owner, i.index_name, i.table_owner, i.table_name, i.index_type, i.status, u.oracle_maintained
+            order by column_count desc, i.owner, i.index_name
+        """, """
+            select i.owner, i.index_name, i.table_owner, i.table_name, count(c.column_name) as column_count, i.index_type, i.status, null as oracle_maintained
+            from dba_indexes i join dba_ind_columns c on c.index_owner = i.owner and c.index_name = i.index_name
+            where i.owner not in ({internal_schemas})
+            group by i.owner, i.index_name, i.table_owner, i.table_name, i.index_type, i.status
+            order by column_count desc, i.owner, i.index_name
+        """)
         schema_objects["invalid_synonyms"] = self._query_schema_rows(connector, "sinónimos locales con destino inexistente", """
             select s.owner, s.synonym_name, s.table_owner, s.table_name, s.db_link,
                    u.oracle_maintained,
@@ -754,7 +851,7 @@ class CheckRunner:
         return {"security": security}
 
     def _discover_storage_inventory(self, connector: Any, parameters: dict[str, Any]) -> dict[str, Any]:
-        storage: dict[str, Any] = {"tablespaces": [], "datafiles": [], "tempfiles": [], "temp_usage": [], "fra": {}, "undo": {}}
+        storage: dict[str, Any] = {"tablespaces": [], "datafiles": [], "tempfiles": [], "temp_usage": [], "fra": {}, "undo": {}, "users": []}
         tablespaces = self._query_rows(connector, "tablespace usage", """
             select
               df.tablespace_name,
@@ -810,6 +907,25 @@ class CheckRunner:
                    round(maxbytes / 1024 / 1024, 2) as maxbytes_mb
             from dba_temp_files
             order by tablespace_name, file_name
+        """)
+
+        internal_schemas = self._sql_in_list(ORACLE_INTERNAL_SCHEMAS)
+        storage["users"] = self._query_rows(connector, "tablespaces asignados a usuarios de aplicación", f"""
+            select u.username, u.account_status, u.default_tablespace, u.temporary_tablespace,
+                   u.oracle_maintained, dt.tablespace_name as default_tablespace_exists,
+                   tt.tablespace_name as temporary_tablespace_exists
+            from dba_users u
+            left join dba_tablespaces dt on dt.tablespace_name = u.default_tablespace
+            left join dba_tablespaces tt on tt.tablespace_name = u.temporary_tablespace
+            where nvl(u.oracle_maintained, 'N') = 'N'
+              and u.username not in ({internal_schemas})
+            order by u.username
+        """)
+        storage["dictionary_managed_tablespaces"] = self._query_rows(connector, "tablespaces administrados por diccionario", """
+            select tablespace_name, extent_management, allocation_type, contents, status
+            from dba_tablespaces
+            where extent_management = 'DICTIONARY'
+            order by tablespace_name
         """)
         temp_usage, temp_usage_error = self._query_rows_with_error(connector, "active temporary tablespace usage", """
             select tf.tablespace_name,
@@ -2021,12 +2137,13 @@ class CheckRunner:
     def _build_storage_evidence(self, check: Check, database: dict[str, Any]) -> dict[str, Any]:
         storage = database.get("storage") if isinstance(database.get("storage"), dict) else {}
         check_id = check.check_id
-        thresholds = {k: v for k, v in check.evaluator.items() if k in {"warning", "fail", "critical", "missing_fra_status"}}
+        thresholds = {k: v for k, v in check.evaluator.items() if k in {"warning", "fail", "critical", "missing_fra_status", "status_when_found"}}
         evidence: dict[str, Any] = {"metric": check_id, "source": check.collector.get("source_view", "oracle storage inventory"), **thresholds}
         tablespaces = storage.get("tablespaces") or []
         datafiles = storage.get("datafiles") or []
         tempfiles = storage.get("tempfiles") or []
         temp_usage = storage.get("temp_usage") or []
+        users = self._filter_oracle_maintained_schema_rows(storage.get("users") or [])
         fra = storage.get("fra") or {"fra_configured": database.get("fra_configured"), "used_pct": database.get("fra_used_pct"), "message": database.get("fra_message")}
         undo = storage.get("undo") or {}
         if check_id == "tablespace_free_pct":
@@ -2057,6 +2174,21 @@ class CheckRunner:
         elif check_id == "tempfiles_status":
             affected = [row for row in tempfiles if str(row.get("status", "")).upper() not in {"AVAILABLE", "ONLINE"}]
             evidence.update({"tempfile_count": len(tempfiles), "affected_count": len(affected), "tempfiles": tempfiles, "affected_tempfiles": affected})
+        elif check_id == "users_system_default_tablespace":
+            affected = [row for row in users if str(row.get("default_tablespace", "")).upper() == "SYSTEM" and str(row.get("account_status", "")).upper() == "OPEN"]
+            evidence.update({"affected_count": len(affected), "rows": affected})
+        elif check_id == "users_system_temp_tablespace":
+            affected = [row for row in users if str(row.get("temporary_tablespace", "")).upper() == "SYSTEM"]
+            evidence.update({"affected_count": len(affected), "rows": affected})
+        elif check_id == "users_missing_default_tablespace":
+            affected = [row for row in users if not row.get("default_tablespace") or row.get("default_tablespace_exists") is None]
+            evidence.update({"affected_count": len(affected), "rows": affected})
+        elif check_id == "users_missing_temp_tablespace":
+            affected = [row for row in users if not row.get("temporary_tablespace") or row.get("temporary_tablespace_exists") is None]
+            evidence.update({"affected_count": len(affected), "rows": affected})
+        elif check_id == "dictionary_managed_tablespaces":
+            rows = storage.get("dictionary_managed_tablespaces") or []
+            evidence.update({"affected_count": len(rows), "rows": rows})
         elif check_id == "temp_usage_pct":
             worst = max(temp_usage, key=lambda row: row.get("used_pct", -1)) if temp_usage else {}
             evidence.update({
@@ -2088,6 +2220,9 @@ class CheckRunner:
             rows = []
         original_rows = rows if isinstance(rows, list) else [rows]
         filtered_rows = self._filter_oracle_maintained_schema_rows(original_rows)
+        if check.check_id == "indexes_too_many_columns":
+            max_columns = int(check.evaluator.get("warning", check.evaluator.get("max_columns", 8)) or 8)
+            filtered_rows = [row for row in filtered_rows if isinstance(row, dict) and int(row.get("column_count") or 0) > max_columns]
         evidence = {
             "metric": check.check_id,
             "label": check.collector.get("label", check.title),
@@ -2095,6 +2230,8 @@ class CheckRunner:
             "affected_count": len(filtered_rows),
             "rows": filtered_rows,
         }
+        if check.check_id == "indexes_too_many_columns":
+            evidence["max_columns"] = int(check.evaluator.get("warning", check.evaluator.get("max_columns", 8)) or 8)
         if check.check_id == "recyclebin_objects":
             evidence["total_mb"] = round(sum(float(row.get("space_mb") or 0) for row in filtered_rows if isinstance(row, dict)), 2)
         if filtered_rows != original_rows:
@@ -2112,7 +2249,7 @@ class CheckRunner:
                 filtered.append(row)
                 continue
             oracle_maintained = str(row.get("oracle_maintained", "")).upper() == "Y"
-            owner = str(row.get("owner", row.get("table_owner", ""))).upper()
+            owner = str(row.get("owner", row.get("username", row.get("table_owner", "")))).upper()
             table_owner = str(row.get("table_owner", "")).upper()
             table_owner_oracle_maintained = str(row.get("table_owner_oracle_maintained", "")).upper() == "Y"
             if not owner or oracle_maintained or owner in ORACLE_INTERNAL_SCHEMAS:
