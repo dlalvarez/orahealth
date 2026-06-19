@@ -1269,3 +1269,20 @@ def test_dictionary_access_privileges_reports_non_oracle_user_with_select_catalo
     assert result["status"] == "WARNING"
     assert result["evidence"]["affected_count"] == 1
     assert result["evidence"]["rows"][0]["access_name"] == "SELECT_CATALOG_ROLE"
+
+
+def test_default_profile_users_excludes_sys_system_and_reports_application_users(tmp_path):
+    results = _run_with_security_inventory(tmp_path, {
+        "default_profile_users": [
+            {"username": "SYS", "account_status": "OPEN", "profile": "DEFAULT", "oracle_maintained": "Y"},
+            {"username": "SYSTEM", "account_status": "OPEN", "profile": "DEFAULT", "oracle_maintained": "Y"},
+            {"username": "MONITOREO", "account_status": "OPEN", "profile": "DEFAULT", "oracle_maintained": "N"},
+            {"username": "PROMETHEUS", "account_status": "OPEN", "profile": "DEFAULT", "oracle_maintained": "N"},
+            {"username": "PRUEBA", "account_status": "OPEN", "profile": "DEFAULT", "oracle_maintained": "N"},
+        ]
+    })
+
+    result = results["default_profile_users"]
+    assert result["status"] == "WARNING"
+    assert result["evidence"]["affected_count"] == 3
+    assert {row["username"] for row in result["evidence"]["rows"]} == {"MONITOREO", "PROMETHEUS", "PRUEBA"}

@@ -816,13 +816,25 @@ class CheckRunner:
               and account_status = 'OPEN'
             order by username
         """)
-        security["default_profile_users"] = self._query_rows(connector, "usuarios con perfil DEFAULT", """
+        default_profile_users, default_profile_error = self._query_rows_with_error(connector, "usuarios con perfil DEFAULT", """
             select username, account_status, profile, oracle_maintained, common
             from dba_users
             where profile = 'DEFAULT'
               and account_status = 'OPEN'
+              and username not in ('SYS', 'SYSTEM')
+              and nvl(oracle_maintained, 'N') = 'N'
             order by username
-        """)
+        """, log_warning=False)
+        if default_profile_error:
+            default_profile_users = self._query_rows(connector, "usuarios con perfil DEFAULT sin columna oracle_maintained", """
+                select username, account_status, profile, null as oracle_maintained, null as common
+                from dba_users
+                where profile = 'DEFAULT'
+                  and account_status = 'OPEN'
+                  and username not in ('SYS', 'SYSTEM')
+                order by username
+            """)
+        security["default_profile_users"] = default_profile_users
         allowed_dba_grantees = self._sql_in_list(ORACLE_DBA_ROLE_ALLOWED_GRANTEES)
         security["dba_role_users"] = self._query_rows(connector, "usuarios o roles no esperados con rol DBA", f"""
             select
@@ -2470,6 +2482,8 @@ class CheckRunner:
         return evidence
 
     def _filter_security_rows(self, check_id: str, rows: list[Any]) -> list[Any]:
+        if check_id == "default_profile_users":
+            return [row for row in rows if not self._is_expected_oracle_security_row(row)]
         if check_id == "dba_role_users":
             return [row for row in rows if not self._is_allowed_dba_grantee(row)]
         if check_id == "critical_privilege_users":
