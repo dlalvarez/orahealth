@@ -1,0 +1,33 @@
+check_id: capacity_segments_top_size
+group_id: capacity
+title: Segmentos de aplicación de mayor tamaño
+description: Fotografía actual de capacidad sin AWR, ASH, DBA-HIST ni repositorio histórico interno.
+severity: INFO
+collector:
+  type: capacity
+  source_view: DBA_SEGMENTS/DBA_USERS
+  label: Segmentos de aplicación de mayor tamaño
+evaluator:
+  type: capacity
+  metric: capacity_segments_top_size
+  top_segments_limit_policy: capacity_top_segments_limit
+  segment_large_warning_mb_policy: capacity_segment_large_warning_mb
+  segment_large_fail_mb_policy: capacity_segment_large_fail_mb
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Identificar los segmentos de aplicación que concentran consumo de capacidad.
+  actions:
+    - Analizar la evidencia como snapshot actual de capacidad, no como forecast ni histórico interno.
+    - Validar crecimiento esperado con responsables de aplicación y ventanas de cambio aprobadas.
+    - Ajustar capacidad, límites o housekeeping solo mediante procedimientos soportados y controlados.
+  validation:
+    - Ejecutar nuevamente OraHealthCheck y confirmar que el margen reportado mejora o queda documentado.
+    - Verificar en diccionario Oracle que los tamaños, límites y estados reflejan el cambio aplicado.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, capacity, snapshot, sin_awr, sin_ash]

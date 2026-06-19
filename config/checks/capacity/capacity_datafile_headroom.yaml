@@ -1,0 +1,33 @@
+check_id: capacity_datafile_headroom
+group_id: capacity
+title: Margen actual por datafile
+description: Fotografía actual de capacidad sin AWR, ASH, DBA-HIST ni repositorio histórico interno.
+severity: WARNING
+collector:
+  type: capacity
+  source_view: DBA_DATA_FILES
+  label: Margen actual por datafile
+evaluator:
+  type: capacity
+  metric: capacity_datafile_headroom
+  datafile_margen_warning_pct_policy: capacity_datafile_headroom_warning_pct
+  datafile_margen_fail_pct_policy: capacity_datafile_headroom_fail_pct
+  datafile_margen_critical_pct_policy: capacity_datafile_headroom_critical_pct
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar datafiles con menor margen contra maxbytes y planificar crecimiento controlado.
+  actions:
+    - Analizar la evidencia como snapshot actual de capacidad, no como forecast ni histórico interno.
+    - Validar crecimiento esperado con responsables de aplicación y ventanas de cambio aprobadas.
+    - Ajustar capacidad, límites o housekeeping solo mediante procedimientos soportados y controlados.
+  validation:
+    - Ejecutar nuevamente OraHealthCheck y confirmar que el margen reportado mejora o queda documentado.
+    - Verificar en diccionario Oracle que los tamaños, límites y estados reflejan el cambio aplicado.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, capacity, snapshot, sin_awr, sin_ash]

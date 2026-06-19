@@ -45,7 +45,7 @@ Esta regla aplica explícitamente a los grupos `oracle_resources`, `io_redo_arch
 | `dataguard` | No | 0 | PENDIENTE | No existe grupo real. | Primary/standby real, transport/apply lag, MRP/RFS/FAL, gaps, protección, broker y estado standby. |
 | `asm` | No | 0 | PENDIENTE | No existe grupo formal. | Diskgroups, espacio libre, redundancia, discos offline, rebalance, ASM instance y errores de storage. |
 | `os` | Sí | 3 | PARCIAL | `os_cpu`, `os_memory`, `os_filesystem_usage`. | Ulimits, swap, procesos Oracle, time sync, Oracle Base/Home/diag/audit/archive filesystems y cobertura AIX/Linux más completa. |
-| `capacity` | Sí | 0 | FORMAL 4A | Grupo formal vacío; la cobertura adelantada vive en `storage`, `oracle_resources`, `io_redo_archive`, `configuration_general` y `operational_readiness`. | Fase 4C: snapshot actual de tamaño, datafiles/tablespaces, segmentos grandes, TEMP/UNDO, límites de sesiones/procesos/transacciones, PGA/SGA y FRA/archive sin SQLite. |
+| `capacity` | Sí | 0 | FORMAL 4A | Grupo formal vacío; la cobertura adelantada vive en `storage`, `oracle_resources`, `io_redo_archive`, `configuration_general` y `operational_readiness`. | Fase 4C: fotografía actual de tamaño, datafiles/tablespaces, segmentos grandes, TEMP/UNDO, límites de sesiones/procesos/transacciones, PGA/SGA y FRA/archive sin SQLite. |
 | `patching` | No | 0 | PENDIENTE | No existe grupo formal. | OPatch, DBA_REGISTRY, componentes inválidos, RU/PSU, datapatch y readiness. |
 
 ## 5. Grupos adicionales aceptados
@@ -195,7 +195,7 @@ La cobertura adelantada se conserva en sus grupos originales y no se mueve ni se
 
 Queda pendiente para Fase 4B implementar rendimiento básico sin AWR por defecto: uptime de instancia, sesiones activas actuales, esperas actuales desde `V$SESSION`/`V$SYSTEM_EVENT`, wait classes actuales, parse ratio con `V$SYSSTAT`, lecturas lógicas/buffer cache básicas, library cache, latches/mutex solo si son de bajo ruido, SQL actualmente activo, long operations y eventos de espera actuales por sesión.
 
-Queda pendiente para Fase 4C implementar capacidad como snapshot actual sin histórico interno: tamaño actual de BD, crecimiento actual por datafiles/tablespaces cuando derive de datos actuales, segmentos grandes, TEMP/UNDO, sesiones/procesos/transacciones contra límites, PGA/SGA y FRA/archivelog. Si en el futuro se requiere tendencia, debe venir de datos Oracle existentes y solo con autorización y licenciamiento explícitos; por defecto no se usa histórico licenciado.
+Queda pendiente para Fase 4C implementar capacidad como fotografía actual sin histórico interno: tamaño actual de BD, crecimiento actual por datafiles/tablespaces cuando derive de datos actuales, segmentos grandes, TEMP/UNDO, sesiones/procesos/transacciones contra límites, PGA/SGA y FRA/archivelog. Si en el futuro se requiere tendencia, debe venir de datos Oracle existentes y solo con autorización y licenciamiento explícitos; por defecto no se usa histórico licenciado.
 
 Esta fase no modifica `config/targets.yaml`, no modifica `standalone_basic`, no mueve checks existentes, no duplica checks, no crea checks dummy, no usa AWR/ASH/`DBA_HIST%`, no usa vistas internas `X$`, no implementa SQLite y no crea repositorio histórico interno.
 
@@ -230,3 +230,11 @@ La Fase 4B implementa los primeros 9 checks reales del grupo `performance`, enfo
 El análisis por `WAIT_CLASS`/`EVENT` se basa en `V$SESSION`; los segundos reportados son `total_observed_wait_seconds` observados en la fotografía actual entre sesiones, no DB Time histórico. Los thresholds de `performance_wait_class_snapshot` son configurables por `WAIT_CLASS`, con exclusión de `Idle` por defecto y fallback `default` para clases no configuradas. `performance_sql_current_activity` muestra SQL activo actual y no equivale a top SQL histórico.
 
 `standalone_all` incorpora `performance` porque el grupo deja de estar vacío. `standalone_basic` permanece sin `performance`. `capacity` sigue pendiente para una fase posterior y no se implementan checks de capacidad en esta fase.
+
+## 15. Actualización Fase 4C - Capacity fotografía actual sin histórico interno
+
+La Fase 4C inicia la cobertura propia del grupo formal `capacity` con 8 checks reales: tamaño actual de base de datos, margen de tablespaces, margen de datafiles, segmentos principales de aplicación, fotografía de TEMP, fotografía de UNDO, margen consolidado de `V$RESOURCE_LIMIT` y margen de FRA/archive. El grupo deja de estar vacío y pasa de estado formal reservado a cobertura iniciada.
+
+`capacity` se define como una fotografía actual de tamaño, uso, margen disponible, límite efectivo y riesgo de saturación actual. No reemplaza a `storage`, `oracle_resources` ni `io_redo_archive`: esos grupos mantienen validaciones puntuales, mientras `capacity` consolida margen y contexto de capacidad.
+
+La fase no introduce SQLite, no crea repositorio histórico interno, no usa AWR, no usa ASH, no usa `DBA_HIST%`, no usa `DBMS_WORKLOAD_REPOSITORY` y no usa vistas internas `X$`. TEMP y UNDO forman parte explícita del fotografía actual. Cualquier tendencia futura basada en AWR deberá ser opcional, declarada y condicionada a licenciamiento explícito.
