@@ -52,11 +52,18 @@ def test_remote_login_passwordfile_validates_expected_standard_value(example_con
     assert run_example_and_results(example_config)["remote_login_passwordfile"]["status"] == ResultStatus.WARNING.value
 
 
-def test_recyclebin_validates_expected_standard_value(example_config):
-    _set_parameter(example_config, "recyclebin", "ON")
+def test_recyclebin_validates_project_standard_value(example_config):
+    profile = example_config["profiles"]["standalone_basic"]
+    policies = {}
+    for standard_id in profile.standards:
+        policies.update(example_config["standards"][standard_id].policies)
+    expected_recyclebin = str(policies["expected_recyclebin"]).upper()
+    non_standard_recyclebin = "ON" if expected_recyclebin == "OFF" else "OFF"
+
+    _set_parameter(example_config, "recyclebin", expected_recyclebin)
     assert run_example_and_results(example_config)["recyclebin"]["status"] == ResultStatus.PASS.value
 
-    _set_parameter(example_config, "recyclebin", "OFF")
+    _set_parameter(example_config, "recyclebin", non_standard_recyclebin)
     assert run_example_and_results(example_config)["recyclebin"]["status"] == ResultStatus.WARNING.value
 
 
