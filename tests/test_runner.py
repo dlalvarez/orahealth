@@ -4,7 +4,8 @@ from pathlib import Path
 
 from orahealthcheck.config_loader import ConfigLoader, ConfigValidator
 from orahealthcheck.engine import CheckRunner
-from orahealthcheck.models import Check, Inventory, Target
+from orahealthcheck.models import Check, Inventory, Result, ResultStatus, Target
+from orahealthcheck.reports.html_reporter import HTMLReporter
 
 
 def _run_example(tmp_path):
@@ -93,16 +94,68 @@ def test_standalone_all_rac_feature_skips_are_traceable_without_corrective_noise
     corrective_html = (output / "corrective_actions.html").read_text(encoding="utf-8")
 
     assert "Oracle RAC básico" in technical_html
-    assert "rac_cluster_database_parameter" in technical_html
-    assert "SKIPPED / Omitido" in technical_html
+    assert "No aplicable" in technical_html
+    assert "Validaciones omitidas:</strong> 7" in technical_html
     assert "oracle_rac" in technical_html
-    assert "rac_cluster_database_parameter" in evidence_html
+    for check_id in expected_rac_checks:
+        assert check_id not in technical_html
+    for check_id in expected_rac_checks:
+        assert check_id in evidence_html
     assert "skipped_reason" in evidence_html
     assert "oracle_rac" in evidence_html
     assert "Oracle RAC" in executive_html
     assert "No detectado" in executive_html
     assert "rac_cluster_database_parameter" not in executive_html
     assert "rac_cluster_database_parameter" not in corrective_html
+
+
+def test_standalone_all_multitenant_feature_skips_are_summarized_in_technical_report(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+
+    output = CheckRunner(config).run_target("example_standalone", profile_id="standalone_all")
+    evidence = json.loads((output / "evidence.json").read_text(encoding="utf-8"))
+    results = {result["check_id"]: result for result in evidence["results"]}
+    expected_multitenant_checks = {
+        "multitenant_pdb_inventory",
+        "multitenant_pdb_open_state",
+        "multitenant_pdb_restricted_mode",
+    }
+
+    technical_html = (output / "technical_report.html").read_text(encoding="utf-8")
+    evidence_html = (output / "evidence_report.html").read_text(encoding="utf-8")
+
+    assert expected_multitenant_checks.issubset(results)
+    assert {results[check_id]["status"] for check_id in expected_multitenant_checks} == {"SKIPPED"}
+    assert "Multitenant / CDB" in technical_html
+    assert "No aplicable" in technical_html
+    assert "multitenant" in technical_html
+    assert "Validaciones omitidas:</strong> 3" in technical_html
+    for check_id in expected_multitenant_checks:
+        assert check_id not in technical_html
+        assert check_id in evidence_html
+
+
+def test_technical_group_summary_is_not_created_for_mixed_status_group():
+    reporter = HTMLReporter(Path("templates/html"))
+    results = [
+        Result("mixed_pass", "mixed", ResultStatus.PASS, "PASS"),
+        Result("mixed_warning", "mixed", ResultStatus.WARNING, "WARNING"),
+        Result("mixed_skipped", "mixed", ResultStatus.SKIPPED, "SKIPPED", evidence={"required_feature": "x", "feature_detected": False, "feature_status": "not_detected"}, skipped_reason="La característica requerida 'x' no está detectada: no aplica."),
+    ]
+
+    assert reporter._not_applicable_feature_group_summary("mixed", results) is None
+
+
+def test_technical_group_summary_is_not_created_for_distinct_skip_reasons():
+    reporter = HTMLReporter(Path("templates/html"))
+    results = [
+        Result("skip_one", "distinct", ResultStatus.SKIPPED, "Uno", evidence={"required_feature": "x", "feature_detected": False, "feature_status": "not_detected"}, skipped_reason="La característica requerida 'x' no está detectada: razón uno."),
+        Result("skip_two", "distinct", ResultStatus.SKIPPED, "Dos", evidence={"required_feature": "x", "feature_detected": False, "feature_status": "not_detected"}, skipped_reason="La característica requerida 'x' no está detectada: razón dos."),
+    ]
+
+    assert reporter._not_applicable_feature_group_summary("distinct", results) is None
 
 def test_executive_report_contains_dashboard_sections(tmp_path):
     output = _run_example(tmp_path)
