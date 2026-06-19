@@ -220,3 +220,11 @@ Quedan pendientes para fases posteriores la definición, creación y prueba de p
 - Evaluar más adelante si se necesita un perfil de auditoría completa, por ejemplo `oracle_full` o `audit_all`, que incluya todos los grupos feature-aware y deje que la aplicabilidad marque `SKIPPED` cuando no corresponda.
 
 Estos perfiles futuros no deben crearse antes de que sus grupos/checks existan, no deben contener checks dummy, no deben duplicar ni mover checks existentes, deben probarse contra ambientes reales o simulados representativos, deben mantener la regla de no penalizar features no detectadas, deben conservar trazabilidad técnica mediante `SKIPPED` en reportes técnicos/evidencias y deben evitar ruido en reportes ejecutivos/correctivos.
+
+## 13. Actualización Fase 4B - Performance básico actual sin AWR/ASH
+
+La Fase 4B implementa los primeros 9 checks reales del grupo `performance`, enfocados en una fotografía actual de rendimiento sin AWR, sin ASH, sin `DBA_HIST%`, sin vistas internas `X$`, sin SQLite y sin repositorio histórico interno. La cobertura prioriza sesiones activas de usuario, esperas actuales por `WAIT_CLASS` y `EVENT`, operaciones largas activas, parse ratio básico acumulado desde startup, library cache básico y SQL actualmente activo.
+
+El análisis por `WAIT_CLASS`/`EVENT` se basa en `V$SESSION`; los segundos reportados son `total_observed_wait_seconds` observados en la fotografía actual entre sesiones, no DB Time histórico. Los thresholds de `performance_wait_class_snapshot` son configurables por `WAIT_CLASS`, con exclusión de `Idle` por defecto y fallback `default` para clases no configuradas. `performance_sql_current_activity` muestra SQL activo actual y no equivale a top SQL histórico.
+
+`standalone_all` incorpora `performance` porque el grupo deja de estar vacío. `standalone_basic` permanece sin `performance`. `capacity` sigue pendiente para una fase posterior y no se implementan checks de capacidad en esta fase.

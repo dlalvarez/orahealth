@@ -320,7 +320,7 @@ Identify performance symptoms and configuration issues that may affect response 
 
 ### Estado Fase 4A
 
-El grupo formal `performance` existe desde Fase 4A con `checks: []`. No contiene checks propios todavía. La cobertura adelantada se documenta como existente en `oracle_resources`, `io_redo_archive`, `configuration_general` y `operational_readiness`, sin mover ni duplicar checks.
+Desde Fase 4B el grupo formal `performance` contiene 9 checks propios de performance básico actual sin AWR/ASH. La cobertura adelantada previa permanece en `oracle_resources`, `io_redo_archive`, `configuration_general` y `operational_readiness`, sin mover ni duplicar checks. El análisis WAIT_CLASS/EVENT se basa en `V$SESSION`; los segundos son observados en la fotografía actual, no DB Time histórico. Los thresholds de wait class son configurables por clase, `Idle` se excluye por defecto, `SQL` actual no equivale a top SQL histórico y `capacity` sigue pendiente.
 
 Los primeros checks propios deben agregarse en Fase 4B solo para gaps reales y con consultas actuales no licenciadas por defecto.
 

@@ -5,6 +5,7 @@ from .not_empty_fail import NotEmptyFailEvaluator
 from .oracle_config import OracleConfigEvaluator
 from .oracle_security import OracleSecurityEvaluator
 from .oracle_resources import OracleResourcesEvaluator
+from .performance import PerformanceEvaluator
 from .io_redo_archive import IoRedoArchiveEvaluator
 from .multitenant import MultitenantEvaluator
 from .recoverability_drp import RecoverabilityDrpEvaluator
@@ -24,6 +25,7 @@ EVALUATORS = {
     "oracle_config": OracleConfigEvaluator(),
     "oracle_security": OracleSecurityEvaluator(),
     "oracle_resources": OracleResourcesEvaluator(),
+    "performance": PerformanceEvaluator(),
     "io_redo_archive": IoRedoArchiveEvaluator(),
     "multitenant": MultitenantEvaluator(),
     "recoverability_drp": RecoverabilityDrpEvaluator(),

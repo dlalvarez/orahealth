@@ -1,4 +1,13 @@
 group_id: performance
 name: Rendimiento
-description: Grupo formal reservado para checks futuros de rendimiento sin AWR, ASH ni DBA_HIST por defecto. La cobertura adelantada permanece en sus grupos originales.
-checks: []
+description: Checks básicos de rendimiento actual sin AWR/ASH.
+checks:
+  - performance_instance_uptime
+  - performance_active_user_sessions
+  - performance_wait_class_snapshot
+  - performance_current_event_summary
+  - performance_non_idle_wait_sessions
+  - performance_long_operations_active
+  - performance_parse_ratio_basic
+  - performance_library_cache_hit_ratio
+  - performance_sql_current_activity
