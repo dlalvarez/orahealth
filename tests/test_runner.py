@@ -62,6 +62,48 @@ def test_runner_skips_check_when_required_feature_is_not_detected(tmp_path):
     assert evidence["summary"]["score"] == 100
 
 
+
+def test_standalone_all_rac_feature_skips_are_traceable_without_corrective_noise(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+
+    output = CheckRunner(config).run_target("example_standalone", profile_id="standalone_all")
+    evidence = json.loads((output / "evidence.json").read_text(encoding="utf-8"))
+    results = {result["check_id"]: result for result in evidence["results"]}
+    expected_rac_checks = {
+        "rac_cluster_database_parameter",
+        "rac_instance_count",
+        "rac_instances_status",
+        "rac_interconnect_info",
+        "rac_services_basic",
+        "rac_threads_status",
+        "rac_undo_configuration_basic",
+    }
+
+    assert expected_rac_checks.issubset(results)
+    assert {results[check_id]["status"] for check_id in expected_rac_checks} == {"SKIPPED"}
+    assert all("oracle_rac" in (results[check_id]["skipped_reason"] or "") for check_id in expected_rac_checks)
+    assert all("no está detectada" in (results[check_id]["skipped_reason"] or "") for check_id in expected_rac_checks)
+    assert evidence["summary"]["score"] == 100
+
+    technical_html = (output / "technical_report.html").read_text(encoding="utf-8")
+    evidence_html = (output / "evidence_report.html").read_text(encoding="utf-8")
+    executive_html = (output / "executive_report.html").read_text(encoding="utf-8")
+    corrective_html = (output / "corrective_actions.html").read_text(encoding="utf-8")
+
+    assert "Oracle RAC básico" in technical_html
+    assert "rac_cluster_database_parameter" in technical_html
+    assert "SKIPPED / Omitido" in technical_html
+    assert "oracle_rac" in technical_html
+    assert "rac_cluster_database_parameter" in evidence_html
+    assert "skipped_reason" in evidence_html
+    assert "oracle_rac" in evidence_html
+    assert "Oracle RAC" in executive_html
+    assert "No detectado" in executive_html
+    assert "rac_cluster_database_parameter" not in executive_html
+    assert "rac_cluster_database_parameter" not in corrective_html
+
 def test_executive_report_contains_dashboard_sections(tmp_path):
     output = _run_example(tmp_path)
     html = (output / "executive_report.html").read_text(encoding="utf-8")
