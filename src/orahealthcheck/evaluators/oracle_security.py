@@ -10,7 +10,8 @@ class OracleSecurityEvaluator:
         if not isinstance(evidence, dict):
             return ResultStatus.ERROR, "La evidencia de seguridad Oracle no tiene el formato esperado"
         if evidence.get("collection_error"):
-            return ResultStatus.ERROR, f"No se pudo recolectar la evidencia de seguridad Oracle: {evidence['collection_error']}"
+            status = ResultStatus(config.get("collection_error_status", "ERROR"))
+            return status, f"No se pudo recolectar la evidencia de seguridad Oracle: {evidence['collection_error']}"
 
         count = int(evidence.get("affected_count") or 0)
         label = config.get("label") or evidence.get("label") or "hallazgos de seguridad"

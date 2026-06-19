@@ -1,0 +1,30 @@
+check_id: admin_privilege_users
+group_id: security
+title: Usuarios con privilegios administrativos especiales
+severity: WARNING
+collector:
+  type: oracle_security
+  field: admin_privilege_users
+  label: Usuarios no esperados con SYSDBA, SYSOPER, SYSASM, SYSBACKUP, SYSDG, SYSKM o SYSRAC
+  source_view: v$pwfile_users
+  missing_status: ERROR
+evaluator:
+  type: oracle_security
+  label: Usuarios no esperados con SYSDBA, SYSOPER, SYSASM, SYSBACKUP, SYSDG, SYSKM o SYSRAC
+  failure_status: WARNING
+  collection_error_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la necesidad real del privilegio administrativo, retirar privilegios innecesarios y validar cuentas autorizadas.
+  actions:
+    - Revisar la evidencia recolectada y confirmar si corresponde a una excepción aprobada.
+    - Aplicar el principio de menor privilegio antes de mantener la configuración.
+    - Documentar responsable, justificación y vigencia de cualquier excepción.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad, fase_3b]

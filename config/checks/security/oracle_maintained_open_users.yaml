@@ -1,0 +1,30 @@
+check_id: oracle_maintained_open_users
+group_id: security
+title: Usuarios Oracle mantenidos internamente abiertos
+severity: WARNING
+collector:
+  type: oracle_security
+  field: oracle_maintained_open_users
+  label: Cuentas Oracle-maintained abiertas distintas de SYS y SYSTEM
+  source_view: dba_users
+  missing_status: SKIPPED
+evaluator:
+  type: oracle_security
+  label: Cuentas Oracle-maintained abiertas distintas de SYS y SYSTEM
+  failure_status: WARNING
+  collection_error_status: SKIPPED
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Validar si la cuenta Oracle mantenida debe permanecer abierta; si no hay justificación, bloquearla y documentar la excepción.
+  actions:
+    - Revisar la evidencia recolectada y confirmar si corresponde a una excepción aprobada.
+    - Aplicar el principio de menor privilegio antes de mantener la configuración.
+    - Documentar responsable, justificación y vigencia de cualquier excepción.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad, fase_3b]

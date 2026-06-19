@@ -1,0 +1,30 @@
+check_id: admin_option_grants
+group_id: security
+title: Privilegios de sistema con ADMIN OPTION
+severity: WARNING
+collector:
+  type: oracle_security
+  field: admin_option_grants
+  label: Privilegios de sistema concedidos con ADMIN OPTION a grantees no esperados
+  source_view: dba_sys_privs + dba_users + dba_roles
+  missing_status: ERROR
+evaluator:
+  type: oracle_security
+  label: Privilegios de sistema concedidos con ADMIN OPTION a grantees no esperados
+  failure_status: WARNING
+  collection_error_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar necesidad de ADMIN OPTION, revocar y volver a conceder sin ADMIN OPTION cuando no corresponda.
+  actions:
+    - Revisar la evidencia recolectada y confirmar si corresponde a una excepción aprobada.
+    - Aplicar el principio de menor privilegio antes de mantener la configuración.
+    - Documentar responsable, justificación y vigencia de cualquier excepción.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad, fase_3b]

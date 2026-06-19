@@ -24,6 +24,7 @@ from orahealthcheck.utils.time import timestamp
 # Allowlists de seguridad Oracle para reducir falsos positivos de cuentas internas
 # esperadas por diseño. No incluyen usuarios de aplicación ni roles custom.
 ORACLE_DBA_ROLE_ALLOWED_GRANTEES = {"SYS", "SYSTEM"}
+ORACLE_EXPECTED_ADMIN_USERS = {"SYS", "SYSTEM"}
 ORACLE_INTERNAL_SCHEMAS = {
     "SYS", "SYSTEM", "XDB", "MDSYS", "CTXSYS", "ORDSYS", "ORDDATA", "ORDPLUGINS",
     "WMSYS", "OUTLN", "DBSNMP", "GSMADMIN_INTERNAL", "AUDSYS", "OJVMSYS",
@@ -886,7 +887,117 @@ class CheckRunner:
               and account_status not like '%LOCKED%'
             order by username
         """)
+        self._set_security_query(security, "oracle_maintained_open_users", connector, "usuarios Oracle-maintained abiertos", """
+            select username, account_status, authentication_type, common, oracle_maintained
+            from dba_users
+            where oracle_maintained = 'Y'
+              and username not in ('SYS', 'SYSTEM')
+              and account_status = 'OPEN'
+            order by username
+        """, log_warning=False)
+        self._set_security_query(security, "admin_privilege_users", connector, "usuarios con privilegios administrativos especiales", """
+            select username, sysdba, sysoper, sysasm, sysbackup, sysdg, syskm, sysrac
+            from v$pwfile_users
+            where username not in ('SYS', 'SYSTEM')
+              and (sysdba = 'TRUE' or sysoper = 'TRUE' or sysasm = 'TRUE' or sysbackup = 'TRUE' or sysdg = 'TRUE' or syskm = 'TRUE' or sysrac = 'TRUE')
+            order by username
+        """, log_warning=False)
+        self._set_security_query(security, "external_authenticated_users", connector, "usuarios con autenticación externa", """
+            select username, account_status, authentication_type, external_name, common, oracle_maintained
+            from dba_users
+            where authentication_type = 'EXTERNAL'
+              and username not in ('SYS', 'SYSTEM')
+              and nvl(oracle_maintained, 'N') <> 'Y'
+            order by username
+        """, log_warning=False)
+        self._set_security_query(security, "proxy_users_configured", connector, "relaciones de autenticación proxy", """
+            select proxy, client, authentication, authorization_constraint, role
+            from dba_proxies
+            order by proxy, client, role
+        """, log_warning=False)
+        self._set_security_query(security, "any_privilege_users", connector, "usuarios o roles no esperados con privilegios ANY", """
+            select sp.grantee, sp.privilege, sp.admin_option, u.account_status, u.oracle_maintained, u.common, r.oracle_maintained as role_oracle_maintained,
+                   case when u.username is not null then 'USER' else 'ROLE' end as grantee_type
+            from dba_sys_privs sp
+            left join dba_users u on u.username = sp.grantee
+            left join dba_roles r on r.role = sp.grantee
+            where sp.privilege in (
+              'ALTER ANY TABLE','DROP ANY PROCEDURE','CREATE ANY TRIGGER','ALTER ANY TRIGGER','DROP ANY TRIGGER',
+              'CREATE ANY SYNONYM','CREATE ANY VIEW','ALTER ANY INDEX','DROP ANY INDEX','UPDATE ANY TABLE','DELETE ANY TABLE',
+              'EXECUTE ANY PROCEDURE','ALTER ANY PROCEDURE'
+            )
+              and sp.grantee not in ('SYS', 'SYSTEM')
+              and nvl(u.oracle_maintained, 'N') <> 'Y'
+              and nvl(r.oracle_maintained, 'N') <> 'Y'
+            order by sp.grantee, sp.privilege
+        """, log_warning=False)
+        self._set_security_query(security, "admin_option_grants", connector, "privilegios de sistema con admin option", """
+            select sp.grantee, sp.privilege, sp.admin_option, u.account_status, u.oracle_maintained, r.oracle_maintained as role_oracle_maintained,
+                   case when u.username is not null then 'USER' else 'ROLE' end as grantee_type
+            from dba_sys_privs sp
+            left join dba_users u on u.username = sp.grantee
+            left join dba_roles r on r.role = sp.grantee
+            where sp.admin_option = 'YES'
+              and sp.grantee not in ('SYS', 'SYSTEM')
+              and nvl(u.oracle_maintained, 'N') <> 'Y'
+              and nvl(r.oracle_maintained, 'N') <> 'Y'
+            order by sp.grantee, sp.privilege
+        """, log_warning=False)
+        self._set_security_query(security, "grant_option_object_privileges", connector, "privilegios de objeto con grant option", """
+            select tp.grantee, tp.owner, tp.table_name, tp.privilege, tp.grantable, tp.type
+            from dba_tab_privs tp
+            left join dba_users owner_u on owner_u.username = tp.owner
+            left join dba_users grantee_u on grantee_u.username = tp.grantee
+            where tp.grantable = 'YES'
+              and nvl(owner_u.oracle_maintained, 'N') <> 'Y'
+              and nvl(grantee_u.oracle_maintained, 'N') <> 'Y'
+              and tp.grantee not in ('SYS', 'SYSTEM')
+            order by tp.grantee, tp.owner, tp.table_name, tp.privilege
+        """, log_warning=False)
+        self._set_security_query(security, "legacy_roles_assigned", connector, "roles legacy asignados directamente", """
+            select rp.grantee, rp.granted_role, rp.admin_option, rp.default_role, u.account_status, u.oracle_maintained
+            from dba_role_privs rp
+            left join dba_users u on u.username = rp.grantee
+            where rp.granted_role in ('CONNECT', 'RESOURCE')
+              and rp.grantee not in ('SYS', 'SYSTEM')
+              and nvl(u.oracle_maintained, 'N') <> 'Y'
+            order by rp.grantee, rp.granted_role
+        """, log_warning=False)
+        self._set_security_query(security, "dictionary_access_privileges", connector, "acceso sensible al diccionario", """
+            select grantee, privilege as access_name, admin_option as option_flag, 'DBA_SYS_PRIVS' as source
+            from dba_sys_privs
+            where privilege = 'SELECT ANY DICTIONARY' and grantee not in ('SYS', 'SYSTEM')
+            union all
+            select grantee, granted_role as access_name, admin_option as option_flag, 'DBA_ROLE_PRIVS' as source
+            from dba_role_privs
+            where granted_role in ('SELECT_CATALOG_ROLE', 'EXECUTE_CATALOG_ROLE') and grantee not in ('SYS', 'SYSTEM')
+            order by grantee, access_name
+        """, log_warning=False)
+        self._set_security_query(security, "inactive_users_by_last_login", connector, "usuarios abiertos inactivos por último login", """
+            select username, account_status, last_login, authentication_type, common, oracle_maintained
+            from dba_users
+            where account_status = 'OPEN'
+              and username not in ('SYS', 'SYSTEM')
+              and nvl(oracle_maintained, 'N') <> 'Y'
+              and (last_login is null or last_login < systimestamp - interval '90' day)
+            order by username
+        """, log_warning=False)
+        self._set_security_query(security, "legacy_password_versions", connector, "usuarios con versiones antiguas de contraseña", """
+            select username, account_status, password_versions, authentication_type, common, oracle_maintained
+            from dba_users
+            where password_versions like '%10G%'
+              and username not in ('SYS', 'SYSTEM')
+              and nvl(oracle_maintained, 'N') <> 'Y'
+            order by username
+        """, log_warning=False)
         return {"security": security}
+
+
+    def _set_security_query(self, security: dict[str, Any], field: str, connector: Any, label: str, sql: str, log_warning: bool = True) -> None:
+        rows, error = self._query_rows_with_error(connector, label, sql, log_warning=log_warning)
+        security[field] = rows
+        if error:
+            security[f"{field}_error"] = error
 
     def _discover_storage_inventory(self, connector: Any, parameters: dict[str, Any]) -> dict[str, Any]:
         storage: dict[str, Any] = {"tablespaces": [], "datafiles": [], "tempfiles": [], "temp_usage": [], "fra": {}, "undo": {}, "users": []}
@@ -2316,8 +2427,8 @@ class CheckRunner:
             evidence["inventory_count"] = len(original_rows)
             evidence["excluded_count"] = len(original_rows) - len(filtered_rows)
             evidence["classification_note"] = "Se excluyeron usuarios o roles Oracle-maintained esperados del hallazgo principal."
-        if field not in security and check.collector.get("missing_status"):
-            evidence["collection_error"] = f"No se encontró la sección {field} en el inventario de seguridad"
+        if security.get(f"{field}_error"):
+            evidence["collection_error"] = security.get(f"{field}_error")
         return evidence
 
     def _filter_security_rows(self, check_id: str, rows: list[Any]) -> list[Any]:
@@ -2325,7 +2436,19 @@ class CheckRunner:
             return [row for row in rows if not self._is_allowed_dba_grantee(row)]
         if check_id == "critical_privilege_users":
             return [row for row in rows if not self._is_allowed_critical_privilege_grantee(row)]
+        if check_id in {"admin_privilege_users", "any_privilege_users", "admin_option_grants", "dictionary_access_privileges", "legacy_roles_assigned", "external_authenticated_users", "legacy_password_versions", "inactive_users_by_last_login"}:
+            return [row for row in rows if not self._is_expected_oracle_security_row(row)]
+        if check_id == "oracle_maintained_open_users":
+            return [row for row in rows if str(row.get("username", "")).upper() not in ORACLE_EXPECTED_ADMIN_USERS] if all(isinstance(row, dict) for row in rows) else rows
         return rows
+
+    def _is_expected_oracle_security_row(self, row: Any) -> bool:
+        if not isinstance(row, dict):
+            return False
+        principal = str(row.get("grantee") or row.get("username") or "").upper()
+        oracle_maintained = str(row.get("oracle_maintained", "")).upper() == "Y"
+        role_oracle_maintained = str(row.get("role_oracle_maintained", "")).upper() == "Y"
+        return principal in ORACLE_EXPECTED_ADMIN_USERS or oracle_maintained or role_oracle_maintained
 
     def _is_allowed_dba_grantee(self, row: Any) -> bool:
         if not isinstance(row, dict):

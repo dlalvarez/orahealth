@@ -1,0 +1,30 @@
+check_id: inactive_users_by_last_login
+group_id: security
+title: Usuarios abiertos inactivos por último login
+severity: WARNING
+collector:
+  type: oracle_security
+  field: inactive_users_by_last_login
+  label: Usuarios abiertos no internos con último login antiguo o sin último login registrado
+  source_view: dba_users
+  missing_status: SKIPPED
+evaluator:
+  type: oracle_security
+  label: Usuarios abiertos no internos con último login antiguo o sin último login registrado
+  failure_status: WARNING
+  collection_error_status: SKIPPED
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Validar vigencia de la cuenta, bloquear usuarios sin uso y documentar excepciones operativas.
+  actions:
+    - Revisar la evidencia recolectada y confirmar si corresponde a una excepción aprobada.
+    - Aplicar el principio de menor privilegio antes de mantener la configuración.
+    - Documentar responsable, justificación y vigencia de cualquier excepción.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad, fase_3b]

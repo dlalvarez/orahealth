@@ -260,7 +260,7 @@ def test_evidence_json_has_minimum_structure(tmp_path):
     assert set(evidence) == {"summary", "results"}
     assert evidence["summary"]["global_status"]
     assert isinstance(evidence["summary"]["score"], int)
-    assert len(evidence["results"]) == 117
+    assert len(evidence["results"]) == 128
     first_result = evidence["results"][0]
     assert {"check_id", "group_id", "status", "failure_severity", "evidence", "duration_ms"}.issubset(first_result)
     assert isinstance(first_result["duration_ms"], int)
@@ -273,8 +273,8 @@ def test_execution_log_contains_run_metadata(tmp_path):
     assert "Target: example_standalone" in log_text
     assert "Profile: standalone_basic" in log_text
     assert "Enabled groups:" in log_text
-    assert "Loaded checks (117):" in log_text
-    assert "Executed checks (103):" in log_text
+    assert "Loaded checks (128):" in log_text
+    assert "Executed checks (114):" in log_text
     assert "Skipped checks (14):" in log_text
     assert "Status summary:" in log_text
     assert f"Output directory: {output}" in log_text
@@ -1119,3 +1119,39 @@ def test_oracle_feature_renderer_handles_absent_and_incomplete_features():
     assert false_item["name"] == "Diagnostic Pack"
     assert false_item["status"] == "No detectado"
     assert false_item["value"] == "No"
+
+def test_oracle_maintained_open_users_reports_only_internal_non_sys_system(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["oracle_maintained_open_users"] = [
+        {"username": "SYS", "account_status": "OPEN", "oracle_maintained": "Y"},
+        {"username": "SYSTEM", "account_status": "OPEN", "oracle_maintained": "Y"},
+        {"username": "MDSYS", "account_status": "OPEN", "oracle_maintained": "Y"},
+    ]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["oracle_maintained_open_users"]["status"] == "WARNING"
+    assert results["oracle_maintained_open_users"]["evidence"]["affected_count"] == 1
+    assert results["oracle_maintained_open_users"]["evidence"]["rows"][0]["username"] == "MDSYS"
+
+
+def test_phase_3b_privilege_checks_do_not_report_expected_oracle_accounts(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["admin_privilege_users"] = [{"username": "SYS", "sysdba": "TRUE"}, {"username": "SYSTEM", "sysoper": "TRUE"}]
+    security["any_privilege_users"] = [{"grantee": "APP_OWNER", "privilege": "DROP ANY INDEX", "oracle_maintained": "N"}]
+    security["admin_option_grants"] = [{"grantee": "APP_ADMIN", "privilege": "CREATE SESSION", "admin_option": "YES", "oracle_maintained": "N"}]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["admin_privilege_users"]["status"] == "PASS"
+    assert results["any_privilege_users"]["status"] == "WARNING"
+    assert results["any_privilege_users"]["evidence"]["rows"][0]["grantee"] == "APP_OWNER"
+    assert results["admin_option_grants"]["status"] == "WARNING"

@@ -1,0 +1,30 @@
+check_id: legacy_roles_assigned
+group_id: security
+title: Roles legacy CONNECT o RESOURCE asignados
+severity: WARNING
+collector:
+  type: oracle_security
+  field: legacy_roles_assigned
+  label: Asignaciones directas de roles legacy CONNECT o RESOURCE a usuarios no internos
+  source_view: dba_role_privs + dba_users
+  missing_status: ERROR
+evaluator:
+  type: oracle_security
+  label: Asignaciones directas de roles legacy CONNECT o RESOURCE a usuarios no internos
+  failure_status: WARNING
+  collection_error_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Reemplazar roles legacy por roles específicos y documentar excepciones aprobadas.
+  actions:
+    - Revisar la evidencia recolectada y confirmar si corresponde a una excepción aprobada.
+    - Aplicar el principio de menor privilegio antes de mantener la configuración.
+    - Documentar responsable, justificación y vigencia de cualquier excepción.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad, fase_3b]

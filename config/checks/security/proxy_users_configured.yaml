@@ -1,0 +1,30 @@
+check_id: proxy_users_configured
+group_id: security
+title: Usuarios proxy configurados
+severity: INFO
+collector:
+  type: oracle_security
+  field: proxy_users_configured
+  label: Relaciones de autenticación proxy configuradas
+  source_view: dba_proxies
+  missing_status: ERROR
+evaluator:
+  type: oracle_security
+  label: Relaciones de autenticación proxy configuradas
+  failure_status: INFO
+  collection_error_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Validar que las relaciones proxy sean necesarias, aplicar mínimo privilegio y eliminar relaciones obsoletas.
+  actions:
+    - Revisar la evidencia recolectada y confirmar si corresponde a una excepción aprobada.
+    - Aplicar el principio de menor privilegio antes de mantener la configuración.
+    - Documentar responsable, justificación y vigencia de cualquier excepción.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad, fase_3b]
