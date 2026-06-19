@@ -1,6 +1,6 @@
 check_id: db_ultra_safe
-group_id: production_readiness
-title: Parámetro db_ultra_safe reportado para preparación productiva
+group_id: operational_readiness
+title: Parámetro db_ultra_safe reportado para preparación operativa
 severity: INFO
 collector:
   type: oracle_parameter
@@ -18,10 +18,10 @@ applies_to:
 remediation:
   summary: db_ultra_safe ajusta controles internos de protección y no debe imponerse universalmente sin evaluar estándar, versión y criticidad del ambiente.
   actions:
-    - Revisar el valor contra el estándar productivo aprobado.
+    - Revisar el valor contra el estándar operativo aprobado.
     - Evaluar impacto operativo antes de modificarlo.
     - Registrar la justificación del valor configurado como parte de la línea base.
   owner: DBA
   requires_window: true
   outage_risk: medium
-tags: [oracle, production_readiness, parameter]
+tags: [oracle, operational_readiness, parameter]

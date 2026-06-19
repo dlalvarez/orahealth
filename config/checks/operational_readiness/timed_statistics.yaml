@@ -1,6 +1,6 @@
 check_id: timed_statistics
-group_id: production_readiness
-title: Estadísticas temporizadas reportadas para preparación productiva
+group_id: operational_readiness
+title: Estadísticas temporizadas reportadas para preparación operativa
 severity: INFO
 collector:
   type: oracle_parameter
@@ -20,8 +20,8 @@ remediation:
   actions:
     - Confirmar el valor esperado por la organización para la versión Oracle y la carga de trabajo.
     - Evitar deshabilitar estadísticas de tiempo sin evaluar impacto en observabilidad operativa.
-    - Documentar el valor como parte de la línea base productiva.
+    - Documentar el valor como parte de la línea base operativa.
   owner: DBA
   requires_window: false
   outage_risk: low
-tags: [oracle, production_readiness, parameter]
+tags: [oracle, operational_readiness, parameter]

@@ -407,11 +407,11 @@ def test_run_accepts_optional_profile_override(monkeypatch, capsys):
 
     monkeypatch.setattr("orahealthcheck.cli.CheckRunner", DummyRunner)
 
-    exit_code = main(["run", "--target", "example_standalone", "--profile", "production_readiness"])
+    exit_code = main(["run", "--target", "example_standalone", "--profile", "standalone_all"])
 
     captured = capsys.readouterr()
     assert exit_code == 0
-    assert calls == [("example_standalone", "production_readiness")]
+    assert calls == [("example_standalone", "standalone_all")]
     assert "Salida generada: output/prueba" in captured.out
 
 
@@ -422,14 +422,14 @@ def test_run_rejects_unknown_profile(capsys):
     assert exit_code == 2
     assert "Perfil desconocido: perfil_inexistente" in captured.err
 
-def test_standalone_all_profile_includes_production_readiness_without_changing_basic():
+def test_standalone_all_profile_includes_operational_readiness_without_changing_basic():
     config = ConfigLoader("config").load_all()
 
     standalone_all = config["profiles"]["standalone_all"]
     standalone_basic = config["profiles"]["standalone_basic"]
 
-    assert "production_readiness" in standalone_all.enabled_groups
-    assert "production_readiness" not in standalone_basic.enabled_groups
+    assert "operational_readiness" in standalone_all.enabled_groups
+    assert "operational_readiness" not in standalone_basic.enabled_groups
     assert "asm" not in standalone_all.enabled_groups
     assert "dataguard" not in standalone_all.enabled_groups
     assert "performance" not in standalone_all.enabled_groups

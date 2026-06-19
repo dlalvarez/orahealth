@@ -1,6 +1,6 @@
 check_id: plsql_optimize_level
-group_id: production_readiness
-title: Nivel de optimización PL/SQL alineado al estándar productivo
+group_id: operational_readiness
+title: Nivel de optimización PL/SQL alineado al estándar operativo
 severity: WARNING
 collector:
   type: oracle_parameter
@@ -24,4 +24,4 @@ remediation:
   owner: DBA
   requires_window: true
   outage_risk: medium
-tags: [oracle, production_readiness, parameter]
+tags: [oracle, operational_readiness, parameter]

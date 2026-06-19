@@ -363,7 +363,7 @@ Implement checks for:
 
 ---
 
-## 5. Phase 3 - Security and Production Readiness
+## 5. Phase 3 - Security and Operational Readiness
 
 ### Objective
 
@@ -372,7 +372,7 @@ Implement security and production-readiness checks.
 ### Groups to implement
 
 - `security`.
-- `production_readiness`.
+- `operational_readiness`.
 
 ### security checks
 
@@ -413,7 +413,7 @@ Implement checks for:
 - Users with SYSDBA, SYSOPER, or SYSASM.
 - Open accounts with no recent usage, where data is available.
 
-### production_readiness checks
+### operational_readiness checks
 
 Implement checks for:
 
@@ -441,7 +441,7 @@ Implement checks for:
 ### Phase 3 acceptance criteria
 
 - A `security_audit` profile can run only security checks.
-- A `production_readiness` profile can run readiness checks.
+- A `operational_readiness` profile can run readiness checks.
 - The corrective report must identify owner, risk, action, validation, and whether a window is required.
 
 ---
@@ -792,7 +792,7 @@ Implement `schema_objects` and `alert_log` groups.
 
 ### Task 9
 
-Implement `security` and `production_readiness` groups.
+Implement `security` and `operational_readiness` groups.
 
 ### Task 10
 

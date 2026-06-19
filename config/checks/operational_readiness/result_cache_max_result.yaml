@@ -1,5 +1,5 @@
 check_id: result_cache_max_result
-group_id: production_readiness
+group_id: operational_readiness
 title: Tamaño máximo por resultado en result cache reportado
 severity: INFO
 collector:
@@ -18,10 +18,10 @@ applies_to:
 remediation:
   summary: result_cache_max_result limita cuánto puede ocupar un resultado individual dentro del result cache; debe revisarse según estándar y patrón de uso.
   actions:
-    - Comparar el valor con la línea base productiva aprobada.
+    - Comparar el valor con la línea base operativa aprobada.
     - Validar impacto en memoria y comportamiento de consultas antes de modificarlo.
-    - Documentar el valor como evidencia de preparación productiva.
+    - Documentar el valor como evidencia de preparación operativa.
   owner: DBA
   requires_window: false
   outage_risk: low
-tags: [oracle, production_readiness, parameter]
+tags: [oracle, operational_readiness, parameter]

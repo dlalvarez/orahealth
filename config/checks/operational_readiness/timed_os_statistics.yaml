@@ -1,5 +1,5 @@
 check_id: timed_os_statistics
-group_id: production_readiness
+group_id: operational_readiness
 title: Estadísticas temporizadas de sistema operativo reportadas
 severity: INFO
 collector:
@@ -18,10 +18,10 @@ applies_to:
 remediation:
   summary: timed_os_statistics define el intervalo de estadísticas temporizadas de sistema operativo; valores no alineados pueden generar overhead o información insuficiente.
   actions:
-    - Revisar el valor contra el estándar productivo y la política de diagnóstico básico.
+    - Revisar el valor contra el estándar operativo y la política de diagnóstico básico.
     - Ajustar solo si existe una definición aprobada para el ambiente.
     - Documentar la razón del valor configurado y monitorear impacto si se modifica.
   owner: DBA
   requires_window: false
   outage_risk: low
-tags: [oracle, production_readiness, parameter]
+tags: [oracle, operational_readiness, parameter]
