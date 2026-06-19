@@ -448,6 +448,15 @@ Implement checks for:
 
 ## 6. Phase 4 - Performance and Capacity
 
+### Ajuste Fase 4A
+
+Antes de implementar checks nuevos de rendimiento y capacidad, Fase 4A reconcilia la cobertura adelantada existente en `oracle_resources`, `io_redo_archive`, `configuration_general`, `operational_readiness` y `storage`. Esta fase crea los grupos formales `performance` y `capacity` sin checks propios, no mueve checks existentes, no duplica checks, no modifica perfiles activos y no introduce AWR/ASH/`DBA_HIST%`, SQLite ni repositorio histórico interno.
+
+Las fases posteriores quedan separadas así:
+
+- Fase 4B: rendimiento básico sin AWR por defecto.
+- Fase 4C: capacidad como snapshot actual sin histórico interno.
+
 ### Objective
 
 Implement performance and capacity checks while respecting Oracle licensing boundaries.

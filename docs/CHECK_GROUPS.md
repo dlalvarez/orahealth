@@ -42,6 +42,32 @@ Example:
 orahealthcheck run --target medaprod --groups security,storage
 ```
 
+### Reconciliación Fase 4A para `performance` y `capacity`
+
+Desde Fase 4A existen los grupos formales `performance` y `capacity`, pero comienzan sin checks propios. La cobertura relacionada que ya fue implementada antes de esta fase permanece en sus grupos originales. Esta decisión evita romper compatibilidad, evita duplicar hallazgos equivalentes y mantiene estable la historia de cada check.
+
+Reglas vigentes:
+
+- No mover checks existentes desde `oracle_resources`, `io_redo_archive`, `configuration_general`, `operational_readiness` ni `storage`.
+- No duplicar checks existentes bajo `performance` o `capacity`.
+- No crear checks dummy ni checks vacíos para rellenar grupos.
+- No activar AWR, ASH ni `DBA_HIST%` por defecto; cualquier uso futuro debe ser opcional, condicionado a licenciamiento explícito y deshabilitado por defecto.
+- No introducir SQLite ni repositorio histórico interno para capacidad.
+- Mantener `capacity` como snapshot actual por defecto.
+
+Cobertura adelantada que se reconoce como relacionada:
+
+- `oracle_resources`: sesiones bloqueadas/bloqueantes, sesiones inactivas, jobs Scheduler/DBA Jobs, PGA, SGA, procesos, sesiones y transacciones contra límites. Cubre parcialmente rendimiento, capacidad y operación básica de recursos, pero debe permanecer en `oracle_resources`.
+- `io_redo_archive`: archive destinations, generación de archived logs, I/O básico por `V$FILESTAT`/`V$SYSSTAT`, flashback, FRA, nologging/unrecoverable y redo logs. Cubre parcialmente rendimiento, capacidad, recuperabilidad, almacenamiento operativo y redo/archive/FRA, pero debe permanecer en `io_redo_archive`.
+- `configuration_general`: `open_cursors`, `processes`, `sessions`, `optimizer_features_enable`, `filesystemio_options` y `db_block_size` aportan contexto de rendimiento/capacidad, pero deben permanecer en `configuration_general`.
+- `operational_readiness`: `plsql_optimize_level`, `plsql_code_type`, `sql_trace`, `timed_statistics`, `timed_os_statistics`, `result_cache_mode`, `result_cache_max_result`, `optimizer_capture_sql_plan_baselines` y `optimizer_use_invisible_indexes` son parámetros operativos relacionados, pero deben permanecer en `operational_readiness`.
+
+Estrategia futura:
+
+- Fase 4B agregará únicamente gaps reales de rendimiento básico sin AWR, por ejemplo uptime, sesiones activas actuales, esperas actuales, parse ratio, cache/library cache, SQL activo, long operations y eventos actuales por sesión.
+- Fase 4C agregará únicamente gaps reales de capacidad tipo snapshot actual, por ejemplo tamaño actual de BD, datafiles/tablespaces, segmentos grandes, TEMP/UNDO, límites de sesiones/procesos/transacciones, PGA/SGA y FRA/archive.
+
+
 ---
 
 ## 3. Group: configuration_general
@@ -291,6 +317,12 @@ Identify performance symptoms and configuration issues that may affect response 
 - SYS/SYSTEM indexes not analyzed.
 - SYS/SYSTEM index partitions not analyzed.
 - `SYS.AUDSES$` cache size for high login rates.
+
+### Estado Fase 4A
+
+El grupo formal `performance` existe desde Fase 4A con `checks: []`. No contiene checks propios todavía. La cobertura adelantada se documenta como existente en `oracle_resources`, `io_redo_archive`, `configuration_general` y `operational_readiness`, sin mover ni duplicar checks.
+
+Los primeros checks propios deben agregarse en Fase 4B solo para gaps reales y con consultas actuales no licenciadas por defecto.
 
 ### Licensing rule
 
@@ -1191,6 +1223,12 @@ Evaluate current capacity and saturation risk. This group must not require an in
 #### Optional trend
 
 Trend analysis may use data already available in Oracle, such as AWR, only when explicitly enabled and licensed. If no historical data is available, the report must indicate that the analysis is a current snapshot.
+
+### Estado Fase 4A
+
+El grupo formal `capacity` existe desde Fase 4A con `checks: []`. No contiene checks propios todavía. La cobertura adelantada se documenta como existente en `storage`, `oracle_resources`, `io_redo_archive`, `configuration_general` y `operational_readiness`, sin mover ni duplicar checks.
+
+Los primeros checks propios deben agregarse en Fase 4C como snapshot actual. No debe introducirse SQLite, repositorio histórico interno ni tendencia basada en AWR/ASH/`DBA_HIST%` por defecto.
 
 ### Typical collectors
 
