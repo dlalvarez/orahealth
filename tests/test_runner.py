@@ -1155,3 +1155,57 @@ def test_phase_3b_privilege_checks_do_not_report_expected_oracle_accounts(tmp_pa
     assert results["any_privilege_users"]["status"] == "WARNING"
     assert results["any_privilege_users"]["evidence"]["rows"][0]["grantee"] == "APP_OWNER"
     assert results["admin_option_grants"]["status"] == "WARNING"
+
+
+def test_admin_privilege_users_omits_sysrac_when_column_is_not_available():
+    class CaptureConnector:
+        queries = []
+
+        def query(self, sql: str):
+            normalized = " ".join(sql.lower().split())
+            type(self).queries.append(normalized)
+            if "from all_tab_columns" in normalized and "v_$pwfile_users" in normalized:
+                return [
+                    {"COLUMN_NAME": "SYSDBA"},
+                    {"COLUMN_NAME": "SYSOPER"},
+                    {"COLUMN_NAME": "SYSASM"},
+                    {"COLUMN_NAME": "SYSBACKUP"},
+                    {"COLUMN_NAME": "SYSDG"},
+                    {"COLUMN_NAME": "SYSKM"},
+                ]
+            return []
+
+    CaptureConnector.queries = []
+    CheckRunner({})._discover_security_inventory(CaptureConnector())
+    admin_query = next(query for query in CaptureConnector.queries if "from v$pwfile_users" in query)
+
+    assert "sysrac" not in admin_query
+    assert "sysdba" in admin_query
+    assert "username not in ('sys', 'system')" in admin_query
+
+
+def test_admin_privilege_users_includes_sysrac_when_column_is_available():
+    class CaptureConnector:
+        queries = []
+
+        def query(self, sql: str):
+            normalized = " ".join(sql.lower().split())
+            type(self).queries.append(normalized)
+            if "from all_tab_columns" in normalized and "v_$pwfile_users" in normalized:
+                return [
+                    {"COLUMN_NAME": "SYSDBA"},
+                    {"COLUMN_NAME": "SYSOPER"},
+                    {"COLUMN_NAME": "SYSASM"},
+                    {"COLUMN_NAME": "SYSBACKUP"},
+                    {"COLUMN_NAME": "SYSDG"},
+                    {"COLUMN_NAME": "SYSKM"},
+                    {"COLUMN_NAME": "SYSRAC"},
+                ]
+            return []
+
+    CaptureConnector.queries = []
+    CheckRunner({})._discover_security_inventory(CaptureConnector())
+    admin_query = next(query for query in CaptureConnector.queries if "from v$pwfile_users" in query)
+
+    assert "sysrac" in admin_query
+    assert "sysrac = 'true'" in admin_query

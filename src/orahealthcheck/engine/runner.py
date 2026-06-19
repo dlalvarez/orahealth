@@ -895,11 +895,14 @@ class CheckRunner:
               and account_status = 'OPEN'
             order by username
         """, log_warning=False)
-        self._set_security_query(security, "admin_privilege_users", connector, "usuarios con privilegios administrativos especiales", """
-            select username, sysdba, sysoper, sysasm, sysbackup, sysdg, syskm, sysrac
+        admin_privilege_columns = self._available_pwfile_admin_columns(connector)
+        admin_privilege_select = ", ".join(["username", *admin_privilege_columns])
+        admin_privilege_predicate = " or ".join(f"{column.lower()} = 'TRUE'" for column in admin_privilege_columns)
+        self._set_security_query(security, "admin_privilege_users", connector, "usuarios con privilegios administrativos especiales", f"""
+            select {admin_privilege_select}
             from v$pwfile_users
             where username not in ('SYS', 'SYSTEM')
-              and (sysdba = 'TRUE' or sysoper = 'TRUE' or sysasm = 'TRUE' or sysbackup = 'TRUE' or sysdg = 'TRUE' or syskm = 'TRUE' or sysrac = 'TRUE')
+              and ({admin_privilege_predicate})
             order by username
         """, log_warning=False)
         self._set_security_query(security, "external_authenticated_users", connector, "usuarios con autenticación externa", """
@@ -992,6 +995,22 @@ class CheckRunner:
         """, log_warning=False)
         return {"security": security}
 
+    def _available_pwfile_admin_columns(self, connector: Any) -> list[str]:
+        candidate_columns = ["SYSDBA", "SYSOPER", "SYSASM", "SYSBACKUP", "SYSDG", "SYSKM", "SYSRAC"]
+        rows, error = self._query_rows_with_error(connector, "columnas disponibles de V$PWFILE_USERS", """
+            select column_name
+            from all_tab_columns
+            where owner = 'SYS'
+              and table_name = 'V_$PWFILE_USERS'
+              and column_name in ('SYSDBA','SYSOPER','SYSASM','SYSBACKUP','SYSDG','SYSKM','SYSRAC')
+            order by column_id
+        """, log_warning=False)
+        if not error and rows:
+            available = {str(row.get("column_name") or row.get("COLUMN_NAME") or "").upper() for row in rows}
+            columns = [column for column in candidate_columns if column in available]
+            if columns:
+                return columns
+        return [column for column in candidate_columns if column != "SYSRAC"]
 
     def _set_security_query(self, security: dict[str, Any], field: str, connector: Any, label: str, sql: str, log_warning: bool = True) -> None:
         rows, error = self._query_rows_with_error(connector, label, sql, log_warning=log_warning)
