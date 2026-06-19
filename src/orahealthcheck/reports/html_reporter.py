@@ -116,6 +116,7 @@ class HTMLReporter:
             "os_inventory_enriched": self._os_inventory_enriched(inventory_dict, results),
             "results": self._sort_results(results),
             "grouped_results": grouped_results,
+            "technical_group_summaries": self._technical_group_summaries(grouped_results),
             "summary": self._summary_with_defaults(summary, results),
             "findings": findings,
             "corrective_actions": corrective_actions,
@@ -133,6 +134,47 @@ class HTMLReporter:
             else:
                 rendered = self._fallback_render(output_name, **context)
             (output_dir / output_name).write_text(rendered, encoding="utf-8")
+
+
+    def _technical_group_summaries(self, grouped_results: dict[str, list[Result]]) -> dict[str, dict[str, Any]]:
+        summaries: dict[str, dict[str, Any]] = {}
+        for group_id, group_results in grouped_results.items():
+            summary = self._not_applicable_feature_group_summary(group_id, group_results)
+            if summary:
+                summaries[group_id] = summary
+        return summaries
+
+    def _not_applicable_feature_group_summary(self, group_id: str, group_results: list[Result]) -> dict[str, Any] | None:
+        if not group_results or any(result.status.value != "SKIPPED" for result in group_results):
+            return None
+
+        features: list[str] = []
+        reasons: list[str] = []
+        for result in group_results:
+            evidence = result.evidence if isinstance(result.evidence, dict) else {}
+            required_feature = evidence.get("required_feature")
+            skipped_reason = (result.skipped_reason or "").strip()
+            if not required_feature or not skipped_reason:
+                return None
+            feature_detected = evidence.get("feature_detected")
+            feature_status = evidence.get("feature_status")
+            reason_mentions_feature = str(required_feature) in skipped_reason
+            clearly_not_detected = feature_detected is False or feature_status == "not_detected" or "no está detectada" in skipped_reason
+            if not reason_mentions_feature or not clearly_not_detected:
+                return None
+            features.append(str(required_feature))
+            reasons.append(skipped_reason)
+
+        if len(set(features)) != 1 or len(set(reasons)) != 1:
+            return None
+
+        return {
+            "group_id": group_id,
+            "group_label": self._group_label(group_id),
+            "required_feature": features[0],
+            "reason": reasons[0],
+            "skipped_count": len(group_results),
+        }
 
     def _target_info(self, target: Target, inventory: dict[str, Any], generated_at: str, config: dict[str, Any] | None) -> dict[str, list[dict[str, Any]]]:
         general = [
@@ -334,6 +376,7 @@ class HTMLReporter:
         os_inventory_enriched: dict[str, Any],
         oracle_feature_items: list[dict[str, Any]],
         grouped_results: dict[str, list[Result]],
+        technical_group_summaries: dict[str, dict[str, Any]],
         corrective_actions: dict[str, list[Result]],
         generated_at: str,
         **_: Any,
@@ -420,7 +463,12 @@ class HTMLReporter:
                 body.append("</table></div>")
             body.append("</section><section><h2>Detalle de validaciones</h2>")
             for group_id, group_results in grouped_results.items():
-                body.append(f"<h3>{esc(self._group_label(group_id))} <small>{esc(group_id)}</small></h3><div class='table-wrap'><table><tr><th>check_id</th><th>Título</th><th>Grupo</th><th>Estado</th><th>Severidad</th><th>Mensaje</th><th>skipped_reason</th><th>error</th><th>duration_ms</th></tr>")
+                group_summary = technical_group_summaries.get(group_id, {})
+                body.append(f"<h3>{esc(self._group_label(group_id))} <small>{esc(group_id)}</small></h3>")
+                if group_summary:
+                    body.append(f"<div class='card'><p><strong>Estado:</strong> No aplicable para este target</p><p><strong>group_id:</strong> {esc(group_summary.get('group_id'))}</p><p><strong>Feature requerida:</strong> {esc(group_summary.get('required_feature'))}</p><p><strong>Razón:</strong> {esc(self._friendly_message(group_summary.get('reason')))}</p><p><strong>Validaciones omitidas:</strong> {esc(group_summary.get('skipped_count'))}</p><p><strong>Detalle completo:</strong> Ver evidence_report.html</p></div>")
+                    continue
+                body.append("<div class='table-wrap'><table><tr><th>check_id</th><th>Título</th><th>Grupo</th><th>Estado</th><th>Severidad</th><th>Mensaje</th><th>skipped_reason</th><th>error</th><th>duration_ms</th></tr>")
                 for result in group_results:
                     body.append(f"<tr><td>{esc(result.check_id)}</td><td>{esc(self._check_title(result.title))}</td><td>{esc(self._group_label(result.group_id))}</td><td>{badge(result.status.value)}</td><td>{esc(self._status_label(result.failure_severity))}</td><td>{esc(self._friendly_message(result.message))}</td><td>{esc(self._friendly_message(result.skipped_reason))}</td><td>{esc(result.error or '')}</td><td>{esc(result.duration_ms)}</td></tr>")
                 body.append("</table></div>")

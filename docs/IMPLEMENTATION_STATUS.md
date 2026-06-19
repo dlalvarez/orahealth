@@ -208,9 +208,11 @@ Para aplicar esta política, `standalone_all` incluye los grupos feature-aware y
 La política de UX por reporte queda definida así:
 
 - El reporte ejecutivo mantiene el inventario de features detectadas/no detectadas, pero no debe listar checks `SKIPPED` masivos como hallazgos ni acciones.
-- El reporte técnico conserva trazabilidad de grupos/checks no aplicables cuando esos checks están en los resultados, incluyendo estado `SKIPPED` y razón.
-- El reporte de evidencias conserva el detalle completo de checks omitidos y su `skipped_reason`.
-- El reporte de acciones correctivas no debe generar acciones para checks `SKIPPED` por features no detectadas.
+- El reporte técnico conserva trazabilidad sin ruido visual: cuando un grupo completo queda `SKIPPED` por la misma feature requerida no detectada, muestra un bloque compacto de grupo no aplicable con feature, razón y cantidad de validaciones omitidas, y no lista cada check individualmente.
+- El reporte de evidencias conserva el detalle completo de checks omitidos y su `skipped_reason`, incluyendo `check_id`, `group_id`, `required_feature`, metadata y evidencia.
+- El reporte de acciones correctivas muestra solo elementos corregibles y no debe generar acciones para checks `SKIPPED` por features no detectadas.
+
+La Fase 4A.2 ajusta únicamente la visualización del reporte técnico para resumir grupos no aplicables por feature. Las features no detectadas no son hallazgos ni riesgos, no generan penalización y pueden aparecer como `SKIPPED` en perfiles amplios; el detalle completo permanece en evidencias para auditoría.
 
 Quedan pendientes para fases posteriores la definición, creación y prueba de perfiles amplios específicos para topologías/features, únicamente cuando los grupos correspondientes existan y tengan checks reales con aplicabilidad clara:
 
