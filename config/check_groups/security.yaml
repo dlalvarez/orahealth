@@ -15,3 +15,14 @@ checks:
   - unlimited_password_life_profiles
   - missing_password_verify_profiles
   - common_accounts_not_locked_or_expired
+  - oracle_maintained_open_users
+  - admin_privilege_users
+  - external_authenticated_users
+  - proxy_users_configured
+  - any_privilege_users
+  - admin_option_grants
+  - grant_option_object_privileges
+  - legacy_roles_assigned
+  - dictionary_access_privileges
+  - inactive_users_by_last_login
+  - legacy_password_versions

@@ -260,7 +260,7 @@ def test_evidence_json_has_minimum_structure(tmp_path):
     assert set(evidence) == {"summary", "results"}
     assert evidence["summary"]["global_status"]
     assert isinstance(evidence["summary"]["score"], int)
-    assert len(evidence["results"]) == 117
+    assert len(evidence["results"]) == 128
     first_result = evidence["results"][0]
     assert {"check_id", "group_id", "status", "failure_severity", "evidence", "duration_ms"}.issubset(first_result)
     assert isinstance(first_result["duration_ms"], int)
@@ -273,8 +273,8 @@ def test_execution_log_contains_run_metadata(tmp_path):
     assert "Target: example_standalone" in log_text
     assert "Profile: standalone_basic" in log_text
     assert "Enabled groups:" in log_text
-    assert "Loaded checks (117):" in log_text
-    assert "Executed checks (103):" in log_text
+    assert "Loaded checks (128):" in log_text
+    assert "Executed checks (114):" in log_text
     assert "Skipped checks (14):" in log_text
     assert "Status summary:" in log_text
     assert f"Output directory: {output}" in log_text
@@ -1119,3 +1119,170 @@ def test_oracle_feature_renderer_handles_absent_and_incomplete_features():
     assert false_item["name"] == "Diagnostic Pack"
     assert false_item["status"] == "No detectado"
     assert false_item["value"] == "No"
+
+def test_oracle_maintained_open_users_reports_only_internal_non_sys_system(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["oracle_maintained_open_users"] = [
+        {"username": "SYS", "account_status": "OPEN", "oracle_maintained": "Y"},
+        {"username": "SYSTEM", "account_status": "OPEN", "oracle_maintained": "Y"},
+        {"username": "MDSYS", "account_status": "OPEN", "oracle_maintained": "Y"},
+    ]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["oracle_maintained_open_users"]["status"] == "WARNING"
+    assert results["oracle_maintained_open_users"]["evidence"]["affected_count"] == 1
+    assert results["oracle_maintained_open_users"]["evidence"]["rows"][0]["username"] == "MDSYS"
+
+
+def test_phase_3b_privilege_checks_do_not_report_expected_oracle_accounts(tmp_path):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security["admin_privilege_users"] = [{"username": "SYS", "sysdba": "TRUE"}, {"username": "SYSTEM", "sysoper": "TRUE"}]
+    security["any_privilege_users"] = [{"grantee": "APP_OWNER", "privilege": "DROP ANY INDEX", "oracle_maintained": "N"}]
+    security["admin_option_grants"] = [{"grantee": "APP_ADMIN", "privilege": "CREATE SESSION", "admin_option": "YES", "oracle_maintained": "N"}]
+
+    output = CheckRunner(config).run_target("example_standalone")
+    results = {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+    assert results["admin_privilege_users"]["status"] == "PASS"
+    assert results["any_privilege_users"]["status"] == "WARNING"
+    assert results["any_privilege_users"]["evidence"]["rows"][0]["grantee"] == "APP_OWNER"
+    assert results["admin_option_grants"]["status"] == "WARNING"
+
+
+def test_admin_privilege_users_omits_sysrac_when_column_is_not_available():
+    class CaptureConnector:
+        queries = []
+
+        def query(self, sql: str):
+            normalized = " ".join(sql.lower().split())
+            type(self).queries.append(normalized)
+            if "from all_tab_columns" in normalized and "v_$pwfile_users" in normalized:
+                return [
+                    {"COLUMN_NAME": "SYSDBA"},
+                    {"COLUMN_NAME": "SYSOPER"},
+                    {"COLUMN_NAME": "SYSASM"},
+                    {"COLUMN_NAME": "SYSBACKUP"},
+                    {"COLUMN_NAME": "SYSDG"},
+                    {"COLUMN_NAME": "SYSKM"},
+                ]
+            return []
+
+    CaptureConnector.queries = []
+    CheckRunner({})._discover_security_inventory(CaptureConnector())
+    admin_query = next(query for query in CaptureConnector.queries if "from v$pwfile_users" in query)
+
+    assert "sysrac" not in admin_query
+    assert "sysdba" in admin_query
+    assert "username not in ('sys', 'system')" in admin_query
+
+
+def test_admin_privilege_users_includes_sysrac_when_column_is_available():
+    class CaptureConnector:
+        queries = []
+
+        def query(self, sql: str):
+            normalized = " ".join(sql.lower().split())
+            type(self).queries.append(normalized)
+            if "from all_tab_columns" in normalized and "v_$pwfile_users" in normalized:
+                return [
+                    {"COLUMN_NAME": "SYSDBA"},
+                    {"COLUMN_NAME": "SYSOPER"},
+                    {"COLUMN_NAME": "SYSASM"},
+                    {"COLUMN_NAME": "SYSBACKUP"},
+                    {"COLUMN_NAME": "SYSDG"},
+                    {"COLUMN_NAME": "SYSKM"},
+                    {"COLUMN_NAME": "SYSRAC"},
+                ]
+            return []
+
+    CaptureConnector.queries = []
+    CheckRunner({})._discover_security_inventory(CaptureConnector())
+    admin_query = next(query for query in CaptureConnector.queries if "from v$pwfile_users" in query)
+
+    assert "sysrac" in admin_query
+    assert "sysrac = 'true'" in admin_query
+
+
+def _run_with_security_inventory(tmp_path, security_updates):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security.update(security_updates)
+    output = CheckRunner(config).run_target("example_standalone")
+    return {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+
+def test_dictionary_access_privileges_excludes_oracle_maintained_user(tmp_path):
+    results = _run_with_security_inventory(tmp_path, {
+        "dictionary_access_privileges": [
+            {"grantee": "AUDSYS", "access_name": "SELECT ANY DICTIONARY", "option_flag": "NO", "source": "DBA_SYS_PRIVS", "oracle_maintained": "Y"},
+        ]
+    })
+
+    result = results["dictionary_access_privileges"]
+    assert result["status"] == "PASS"
+    assert result["evidence"]["affected_count"] == 0
+
+
+def test_dictionary_access_privileges_excludes_expected_oracle_role(tmp_path):
+    results = _run_with_security_inventory(tmp_path, {
+        "dictionary_access_privileges": [
+            {"grantee": "EXP_FULL_DATABASE", "access_name": "SELECT ANY DICTIONARY", "option_flag": "NO", "source": "DBA_SYS_PRIVS"},
+        ]
+    })
+
+    result = results["dictionary_access_privileges"]
+    assert result["status"] == "PASS"
+    assert result["evidence"]["affected_count"] == 0
+
+
+def test_dictionary_access_privileges_reports_non_oracle_user_with_select_any_dictionary(tmp_path):
+    results = _run_with_security_inventory(tmp_path, {
+        "dictionary_access_privileges": [
+            {"grantee": "APP_AUDITOR", "access_name": "SELECT ANY DICTIONARY", "option_flag": "NO", "source": "DBA_SYS_PRIVS", "oracle_maintained": "N"},
+        ]
+    })
+
+    result = results["dictionary_access_privileges"]
+    assert result["status"] == "WARNING"
+    assert result["evidence"]["affected_count"] == 1
+    assert result["evidence"]["rows"][0]["grantee"] == "APP_AUDITOR"
+
+
+def test_dictionary_access_privileges_reports_non_oracle_user_with_select_catalog_role(tmp_path):
+    results = _run_with_security_inventory(tmp_path, {
+        "dictionary_access_privileges": [
+            {"grantee": "APP_REPORT", "access_name": "SELECT_CATALOG_ROLE", "option_flag": "NO", "source": "DBA_ROLE_PRIVS", "oracle_maintained": "N"},
+        ]
+    })
+
+    result = results["dictionary_access_privileges"]
+    assert result["status"] == "WARNING"
+    assert result["evidence"]["affected_count"] == 1
+    assert result["evidence"]["rows"][0]["access_name"] == "SELECT_CATALOG_ROLE"
+
+
+def test_default_profile_users_excludes_sys_system_and_reports_application_users(tmp_path):
+    results = _run_with_security_inventory(tmp_path, {
+        "default_profile_users": [
+            {"username": "SYS", "account_status": "OPEN", "profile": "DEFAULT", "oracle_maintained": "Y"},
+            {"username": "SYSTEM", "account_status": "OPEN", "profile": "DEFAULT", "oracle_maintained": "Y"},
+            {"username": "MONITOREO", "account_status": "OPEN", "profile": "DEFAULT", "oracle_maintained": "N"},
+            {"username": "PROMETHEUS", "account_status": "OPEN", "profile": "DEFAULT", "oracle_maintained": "N"},
+            {"username": "PRUEBA", "account_status": "OPEN", "profile": "DEFAULT", "oracle_maintained": "N"},
+        ]
+    })
+
+    result = results["default_profile_users"]
+    assert result["status"] == "WARNING"
+    assert result["evidence"]["affected_count"] == 3
+    assert {row["username"] for row in result["evidence"]["rows"]} == {"MONITOREO", "PROMETHEUS", "PRUEBA"}

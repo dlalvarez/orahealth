@@ -1,0 +1,30 @@
+check_id: dictionary_access_privileges
+group_id: security
+title: Privilegios sensibles sobre diccionario
+severity: WARNING
+collector:
+  type: oracle_security
+  field: dictionary_access_privileges
+  label: Acceso sensible al diccionario mediante SELECT ANY DICTIONARY o roles de catálogo
+  source_view: dba_sys_privs + dba_role_privs
+  missing_status: ERROR
+evaluator:
+  type: oracle_security
+  label: Acceso sensible al diccionario mediante SELECT ANY DICTIONARY o roles de catálogo
+  failure_status: WARNING
+  collection_error_status: ERROR
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Validar necesidad de acceso al diccionario, revocar permisos no justificados y usar roles mínimos.
+  actions:
+    - Revisar la evidencia recolectada y confirmar si corresponde a una excepción aprobada.
+    - Aplicar el principio de menor privilegio antes de mantener la configuración.
+    - Documentar responsable, justificación y vigencia de cualquier excepción.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, seguridad, fase_3b]

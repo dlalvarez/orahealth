@@ -746,6 +746,32 @@ La fase 2C implementa checks de seguridad Oracle basados en vistas de diccionari
 - `missing_password_verify_profiles` — perfiles sin función efectiva de verificación de contraseña.
 - `common_accounts_not_locked_or_expired` — cuentas comunes/default que deberían estar bloqueadas; una cuenta expirada sin bloqueo sigue siendo hallazgo.
 
+### Implementado en Fase 3B
+
+La fase 3B amplía el grupo `security` sin mover ni duplicar checks existentes. Se agregan checks conservadores para:
+
+- `oracle_maintained_open_users` — cuentas `ORACLE_MAINTAINED='Y'` distintas de `SYS` y `SYSTEM` que permanecen `OPEN`; se reportan como revisión preventiva.
+- `admin_privilege_users` — usuarios no esperados con privilegios administrativos del password file como `SYSDBA`, `SYSOPER`, `SYSASM`, `SYSBACKUP`, `SYSDG`, `SYSKM` o `SYSRAC`.
+- `external_authenticated_users` — usuarios no internos con autenticación externa.
+- `proxy_users_configured` — relaciones de proxy authentication configuradas.
+- `any_privilege_users` — privilegios amplios tipo `ANY` no cubiertos por `critical_privilege_users`.
+- `admin_option_grants` — privilegios de sistema con `ADMIN OPTION`.
+- `grant_option_object_privileges` — privilegios de objeto con `GRANT OPTION`.
+- `legacy_roles_assigned` — asignaciones directas de `CONNECT` o `RESOURCE`.
+- `dictionary_access_privileges` — acceso sensible al diccionario mediante `SELECT ANY DICTIONARY`, `SELECT_CATALOG_ROLE` o `EXECUTE_CATALOG_ROLE`.
+- `inactive_users_by_last_login` — usuarios abiertos no internos con `LAST_LOGIN` antiguo o no registrado cuando la columna está disponible.
+- `legacy_password_versions` — usuarios no internos con versiones antiguas de contraseña como `10G`.
+
+Reglas de clasificación de Fase 3B:
+
+- `SYS` y `SYSTEM` se excluyen de hallazgos por privilegios elevados esperados para evitar falsos positivos.
+- Los usuarios y roles Oracle-maintained se excluyen de checks de privilegios elevados esperados cuando la vista expone `ORACLE_MAINTAINED`.
+- Las cuentas Oracle-maintained abiertas distintas de `SYS` y `SYSTEM` se revisan únicamente en `oracle_maintained_open_users`.
+- Si columnas dependientes de versión como `ORACLE_MAINTAINED` o `LAST_LOGIN` no están disponibles, el check queda omitido o con error controlado según su configuración; no debe producir traceback.
+- No se usaron AWR, ASH, `DBA_HIST%`, Diagnostic Pack, Tuning Pack, SQLite ni vistas internas `X$`.
+
+Siguen pendientes para fases futuras revisiones avanzadas de Unified Audit Trail, fallos históricos de login, Database Vault, redacción de datos, TDE avanzado, OLS, SQL Firewall, sesiones históricas, roles anidados/no asignados y paquetes SYS a PUBLIC.
+
 ### Typical collectors
 
 ```text
