@@ -1,0 +1,4 @@
+group_id: performance
+name: Rendimiento
+description: Grupo formal reservado para checks futuros de rendimiento sin AWR, ASH ni DBA_HIST por defecto. La cobertura adelantada permanece en sus grupos originales.
+checks: []

@@ -1,0 +1,4 @@
+group_id: capacity
+name: Capacidad
+description: Grupo formal reservado para checks futuros de capacidad tipo snapshot actual, sin SQLite ni repositorio histórico interno. La cobertura adelantada permanece en sus grupos originales.
+checks: []
