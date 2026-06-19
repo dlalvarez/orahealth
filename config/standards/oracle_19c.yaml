@@ -31,3 +31,56 @@ policies:
   min_redo_log_members_per_group: 2
   expected_force_logging: "YES"
   expected_plsql_optimize_level: 2
+  performance_default_max_rows: 20
+  performance_instance_min_uptime_hours: 1
+  performance_active_user_sessions_warning: 50
+  performance_active_user_sessions_fail: 100
+  performance_wait_class_exclude_wait_classes: [Idle]
+  performance_wait_class_default:
+    warning: {sessions: 10, total_seconds: 120, max_seconds: 60}
+    fail: {sessions: 20, total_seconds: 300, max_seconds: 180}
+  performance_wait_class_classes:
+    Application:
+      warning: {sessions: 1, total_seconds: 30, max_seconds: 30}
+      fail: {sessions: 3, total_seconds: 120, max_seconds: 90}
+    Concurrency:
+      warning: {sessions: 2, total_seconds: 30, max_seconds: 30}
+      fail: {sessions: 5, total_seconds: 120, max_seconds: 90}
+    Commit:
+      warning: {sessions: 2, total_seconds: 20, max_seconds: 15}
+      fail: {sessions: 5, total_seconds: 60, max_seconds: 30}
+    User I/O:
+      warning: {sessions: 10, total_seconds: 120, max_seconds: 60}
+      fail: {sessions: 25, total_seconds: 600, max_seconds: 180}
+    System I/O:
+      warning: {sessions: 5, total_seconds: 90, max_seconds: 45}
+      fail: {sessions: 15, total_seconds: 300, max_seconds: 120}
+    Cluster:
+      warning: {sessions: 3, total_seconds: 60, max_seconds: 30}
+      fail: {sessions: 10, total_seconds: 240, max_seconds: 90}
+    Network:
+      warning: {sessions: 10, total_seconds: 180, max_seconds: 90}
+      fail: {sessions: 30, total_seconds: 600, max_seconds: 180}
+    Configuration:
+      warning: {sessions: 1, total_seconds: 30, max_seconds: 30}
+      fail: {sessions: 3, total_seconds: 120, max_seconds: 90}
+    Administrative:
+      warning: {sessions: 3, total_seconds: 120, max_seconds: 120}
+      fail: {sessions: 10, total_seconds: 600, max_seconds: 300}
+    Scheduler:
+      warning: {sessions: 5, total_seconds: 180, max_seconds: 120}
+      fail: {sessions: 15, total_seconds: 600, max_seconds: 300}
+    Queueing:
+      warning: {sessions: 5, total_seconds: 120, max_seconds: 60}
+      fail: {sessions: 15, total_seconds: 300, max_seconds: 180}
+    Other:
+      warning: {sessions: 5, total_seconds: 120, max_seconds: 60}
+      fail: {sessions: 15, total_seconds: 300, max_seconds: 180}
+  performance_longops_warning_count: 10
+  performance_longops_warning_time_remaining_seconds: 3600
+  performance_parse_warning_hard_parse_pct: 10
+  performance_parse_min_total: 1000
+  performance_library_cache_warning_min_get_hit_pct: 95
+  performance_library_cache_warning_min_pin_hit_pct: 95
+  performance_library_cache_min_volume: 1000
+  performance_sql_current_activity_max_rows: 20

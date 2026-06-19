@@ -13,6 +13,7 @@ enabled_groups:
   - rac
   - multitenant
   - operational_readiness
+  - performance
 standards:
   - oracle_19c
   - development

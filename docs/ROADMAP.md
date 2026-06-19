@@ -868,3 +868,9 @@ Los perfiles amplios pueden incluir grupos feature-aware para preservar trazabil
 La UX esperada es que el reporte ejecutivo y el reporte de acciones correctivas eviten ruido por checks `SKIPPED` masivos, mientras que el reporte técnico y el reporte de evidencias conserven el detalle técnico cuando esos resultados existen.
 
 Quedan para fases futuras los perfiles específicos para RAC, ASM, configuraciones con bases standby/Data Guard real y posibles perfiles de auditoría completa. No deben crearse perfiles como `rac_all`, `rac_full`, `asm_all`, `asm_full`, `dataguard_all`, `dataguard_full`, `oracle_full`, `audit_all` o similares hasta que los grupos correspondientes existan, tengan checks reales y cuenten con aplicabilidad clara y pruebas representativas.
+
+### Fase 4B completada - Performance básico actual sin AWR/ASH
+
+Se implementa el grupo `performance` con 9 checks iniciales basados en vistas dinámicas actuales permitidas (`V$INSTANCE`, `V$SESSION`, `V$SESSION_LONGOPS`, `V$SYSSTAT`, `V$LIBRARYCACHE` y `V$SQL`). Esta fase excluye AWR, ASH, `DBA_HIST%`, `DBMS_WORKLOAD_REPOSITORY`, `DBA_ADVISOR`, `DBA_SQLTUNE`, SQL Monitor licenciado, vistas `X$`, SQLite y cualquier repositorio histórico interno.
+
+El foco principal queda en la fotografía actual de esperas por `WAIT_CLASS` y `EVENT`. Los segundos de espera agregados se documentan como segundos observados en la muestra actual, no como DB Time histórico. Los thresholds por `WAIT_CLASS` son configurables desde estándares, con `Idle` excluido por defecto y configuración `default` para wait classes no declaradas. El SQL actual se reporta como actividad presente y no como top SQL histórico. `capacity` continúa pendiente para una fase posterior.

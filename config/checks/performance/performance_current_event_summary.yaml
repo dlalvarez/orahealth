@@ -1,0 +1,27 @@
+check_id: performance_current_event_summary
+group_id: performance
+title: Resumen actual por WAIT_CLASS y EVENT
+description: Performance básico actual con vistas dinámicas permitidas; fuente V$SESSION.
+severity: WARNING
+collector:
+  type: performance
+  source_view: V$SESSION
+  max_rows_policy: performance_default_max_rows
+evaluator:
+  type: performance
+  metric: performance_current_event_summary
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar evidencia actual y correlacionar con actividad de aplicación antes de concluir causa raíz.
+  actions:
+    - Interpretar la evidencia como fotografía actual, no como histórico ni DB Time.
+    - Revisar wait_class, event, SQL_ID, módulo, máquina y sesiones asociadas.
+    - Validar si el patrón persiste con herramientas permitidas y licenciamiento aprobado.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, performance, actual, sin_awr, sin_ash]
