@@ -24,7 +24,7 @@ performance
 alert_log
 storage
 schema_objects
-production_readiness
+operational_readiness
 security
 rac
 dataguard
@@ -581,11 +581,11 @@ custom
 
 ---
 
-## 8. Group: production_readiness
+## 8. Grupo: operational_readiness
 
 ### Purpose
 
-Validate whether a database is configured appropriately for production operation, stability, traceability, robustness, and performance.
+Validar parámetros y configuraciones operativas recomendadas para que una base de datos esté preparada para operar de forma estable y controlada en ambientes críticos. Este grupo no representa un perfil ni un ambiente específico.
 
 ### Checks to include
 
@@ -1270,7 +1270,7 @@ enabled_groups:
   - alert_log
   - storage
   - schema_objects
-  - production_readiness
+  - operational_readiness
   - security
   - os
   - capacity
@@ -1285,7 +1285,7 @@ enabled_groups:
   - alert_log
   - storage
   - schema_objects
-  - production_readiness
+  - operational_readiness
   - security
   - rac
   - asm
@@ -1301,7 +1301,7 @@ enabled_groups:
   - performance
   - alert_log
   - storage
-  - production_readiness
+  - operational_readiness
   - security
   - dataguard
   - os
@@ -1317,7 +1317,7 @@ enabled_groups:
   - alert_log
   - storage
   - schema_objects
-  - production_readiness
+  - operational_readiness
   - security
   - rac
   - asm
@@ -1331,7 +1331,7 @@ enabled_groups:
 ```yaml
 enabled_groups:
   - security
-  - production_readiness
+  - operational_readiness
 ```
 
 ### capacity_performance
@@ -1498,9 +1498,9 @@ Estos grupos no eliminan ni reemplazan la lista original de grupos requeridos. S
 
 ---
 
-## Actualización Fase 3A - Grupo production_readiness
+## Actualización Fase 3A.1 - Grupo operational_readiness
 
-Se crea/inicia el grupo formal `production_readiness` para checks conservadores de preparación productiva que todavía no estaban cubiertos por otros grupos.
+El grupo antes llamado `production_readiness` fue reemplazado por `operational_readiness` para evitar confusión entre grupos técnicos y perfiles de ejecución. `operational_readiness` es un grupo de checks, no un perfil.
 
 El grupo contiene inicialmente checks basados en `V$PARAMETER` para:
 
@@ -1527,7 +1527,7 @@ Esta fase no agrega AWR, ASH, `DBA_HIST%`, Diagnostic Pack, Tuning Pack, SQLite 
 
 ## Actualización Fase 3A - Perfiles standalone y separación topología/almacenamiento
 
-Se agrega el perfil `standalone_all` para ejecutar una revisión amplia de bases standalone con todos los grupos ya implementados y razonablemente aplicables a esa topología. Este perfil incluye `production_readiness` para evitar omisiones por configuración de perfiles cuando se requiere una evaluación amplia.
+Se agrega el perfil `standalone_all` para ejecutar una revisión amplia de bases standalone con todos los grupos ya implementados y razonablemente aplicables a esa topología. Este perfil incluye `operational_readiness` para evitar omisiones por configuración de perfiles cuando se requiere una evaluación amplia.
 
 Diferencia conceptual de perfiles:
 
@@ -1538,12 +1538,39 @@ standalone_basic:
 
 standalone_all:
   Perfil amplio para ejecutar los grupos ya implementados y razonablemente aplicables a una base standalone.
-  Incluye production_readiness.
+  Incluye operational_readiness.
   Debe entenderse como standalone sobre filesystem o standalone sobre ASM.
   No significa filesystem-only.
 
-production_readiness:
-  Perfil especializado que ejecuta únicamente checks de preparación productiva.
+```
+
+
+Separación conceptual:
+
+```text
+Grupo de checks = dominio técnico que se valida.
+Perfil = combinación de grupos ejecutada según intención, topología o alcance.
+```
+
+Ejemplos de perfiles:
+
+```text
+standalone_basic
+standalone_all
+rac_full
+drp_precheck_compare
+security_audit
+```
+
+Ejemplos de grupos técnicos:
+
+```text
+configuration_general
+storage
+security
+schema_objects
+alert_log
+operational_readiness
 ```
 
 OraHealthCheck separa topología de base de datos y tipo de almacenamiento.

@@ -170,7 +170,7 @@ orahealthcheck/
       dataguard_full.yaml
       rac_dataguard_full.yaml
       security_audit.yaml
-      production_readiness.yaml
+      operational_readiness.yaml
       capacity_performance.yaml
       patching_readiness.yaml
       drp_precheck_compare.yaml
@@ -181,7 +181,7 @@ orahealthcheck/
       alert_log.yaml
       storage.yaml
       schema_objects.yaml
-      production_readiness.yaml
+      operational_readiness.yaml
       security.yaml
       rac.yaml
       dataguard.yaml
@@ -196,7 +196,7 @@ orahealthcheck/
       alert_log/
       storage/
       schema_objects/
-      production_readiness/
+      operational_readiness/
       security/
       rac/
       dataguard/
@@ -522,7 +522,7 @@ enabled_groups:
   - alert_log
   - storage
   - schema_objects
-  - production_readiness
+  - operational_readiness
   - security
   - os
   - capacity

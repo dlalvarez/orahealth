@@ -1,5 +1,5 @@
 check_id: optimizer_capture_sql_plan_baselines
-group_id: production_readiness
+group_id: operational_readiness
 title: Captura automática de SQL Plan Baselines gobernada
 severity: WARNING
 collector:
@@ -25,4 +25,4 @@ remediation:
   owner: DBA
   requires_window: false
   outage_risk: low
-tags: [oracle, production_readiness, parameter]
+tags: [oracle, operational_readiness, parameter]

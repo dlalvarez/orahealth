@@ -1,6 +1,6 @@
 check_id: plsql_code_type
-group_id: production_readiness
-title: Tipo de código PL/SQL reportado para preparación productiva
+group_id: operational_readiness
+title: Tipo de código PL/SQL reportado para preparación operativa
 severity: INFO
 collector:
   type: oracle_parameter
@@ -18,10 +18,10 @@ applies_to:
 remediation:
   summary: El parámetro plsql_code_type indica si el código PL/SQL se compila como INTERPRETED o NATIVE; no existe un valor universal obligatorio y debe evaluarse contra el estándar de la organización.
   actions:
-    - Confirmar si el estándar productivo requiere INTERPRETED o NATIVE para la carga de trabajo.
+    - Confirmar si el estándar operativo requiere INTERPRETED o NATIVE para la carga de trabajo.
     - Si se decide cambiar el valor, validar dependencias, procedimiento de recompilación y pruebas funcionales.
-    - Documentar la justificación del valor elegido como parte de la línea base productiva.
+    - Documentar la justificación del valor elegido como parte de la línea base operativa.
   owner: DBA
   requires_window: false
   outage_risk: low
-tags: [oracle, production_readiness, parameter]
+tags: [oracle, operational_readiness, parameter]

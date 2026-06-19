@@ -1,5 +1,5 @@
 profile_id: standalone_all
-description: Perfil amplio para bases standalone; ejecuta grupos implementados y razonablemente aplicables, incluyendo preparación productiva.
+description: Perfil amplio para bases standalone; ejecuta grupos implementados y razonablemente aplicables, incluyendo preparación operativa.
 enabled_groups:
   - configuration_general
   - storage
@@ -11,7 +11,7 @@ enabled_groups:
   - io_redo_archive
   - recoverability_drp
   - multitenant
-  - production_readiness
+  - operational_readiness
 standards:
   - oracle_19c
   - development

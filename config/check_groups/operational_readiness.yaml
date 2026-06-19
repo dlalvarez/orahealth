@@ -1,6 +1,6 @@
-group_id: production_readiness
-name: Preparación productiva
-description: Checks conservadores de preparación productiva basados en parámetros Oracle estándar sin AWR, ASH ni Diagnostic Pack.
+group_id: operational_readiness
+name: Preparación operativa
+description: Validaciones de configuración operativa recomendada basadas en parámetros Oracle estándar, sin AWR, ASH ni Diagnostic Pack.
 checks:
   - plsql_optimize_level
   - plsql_code_type
