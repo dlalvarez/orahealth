@@ -10,6 +10,7 @@ enabled_groups:
   - oracle_resources
   - io_redo_archive
   - recoverability_drp
+  - rac
   - multitenant
   - operational_readiness
 standards:

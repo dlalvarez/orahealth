@@ -422,14 +422,28 @@ def test_run_rejects_unknown_profile(capsys):
     assert exit_code == 2
     assert "Perfil desconocido: perfil_inexistente" in captured.err
 
-def test_standalone_all_profile_includes_operational_readiness_without_changing_basic():
+def test_standalone_all_profile_includes_rac_and_operational_readiness_without_changing_basic():
     config = ConfigLoader("config").load_all()
 
     standalone_all = config["profiles"]["standalone_all"]
     standalone_basic = config["profiles"]["standalone_basic"]
 
     assert "operational_readiness" in standalone_all.enabled_groups
-    assert "operational_readiness" not in standalone_basic.enabled_groups
+    assert "rac" in standalone_all.enabled_groups
+    assert "multitenant" in standalone_all.enabled_groups
+
+    for group_id in [
+        "rac",
+        "multitenant",
+        "operational_readiness",
+        "performance",
+        "capacity",
+        "asm",
+        "dataguard",
+        "patching",
+    ]:
+        assert group_id not in standalone_basic.enabled_groups
+
     assert "asm" not in standalone_all.enabled_groups
     assert "dataguard" not in standalone_all.enabled_groups
     assert "performance" not in standalone_all.enabled_groups

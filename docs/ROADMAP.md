@@ -860,3 +860,11 @@ The foundation is done when:
 ## Nota de alineación posterior a Fase 2M
 
 Después de la Fase 2M se incorporó la Fase 2N como una auditoría documental de alineación entre el roadmap inicial, los grupos definidos originalmente y el estado real implementado. El resultado queda registrado en `docs/IMPLEMENTATION_STATUS.md` y no elimina ni revierte funcionalidades ya implementadas.
+
+### Nota Fase 4A.1 - Política de features no aplicables y perfiles amplios
+
+Los perfiles amplios pueden incluir grupos feature-aware para preservar trazabilidad, aunque la feature no esté presente en un target concreto. En ese caso, los checks dependientes deben terminar como `SKIPPED` con razón clara, sin hallazgos y sin penalización de score. El inventario de features debe seguir mostrando las features no detectadas. Como ajuste menor del PR #29, `standalone_basic` queda como perfil básico standalone sin grupos feature-aware no esenciales, mientras que `standalone_all` conserva grupos feature-aware ya implementados como `rac` y `multitenant` para trazabilidad `SKIPPED`.
+
+La UX esperada es que el reporte ejecutivo y el reporte de acciones correctivas eviten ruido por checks `SKIPPED` masivos, mientras que el reporte técnico y el reporte de evidencias conserven el detalle técnico cuando esos resultados existen.
+
+Quedan para fases futuras los perfiles específicos para RAC, ASM, configuraciones con bases standby/Data Guard real y posibles perfiles de auditoría completa. No deben crearse perfiles como `rac_all`, `rac_full`, `asm_all`, `asm_full`, `dataguard_all`, `dataguard_full`, `oracle_full`, `audit_all` o similares hasta que los grupos correspondientes existan, tengan checks reales y cuenten con aplicabilidad clara y pruebas representativas.

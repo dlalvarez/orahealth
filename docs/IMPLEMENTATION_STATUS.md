@@ -198,3 +198,25 @@ Queda pendiente para Fase 4B implementar rendimiento básico sin AWR por defecto
 Queda pendiente para Fase 4C implementar capacidad como snapshot actual sin histórico interno: tamaño actual de BD, crecimiento actual por datafiles/tablespaces cuando derive de datos actuales, segmentos grandes, TEMP/UNDO, sesiones/procesos/transacciones contra límites, PGA/SGA y FRA/archivelog. Si en el futuro se requiere tendencia, debe venir de datos Oracle existentes y solo con autorización y licenciamiento explícitos; por defecto no se usa histórico licenciado.
 
 Esta fase no modifica `config/targets.yaml`, no modifica `standalone_basic`, no mueve checks existentes, no duplica checks, no crea checks dummy, no usa AWR/ASH/`DBA_HIST%`, no usa vistas internas `X$`, no implementa SQLite y no crea repositorio histórico interno.
+
+## 13. Actualización Fase 4A.1 - Visibilidad de features no aplicables en perfiles amplios
+
+La Fase 4A.1 formaliza la política de visibilidad para features no aplicables. Una feature no detectada no genera hallazgos, no penaliza el score y debe seguir apareciendo en el inventario de features como no detectada. En perfiles amplios, los checks feature-aware pueden incluirse para conservar trazabilidad técnica y quedar `SKIPPED` con una razón clara cuando la feature requerida no está detectada.
+
+Para aplicar esta política, `standalone_all` incluye los grupos feature-aware ya implementados `rac` y `multitenant`, además de los grupos amplios ya aplicables. En bases standalone no RAC/CDB, esos checks quedan omitidos por `requires_feature`, con evidencia y razón de omisión. Como ajuste menor del PR #29, `standalone_basic` queda limpio como perfil básico standalone y no incluye grupos feature-aware no esenciales como `rac`, `multitenant` ni `operational_readiness`; `config/targets.yaml` permanece sin cambios.
+
+La política de UX por reporte queda definida así:
+
+- El reporte ejecutivo mantiene el inventario de features detectadas/no detectadas, pero no debe listar checks `SKIPPED` masivos como hallazgos ni acciones.
+- El reporte técnico conserva trazabilidad de grupos/checks no aplicables cuando esos checks están en los resultados, incluyendo estado `SKIPPED` y razón.
+- El reporte de evidencias conserva el detalle completo de checks omitidos y su `skipped_reason`.
+- El reporte de acciones correctivas no debe generar acciones para checks `SKIPPED` por features no detectadas.
+
+Quedan pendientes para fases posteriores la definición, creación y prueba de perfiles amplios específicos para topologías/features, únicamente cuando los grupos correspondientes existan y tengan checks reales con aplicabilidad clara:
+
+- Crear y probar un perfil amplio para RAC, por ejemplo `rac_all` o `rac_full`, cuando RAC avanzado esté implementado.
+- Crear y probar un perfil amplio para ASM, por ejemplo `asm_all` o `asm_full`, cuando el grupo `asm` exista con checks reales.
+- Crear y probar un perfil amplio para configuraciones con bases standby, por ejemplo `dataguard_all` o `dataguard_full`, cuando el grupo `dataguard` exista y esté estrictamente limitado a bases standby/Data Guard real.
+- Evaluar más adelante si se necesita un perfil de auditoría completa, por ejemplo `oracle_full` o `audit_all`, que incluya todos los grupos feature-aware y deje que la aplicabilidad marque `SKIPPED` cuando no corresponda.
+
+Estos perfiles futuros no deben crearse antes de que sus grupos/checks existan, no deben contener checks dummy, no deben duplicar ni mover checks existentes, deben probarse contra ambientes reales o simulados representativos, deben mantener la regla de no penalizar features no detectadas, deben conservar trazabilidad técnica mediante `SKIPPED` en reportes técnicos/evidencias y deben evitar ruido en reportes ejecutivos/correctivos.
