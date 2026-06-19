@@ -25,6 +25,11 @@ from orahealthcheck.utils.time import timestamp
 # esperadas por diseño. No incluyen usuarios de aplicación ni roles custom.
 ORACLE_DBA_ROLE_ALLOWED_GRANTEES = {"SYS", "SYSTEM"}
 ORACLE_EXPECTED_ADMIN_USERS = {"SYS", "SYSTEM"}
+ORACLE_EXPECTED_DICTIONARY_ACCESS_GRANTEES = {
+    "SYS", "SYSTEM", "DBA", "SELECT_CATALOG_ROLE", "EXECUTE_CATALOG_ROLE",
+    "EXP_FULL_DATABASE", "IMP_FULL_DATABASE", "OEM_MONITOR", "SYSBACKUP",
+    "SYSDG", "SYSKM", "SYSRAC", "SYSASM",
+}
 ORACLE_INTERNAL_SCHEMAS = {
     "SYS", "SYSTEM", "XDB", "MDSYS", "CTXSYS", "ORDSYS", "ORDDATA", "ORDPLUGINS",
     "WMSYS", "OUTLN", "DBSNMP", "GSMADMIN_INTERNAL", "AUDSYS", "OJVMSYS",
@@ -966,14 +971,28 @@ class CheckRunner:
               and nvl(u.oracle_maintained, 'N') <> 'Y'
             order by rp.grantee, rp.granted_role
         """, log_warning=False)
-        self._set_security_query(security, "dictionary_access_privileges", connector, "acceso sensible al diccionario", """
-            select grantee, privilege as access_name, admin_option as option_flag, 'DBA_SYS_PRIVS' as source
-            from dba_sys_privs
-            where privilege = 'SELECT ANY DICTIONARY' and grantee not in ('SYS', 'SYSTEM')
-            union all
-            select grantee, granted_role as access_name, admin_option as option_flag, 'DBA_ROLE_PRIVS' as source
-            from dba_role_privs
-            where granted_role in ('SELECT_CATALOG_ROLE', 'EXECUTE_CATALOG_ROLE') and grantee not in ('SYS', 'SYSTEM')
+        expected_dictionary_grantees = self._sql_in_list(ORACLE_EXPECTED_DICTIONARY_ACCESS_GRANTEES)
+        self._set_security_query(security, "dictionary_access_privileges", connector, "acceso sensible al diccionario", f"""
+            select grantee, access_name, option_flag, source
+            from (
+              select sp.grantee, sp.privilege as access_name, sp.admin_option as option_flag, 'DBA_SYS_PRIVS' as source
+              from dba_sys_privs sp
+              left join dba_users u on u.username = sp.grantee
+              left join dba_roles r on r.role = sp.grantee
+              where sp.privilege = 'SELECT ANY DICTIONARY'
+                and sp.grantee not in ({expected_dictionary_grantees})
+                and nvl(u.oracle_maintained, 'N') <> 'Y'
+                and nvl(r.oracle_maintained, 'N') <> 'Y'
+              union all
+              select rp.grantee, rp.granted_role as access_name, rp.admin_option as option_flag, 'DBA_ROLE_PRIVS' as source
+              from dba_role_privs rp
+              left join dba_users u on u.username = rp.grantee
+              left join dba_roles r on r.role = rp.grantee
+              where rp.granted_role in ('SELECT_CATALOG_ROLE', 'EXECUTE_CATALOG_ROLE')
+                and rp.grantee not in ({expected_dictionary_grantees})
+                and nvl(u.oracle_maintained, 'N') <> 'Y'
+                and nvl(r.oracle_maintained, 'N') <> 'Y'
+            )
             order by grantee, access_name
         """, log_warning=False)
         self._set_security_query(security, "inactive_users_by_last_login", connector, "usuarios abiertos inactivos por último login", """
@@ -2455,11 +2474,19 @@ class CheckRunner:
             return [row for row in rows if not self._is_allowed_dba_grantee(row)]
         if check_id == "critical_privilege_users":
             return [row for row in rows if not self._is_allowed_critical_privilege_grantee(row)]
-        if check_id in {"admin_privilege_users", "any_privilege_users", "admin_option_grants", "dictionary_access_privileges", "legacy_roles_assigned", "external_authenticated_users", "legacy_password_versions", "inactive_users_by_last_login"}:
+        if check_id == "dictionary_access_privileges":
+            return [row for row in rows if not self._is_expected_dictionary_access_grantee(row)]
+        if check_id in {"admin_privilege_users", "any_privilege_users", "admin_option_grants", "legacy_roles_assigned", "external_authenticated_users", "legacy_password_versions", "inactive_users_by_last_login"}:
             return [row for row in rows if not self._is_expected_oracle_security_row(row)]
         if check_id == "oracle_maintained_open_users":
             return [row for row in rows if str(row.get("username", "")).upper() not in ORACLE_EXPECTED_ADMIN_USERS] if all(isinstance(row, dict) for row in rows) else rows
         return rows
+
+    def _is_expected_dictionary_access_grantee(self, row: Any) -> bool:
+        if not isinstance(row, dict):
+            return False
+        grantee = str(row.get("grantee", "")).upper()
+        return grantee in ORACLE_EXPECTED_DICTIONARY_ACCESS_GRANTEES or self._is_expected_oracle_security_row(row)
 
     def _is_expected_oracle_security_row(self, row: Any) -> bool:
         if not isinstance(row, dict):

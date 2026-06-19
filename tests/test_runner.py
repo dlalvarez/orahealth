@@ -1209,3 +1209,63 @@ def test_admin_privilege_users_includes_sysrac_when_column_is_available():
 
     assert "sysrac" in admin_query
     assert "sysrac = 'true'" in admin_query
+
+
+def _run_with_security_inventory(tmp_path, security_updates):
+    config = ConfigLoader("config").load_all()
+    ConfigValidator().validate(config)
+    config["settings"]["app"]["default_output_dir"] = str(tmp_path)
+    security = config["targets"]["example_standalone"].database["mock_inventory"]["security"]
+    security.update(security_updates)
+    output = CheckRunner(config).run_target("example_standalone")
+    return {result["check_id"]: result for result in json.loads((output / "evidence.json").read_text(encoding="utf-8"))["results"]}
+
+
+def test_dictionary_access_privileges_excludes_oracle_maintained_user(tmp_path):
+    results = _run_with_security_inventory(tmp_path, {
+        "dictionary_access_privileges": [
+            {"grantee": "AUDSYS", "access_name": "SELECT ANY DICTIONARY", "option_flag": "NO", "source": "DBA_SYS_PRIVS", "oracle_maintained": "Y"},
+        ]
+    })
+
+    result = results["dictionary_access_privileges"]
+    assert result["status"] == "PASS"
+    assert result["evidence"]["affected_count"] == 0
+
+
+def test_dictionary_access_privileges_excludes_expected_oracle_role(tmp_path):
+    results = _run_with_security_inventory(tmp_path, {
+        "dictionary_access_privileges": [
+            {"grantee": "EXP_FULL_DATABASE", "access_name": "SELECT ANY DICTIONARY", "option_flag": "NO", "source": "DBA_SYS_PRIVS"},
+        ]
+    })
+
+    result = results["dictionary_access_privileges"]
+    assert result["status"] == "PASS"
+    assert result["evidence"]["affected_count"] == 0
+
+
+def test_dictionary_access_privileges_reports_non_oracle_user_with_select_any_dictionary(tmp_path):
+    results = _run_with_security_inventory(tmp_path, {
+        "dictionary_access_privileges": [
+            {"grantee": "APP_AUDITOR", "access_name": "SELECT ANY DICTIONARY", "option_flag": "NO", "source": "DBA_SYS_PRIVS", "oracle_maintained": "N"},
+        ]
+    })
+
+    result = results["dictionary_access_privileges"]
+    assert result["status"] == "WARNING"
+    assert result["evidence"]["affected_count"] == 1
+    assert result["evidence"]["rows"][0]["grantee"] == "APP_AUDITOR"
+
+
+def test_dictionary_access_privileges_reports_non_oracle_user_with_select_catalog_role(tmp_path):
+    results = _run_with_security_inventory(tmp_path, {
+        "dictionary_access_privileges": [
+            {"grantee": "APP_REPORT", "access_name": "SELECT_CATALOG_ROLE", "option_flag": "NO", "source": "DBA_ROLE_PRIVS", "oracle_maintained": "N"},
+        ]
+    })
+
+    result = results["dictionary_access_privileges"]
+    assert result["status"] == "WARNING"
+    assert result["evidence"]["affected_count"] == 1
+    assert result["evidence"]["rows"][0]["access_name"] == "SELECT_CATALOG_ROLE"
