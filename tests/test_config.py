@@ -430,8 +430,20 @@ def test_standalone_all_profile_includes_rac_and_operational_readiness_without_c
 
     assert "operational_readiness" in standalone_all.enabled_groups
     assert "rac" in standalone_all.enabled_groups
-    assert "operational_readiness" not in standalone_basic.enabled_groups
-    assert "rac" in standalone_basic.enabled_groups
+    assert "multitenant" in standalone_all.enabled_groups
+
+    for group_id in [
+        "rac",
+        "multitenant",
+        "operational_readiness",
+        "performance",
+        "capacity",
+        "asm",
+        "dataguard",
+        "patching",
+    ]:
+        assert group_id not in standalone_basic.enabled_groups
+
     assert "asm" not in standalone_all.enabled_groups
     assert "dataguard" not in standalone_all.enabled_groups
     assert "performance" not in standalone_all.enabled_groups

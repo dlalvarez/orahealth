@@ -863,7 +863,7 @@ Después de la Fase 2M se incorporó la Fase 2N como una auditoría documental d
 
 ### Nota Fase 4A.1 - Política de features no aplicables y perfiles amplios
 
-Los perfiles amplios pueden incluir grupos feature-aware para preservar trazabilidad, aunque la feature no esté presente en un target concreto. En ese caso, los checks dependientes deben terminar como `SKIPPED` con razón clara, sin hallazgos y sin penalización de score. El inventario de features debe seguir mostrando las features no detectadas.
+Los perfiles amplios pueden incluir grupos feature-aware para preservar trazabilidad, aunque la feature no esté presente en un target concreto. En ese caso, los checks dependientes deben terminar como `SKIPPED` con razón clara, sin hallazgos y sin penalización de score. El inventario de features debe seguir mostrando las features no detectadas. Como ajuste menor del PR #29, `standalone_basic` queda como perfil básico standalone sin grupos feature-aware no esenciales, mientras que `standalone_all` conserva grupos feature-aware ya implementados como `rac` y `multitenant` para trazabilidad `SKIPPED`.
 
 La UX esperada es que el reporte ejecutivo y el reporte de acciones correctivas eviten ruido por checks `SKIPPED` masivos, mientras que el reporte técnico y el reporte de evidencias conserven el detalle técnico cuando esos resultados existen.
 

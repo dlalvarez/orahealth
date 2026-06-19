@@ -203,7 +203,7 @@ Esta fase no modifica `config/targets.yaml`, no modifica `standalone_basic`, no 
 
 La Fase 4A.1 formaliza la política de visibilidad para features no aplicables. Una feature no detectada no genera hallazgos, no penaliza el score y debe seguir apareciendo en el inventario de features como no detectada. En perfiles amplios, los checks feature-aware pueden incluirse para conservar trazabilidad técnica y quedar `SKIPPED` con una razón clara cuando la feature requerida no está detectada.
 
-Para aplicar esta política, `standalone_all` incluye el grupo `rac` además de los grupos amplios ya aplicables. En bases standalone no RAC, los checks de `rac` quedan omitidos por `requires_feature: oracle_rac`, con evidencia y razón de omisión. `standalone_basic` no se modifica en esta fase y `config/targets.yaml` permanece sin cambios.
+Para aplicar esta política, `standalone_all` incluye los grupos feature-aware ya implementados `rac` y `multitenant`, además de los grupos amplios ya aplicables. En bases standalone no RAC/CDB, esos checks quedan omitidos por `requires_feature`, con evidencia y razón de omisión. Como ajuste menor del PR #29, `standalone_basic` queda limpio como perfil básico standalone y no incluye grupos feature-aware no esenciales como `rac`, `multitenant` ni `operational_readiness`; `config/targets.yaml` permanece sin cambios.
 
 La política de UX por reporte queda definida así:
 
