@@ -1,0 +1,30 @@
+check_id: capacity_database_size_snapshot
+group_id: capacity
+title: Fotografía de tamaño de base de datos
+description: Fotografía actual de capacidad sin AWR, ASH, DBA-HIST ni repositorio histórico interno.
+severity: INFO
+collector:
+  type: capacity
+  source_view: DBA_DATA_FILES/DBA_FREE_SPACE/DBA_TABLESPACES
+  label: Fotografía de tamaño de base de datos
+evaluator:
+  type: capacity
+  metric: capacity_database_size_snapshot
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Inventariar tamaño total, usado y libre actual de datafiles permanentes.
+  actions:
+    - Analizar la evidencia como snapshot actual de capacidad, no como forecast ni histórico interno.
+    - Validar crecimiento esperado con responsables de aplicación y ventanas de cambio aprobadas.
+    - Ajustar capacidad, límites o housekeeping solo mediante procedimientos soportados y controlados.
+  validation:
+    - Ejecutar nuevamente OraHealthCheck y confirmar que el margen reportado mejora o queda documentado.
+    - Verificar en diccionario Oracle que los tamaños, límites y estados reflejan el cambio aplicado.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, capacity, snapshot, sin_awr, sin_ash]

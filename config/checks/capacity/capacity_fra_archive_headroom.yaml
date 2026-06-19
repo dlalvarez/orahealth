@@ -1,0 +1,33 @@
+check_id: capacity_fra_archive_headroom
+group_id: capacity
+title: Margen consolidado de FRA y archive
+description: Fotografía actual de capacidad sin AWR, ASH, DBA-HIST ni repositorio histórico interno.
+severity: WARNING
+collector:
+  type: capacity
+  source_view: V$RECOVERY_FILE_DEST/V$ARCHIVE_DEST/V$ARCHIVE_DEST_STATUS
+  label: Margen consolidado de FRA y archive
+evaluator:
+  type: capacity
+  metric: capacity_fra_archive_headroom
+  fra_used_warning_pct_policy: capacity_fra_used_warning_pct
+  fra_used_fail_pct_policy: capacity_fra_used_fail_pct
+  fra_used_critical_pct_policy: capacity_fra_used_critical_pct
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar margen de FRA y estado básico de destinos archive; cualquier limpieza debe ejecutarse con RMAN o procedimiento aprobado.
+  actions:
+    - Analizar la evidencia como snapshot actual de capacidad, no como forecast ni histórico interno.
+    - Validar crecimiento esperado con responsables de aplicación y ventanas de cambio aprobadas.
+    - Ajustar capacidad, límites o housekeeping solo mediante procedimientos soportados y controlados.
+  validation:
+    - Ejecutar nuevamente OraHealthCheck y confirmar que el margen reportado mejora o queda documentado.
+    - Verificar en diccionario Oracle que los tamaños, límites y estados reflejan el cambio aplicado.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, capacity, snapshot, sin_awr, sin_ash]

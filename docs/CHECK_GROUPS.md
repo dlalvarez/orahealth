@@ -53,7 +53,7 @@ Reglas vigentes:
 - No crear checks dummy ni checks vacíos para rellenar grupos.
 - No activar AWR, ASH ni `DBA_HIST%` por defecto; cualquier uso futuro debe ser opcional, condicionado a licenciamiento explícito y deshabilitado por defecto.
 - No introducir SQLite ni repositorio histórico interno para capacidad.
-- Mantener `capacity` como snapshot actual por defecto.
+- Mantener `capacity` como fotografía actual por defecto.
 
 Cobertura adelantada que se reconoce como relacionada:
 
@@ -65,7 +65,7 @@ Cobertura adelantada que se reconoce como relacionada:
 Estrategia futura:
 
 - Fase 4B agregará únicamente gaps reales de rendimiento básico sin AWR, por ejemplo uptime, sesiones activas actuales, esperas actuales, parse ratio, cache/library cache, SQL activo, long operations y eventos actuales por sesión.
-- Fase 4C agregará únicamente gaps reales de capacidad tipo snapshot actual, por ejemplo tamaño actual de BD, datafiles/tablespaces, segmentos grandes, TEMP/UNDO, límites de sesiones/procesos/transacciones, PGA/SGA y FRA/archive.
+- Fase 4C agregará únicamente gaps reales de capacidad tipo fotografía actual, por ejemplo tamaño actual de BD, datafiles/tablespaces, segmentos grandes, TEMP/UNDO, límites de sesiones/procesos/transacciones, PGA/SGA y FRA/archive.
 
 
 ---
@@ -1228,7 +1228,7 @@ Trend analysis may use data already available in Oracle, such as AWR, only when 
 
 El grupo formal `capacity` existe desde Fase 4A con `checks: []`. No contiene checks propios todavía. La cobertura adelantada se documenta como existente en `storage`, `oracle_resources`, `io_redo_archive`, `configuration_general` y `operational_readiness`, sin mover ni duplicar checks.
 
-Los primeros checks propios deben agregarse en Fase 4C como snapshot actual. No debe introducirse SQLite, repositorio histórico interno ni tendencia basada en AWR/ASH/`DBA_HIST%` por defecto.
+Los primeros checks propios deben agregarse en Fase 4C como fotografía actual. No debe introducirse SQLite, repositorio histórico interno ni tendencia basada en AWR/ASH/`DBA_HIST%` por defecto.
 
 ### Typical collectors
 
@@ -1660,3 +1660,20 @@ Reglas conceptuales para fases futuras:
 - El caso RAC sobre filesystem se considera histórico o legacy y no es el objetivo principal del diseño moderno del proyecto.
 
 Esta actualización no crea el grupo `asm`, no agrega checks ASM, no agrega checks RAC y no modifica `config/targets.yaml` ni `standalone_basic`.
+
+### Actualización Fase 4C para `capacity`
+
+Desde Fase 4C el grupo `capacity` contiene 8 checks propios y deja de estar vacío. Su alcance es un fotografía actual de capacidad y margen: tamaño total, uso actual, margen disponible, límite efectivo, riesgo de saturación actual y principales consumidores de espacio.
+
+Checks implementados:
+
+- `capacity_database_size_snapshot`
+- `capacity_tablespace_margen`
+- `capacity_datafile_margen`
+- `capacity_segments_top_size`
+- `capacity_temp_capacity_snapshot`
+- `capacity_undo_capacity_snapshot`
+- `capacity_resource_limits_margen`
+- `capacity_fra_archive_margen`
+
+`capacity` no reemplaza a `storage`, `oracle_resources` ni `io_redo_archive`; consolida capacidad actual y margen sin duplicar el mismo hallazgo puntual. No introduce SQLite, no crea repositorio histórico interno y no usa AWR/ASH/`DBA_HIST%` por defecto. TEMP y UNDO quedan incluidos explícitamente en la fotografía de capacidad. Cualquier tendencia futura basada en AWR deberá ser opcional y condicionada a licenciamiento explícito.

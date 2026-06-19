@@ -447,5 +447,5 @@ def test_standalone_all_profile_includes_rac_and_operational_readiness_without_c
     assert "asm" not in standalone_all.enabled_groups
     assert "dataguard" not in standalone_all.enabled_groups
     assert "performance" in standalone_all.enabled_groups
-    assert "capacity" not in standalone_all.enabled_groups
+    assert "capacity" in standalone_all.enabled_groups
     assert "patching" not in standalone_all.enabled_groups

@@ -84,3 +84,24 @@ policies:
   performance_library_cache_warning_min_pin_hit_pct: 95
   performance_library_cache_min_volume: 1000
   performance_sql_current_activity_max_rows: 20
+  capacity_tablespace_headroom_warning_pct: 20
+  capacity_tablespace_headroom_fail_pct: 10
+  capacity_tablespace_headroom_critical_pct: 5
+  capacity_datafile_headroom_warning_pct: 20
+  capacity_datafile_headroom_fail_pct: 10
+  capacity_datafile_headroom_critical_pct: 5
+  capacity_temp_used_warning_pct: 80
+  capacity_temp_used_fail_pct: 90
+  capacity_temp_used_critical_pct: 95
+  capacity_undo_used_warning_pct: 80
+  capacity_undo_used_fail_pct: 90
+  capacity_undo_used_critical_pct: 95
+  capacity_resource_limit_warning_pct: 80
+  capacity_resource_limit_fail_pct: 90
+  capacity_resource_limit_critical_pct: 95
+  capacity_fra_used_warning_pct: 80
+  capacity_fra_used_fail_pct: 90
+  capacity_fra_used_critical_pct: 95
+  capacity_top_segments_limit: 20
+  capacity_segment_large_warning_mb: 10240
+  capacity_segment_large_fail_mb: 51200

@@ -1,0 +1,33 @@
+check_id: capacity_resource_limits_headroom
+group_id: capacity
+title: Margen consolidado de límites de recursos
+description: Fotografía actual de capacidad sin AWR, ASH, DBA-HIST ni repositorio histórico interno.
+severity: WARNING
+collector:
+  type: capacity
+  source_view: V$RESOURCE_LIMIT
+  label: Margen consolidado de límites de recursos
+evaluator:
+  type: capacity
+  metric: capacity_resource_limits_headroom
+  resource_limit_warning_pct_policy: capacity_resource_limit_warning_pct
+  resource_limit_fail_pct_policy: capacity_resource_limit_fail_pct
+  resource_limit_critical_pct_policy: capacity_resource_limit_critical_pct
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar el peor margen actual frente a sessions, processes y transactions.
+  actions:
+    - Analizar la evidencia como snapshot actual de capacidad, no como forecast ni histórico interno.
+    - Validar crecimiento esperado con responsables de aplicación y ventanas de cambio aprobadas.
+    - Ajustar capacidad, límites o housekeeping solo mediante procedimientos soportados y controlados.
+  validation:
+    - Ejecutar nuevamente OraHealthCheck y confirmar que el margen reportado mejora o queda documentado.
+    - Verificar en diccionario Oracle que los tamaños, límites y estados reflejan el cambio aplicado.
+  owner: DBA
+  requires_window: false
+  outage_risk: low
+tags: [oracle, capacity, snapshot, sin_awr, sin_ash]

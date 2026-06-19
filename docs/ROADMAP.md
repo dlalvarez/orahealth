@@ -455,7 +455,7 @@ Antes de implementar checks nuevos de rendimiento y capacidad, Fase 4A reconcili
 Las fases posteriores quedan separadas así:
 
 - Fase 4B: rendimiento básico sin AWR por defecto.
-- Fase 4C: capacidad como snapshot actual sin histórico interno.
+- Fase 4C: capacidad como fotografía actual sin histórico interno.
 
 ### Objective
 
@@ -874,3 +874,9 @@ Quedan para fases futuras los perfiles específicos para RAC, ASM, configuracion
 Se implementa el grupo `performance` con 9 checks iniciales basados en vistas dinámicas actuales permitidas (`V$INSTANCE`, `V$SESSION`, `V$SESSION_LONGOPS`, `V$SYSSTAT`, `V$LIBRARYCACHE` y `V$SQL`). Esta fase excluye AWR, ASH, `DBA_HIST%`, `DBMS_WORKLOAD_REPOSITORY`, `DBA_ADVISOR`, `DBA_SQLTUNE`, SQL Monitor licenciado, vistas `X$`, SQLite y cualquier repositorio histórico interno.
 
 El foco principal queda en la fotografía actual de esperas por `WAIT_CLASS` y `EVENT`. Los segundos de espera agregados se documentan como segundos observados en la muestra actual, no como DB Time histórico. Los thresholds por `WAIT_CLASS` son configurables desde estándares, con `Idle` excluido por defecto y configuración `default` para wait classes no declaradas. El SQL actual se reporta como actividad presente y no como top SQL histórico. `capacity` continúa pendiente para una fase posterior.
+
+### Actualización Fase 4C - Capacity fotografía actual sin histórico interno
+
+Fase 4C queda implementada como fotografía actual de capacidad, sin proyección ni repositorio interno. Se agregan checks reales al grupo `capacity` para tamaño de base de datos, margen de tablespaces/datafiles, segmentos principales, TEMP, UNDO, límites de recursos y FRA/archive. `standalone_all` incluye `capacity`; `standalone_basic` permanece sin cambios.
+
+La implementación mantiene las restricciones de licenciamiento: no usa AWR, ASH, `DBA_HIST%`, `DBMS_WORKLOAD_REPOSITORY`, SQL Monitor licenciado, `DBA_ADVISOR`, `DBA_SQLTUNE`, SQLite ni vistas `X$`. Las tendencias futuras basadas en AWR solo podrán ser opcionales, explícitas y condicionadas a licenciamiento.

@@ -14,6 +14,7 @@ enabled_groups:
   - multitenant
   - operational_readiness
   - performance
+  - capacity
 standards:
   - oracle_19c
   - development

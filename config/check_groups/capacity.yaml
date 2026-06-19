@@ -1,4 +1,12 @@
 group_id: capacity
 name: Capacidad
-description: Grupo formal reservado para checks futuros de capacidad tipo snapshot actual, sin SQLite ni repositorio histórico interno. La cobertura adelantada permanece en sus grupos originales.
-checks: []
+description: Fotografía actual de capacidad y margen sin SQLite, AWR, ASH, DBA-HIST ni repositorio histórico interno.
+checks:
+  - capacity_database_size_snapshot
+  - capacity_tablespace_headroom
+  - capacity_datafile_headroom
+  - capacity_segments_top_size
+  - capacity_temp_capacity_snapshot
+  - capacity_undo_capacity_snapshot
+  - capacity_resource_limits_headroom
+  - capacity_fra_archive_headroom
