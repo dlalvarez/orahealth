@@ -238,3 +238,13 @@ La Fase 4C inicia la cobertura propia del grupo formal `capacity` con 8 checks r
 `capacity` se define como una fotografía actual de tamaño, uso, margen disponible, límite efectivo y riesgo de saturación actual. No reemplaza a `storage`, `oracle_resources` ni `io_redo_archive`: esos grupos mantienen validaciones puntuales, mientras `capacity` consolida margen y contexto de capacidad.
 
 La fase no introduce SQLite, no crea repositorio histórico interno, no usa AWR, no usa ASH, no usa `DBA_HIST%`, no usa `DBMS_WORKLOAD_REPOSITORY` y no usa vistas internas `X$`. TEMP y UNDO forman parte explícita del fotografía actual. Cualquier tendencia futura basada en AWR deberá ser opcional, declarada y condicionada a licenciamiento explícito.
+
+## 16. Actualización Fase 5A - ASM básico feature-aware
+
+La Fase 5A inicia el grupo formal `asm` con 8 checks reales: `asm_database_uses_asm`, `asm_database_files_on_asm`, `asm_diskgroup_inventory_db_view`, `asm_diskgroup_usage_db_view`, `asm_diskgroup_state_db_view`, `asm_diskgroup_free_headroom_db_view`, `asm_disk_status_db_view` y `asm_rebalance_operations_db_view`.
+
+ASM se evalúa desde la conexión de base de datos del target. No se conecta a la instancia ASM, no se requiere SYSASM ni usuario Grid y no se usan asmcmd, crsctl ni srvctl. La fase se enfoca en diskgroups y archivos ASM relevantes para la base evaluada: datafiles, tempfiles, redo logs, control files y FRA cuando aplique. Si ASM no está detectado, los checks quedan `SKIPPED` y no generan hallazgos ni penalización. `standalone_all` incluye `asm`; `standalone_basic` permanece sin `asm`. Standalone puede usar ASM y ASM no implica RAC. La conexión dedicada ASM/Grid queda pendiente para una fase avanzada futura.
+
+| Grupo | Existe | Checks implementados | Estado | Principales checks implementados | Pendiente |
+| --- | --- | ---: | --- | --- | --- |
+| `asm` | Sí | 8 | INICIADA 5A | `asm_database_uses_asm`, `asm_database_files_on_asm`, `asm_diskgroup_inventory_db_view`, `asm_diskgroup_usage_db_view`, `asm_diskgroup_state_db_view`, `asm_diskgroup_free_headroom_db_view`, `asm_disk_status_db_view`, `asm_rebalance_operations_db_view` | ASM avanzado con conexión dedicada/Grid, OCR/voting, ASM alert log, failgroups avanzados, compatibilidad avanzada y análisis completo de discos/storage si aplica. |

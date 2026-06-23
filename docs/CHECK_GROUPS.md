@@ -1677,3 +1677,18 @@ Checks implementados:
 - `capacity_fra_archive_margen`
 
 `capacity` no reemplaza a `storage`, `oracle_resources` ni `io_redo_archive`; consolida capacidad actual y margen sin duplicar el mismo hallazgo puntual. No introduce SQLite, no crea repositorio histórico interno y no usa AWR/ASH/`DBA_HIST%` por defecto. TEMP y UNDO quedan incluidos explícitamente en la fotografía de capacidad. Cualquier tendencia futura basada en AWR deberá ser opcional y condicionada a licenciamiento explícito.
+
+### Actualización Fase 5A para `asm`
+
+Desde Fase 5A el grupo `asm` existe con 8 checks reales y aplicabilidad feature-aware. Los checks son:
+
+- `asm_database_uses_asm`
+- `asm_database_files_on_asm`
+- `asm_diskgroup_inventory_db_view`
+- `asm_diskgroup_usage_db_view`
+- `asm_diskgroup_state_db_view`
+- `asm_diskgroup_free_headroom_db_view`
+- `asm_disk_status_db_view`
+- `asm_rebalance_operations_db_view`
+
+ASM se evalúa desde la conexión Oracle de la base de datos evaluada. No se conecta a la instancia ASM, no requiere SYSASM/Grid y no usa asmcmd, crsctl ni srvctl. La evaluación se centra en archivos ASM propios de la base, diskgroups relevantes, capacidad y estado observables desde la conexión actual, discos visibles y rebalance. Si no se detectan archivos de base sobre ASM, los checks quedan `SKIPPED` como no aplicables, sin hallazgos ni penalización. `standalone_all` incluye `asm` porque una base standalone puede residir sobre ASM; ASM no implica RAC. La conexión dedicada ASM/Grid queda reservada para una fase avanzada futura.

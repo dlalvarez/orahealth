@@ -1,0 +1,33 @@
+check_id: asm_database_files_on_asm
+group_id: asm
+title: Inventario de archivos de base en ASM
+description: ASM básico feature-aware evaluado desde la conexión Oracle de la base de datos, sin conexión dedicada ASM/Grid.
+severity: WARNING
+collector:
+  type: asm
+  source_view: V$DATAFILE/V$TEMPFILE/V$LOGFILE/V$CONTROLFILE/V$PARAMETER/V$RECOVERY_FILE_DEST
+  label: Inventario de archivos de base en ASM
+evaluator:
+  type: asm
+  metric: asm_database_files_on_asm
+applicability:
+  requires_feature: asm
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Inventariar archivos ASM realmente usados por la base evaluada.
+  actions:
+    - Revisar la evidencia desde la perspectiva de la base evaluada y confirmar los diskgroups realmente usados.
+    - No borrar archivos manualmente de ASM ni modificar discos sin procedimiento DBA/Grid/Storage aprobado.
+    - Para falta de espacio, evaluar ampliar el diskgroup, agregar discos o liberar espacio con procedimientos soportados y validados.
+    - Para estados anómalos, coordinar revisión con DBA, Grid Infrastructure y Storage según corresponda.
+  validation:
+    - Ejecutar nuevamente OraHealthCheck y confirmar que el check ASM queda dentro de umbrales o documentado.
+    - Validar en vistas dinámicas permitidas que el estado y la capacidad reflejan el cambio aplicado.
+  owner: Mixed
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, asm, feature-aware, conexion_base]

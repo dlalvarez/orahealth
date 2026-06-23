@@ -1,0 +1,39 @@
+check_id: asm_diskgroup_free_headroom_db_view
+group_id: asm
+title: Margen efectivo de diskgroups ASM
+description: ASM básico feature-aware evaluado desde la conexión Oracle de la base de datos, sin conexión dedicada ASM/Grid.
+severity: WARNING
+collector:
+  type: asm
+  source_view: V$ASM_DISKGROUP_STAT
+  label: Margen efectivo de diskgroups ASM
+evaluator:
+  type: asm
+  metric: asm_diskgroup_free_headroom_db_view
+  diskgroup_usable_file_warning_pct_policy: asm_diskgroup_usable_file_warning_pct
+  diskgroup_usable_file_fail_pct_policy: asm_diskgroup_usable_file_fail_pct
+  diskgroup_usable_file_critical_pct_policy: asm_diskgroup_usable_file_critical_pct
+  diskgroup_free_warning_pct_policy: asm_diskgroup_free_warning_pct
+  diskgroup_free_fail_pct_policy: asm_diskgroup_free_fail_pct
+  diskgroup_free_critical_pct_policy: asm_diskgroup_free_critical_pct
+applicability:
+  requires_feature: asm
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Reportar margen efectivo con USABLE_FILE_MB o FREE_MB como respaldo.
+  actions:
+    - Revisar la evidencia desde la perspectiva de la base evaluada y confirmar los diskgroups realmente usados.
+    - No borrar archivos manualmente de ASM ni modificar discos sin procedimiento DBA/Grid/Storage aprobado.
+    - Para falta de espacio, evaluar ampliar el diskgroup, agregar discos o liberar espacio con procedimientos soportados y validados.
+    - Para estados anómalos, coordinar revisión con DBA, Grid Infrastructure y Storage según corresponda.
+  validation:
+    - Ejecutar nuevamente OraHealthCheck y confirmar que el check ASM queda dentro de umbrales o documentado.
+    - Validar en vistas dinámicas permitidas que el estado y la capacidad reflejan el cambio aplicado.
+  owner: Mixed
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, asm, feature-aware, conexion_base]

@@ -1,0 +1,12 @@
+group_id: asm
+name: ASM
+description: ASM básico feature-aware desde la conexión de base de datos del target.
+checks:
+  - asm_database_uses_asm
+  - asm_database_files_on_asm
+  - asm_diskgroup_inventory_db_view
+  - asm_diskgroup_usage_db_view
+  - asm_diskgroup_state_db_view
+  - asm_diskgroup_free_headroom_db_view
+  - asm_disk_status_db_view
+  - asm_rebalance_operations_db_view

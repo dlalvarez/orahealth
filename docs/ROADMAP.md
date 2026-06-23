@@ -880,3 +880,7 @@ El foco principal queda en la fotografía actual de esperas por `WAIT_CLASS` y `
 Fase 4C queda implementada como fotografía actual de capacidad, sin proyección ni repositorio interno. Se agregan checks reales al grupo `capacity` para tamaño de base de datos, margen de tablespaces/datafiles, segmentos principales, TEMP, UNDO, límites de recursos y FRA/archive. `standalone_all` incluye `capacity`; `standalone_basic` permanece sin cambios.
 
 La implementación mantiene las restricciones de licenciamiento: no usa AWR, ASH, `DBA_HIST%`, `DBMS_WORKLOAD_REPOSITORY`, SQL Monitor licenciado, `DBA_ADVISOR`, `DBA_SQLTUNE`, SQLite ni vistas `X$`. Las tendencias futuras basadas en AWR solo podrán ser opcionales, explícitas y condicionadas a licenciamiento.
+
+### Nota Fase 5A - ASM básico feature-aware desde conexión de base de datos
+
+Fase 5A implementa el grupo real `asm` con checks iniciales feature-aware ejecutados desde la misma conexión Oracle de la base evaluada. Esta fase no se conecta a la instancia ASM, no requiere SYSASM ni usuario Grid, y no usa asmcmd, crsctl ni srvctl. El alcance se limita a archivos ASM realmente usados por el target, diskgroups relevantes, capacidad/estado observable, discos visibles y rebalance desde vistas dinámicas permitidas. Si ASM no se detecta, los checks quedan `SKIPPED` sin hallazgos ni penalización. `standalone_all` incluye `asm` porque una base standalone puede usar ASM y ASM no implica RAC; la conexión dedicada ASM/Grid queda fuera de alcance para una fase avanzada futura.
