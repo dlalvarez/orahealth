@@ -1,0 +1,34 @@
+check_id: asm_diskgroup_state_db_view
+group_id: asm
+title: Estado de diskgroups ASM desde la base
+description: ASM básico feature-aware evaluado desde la conexión Oracle de la base de datos, sin conexión dedicada ASM/Grid.
+severity: WARNING
+collector:
+  type: asm
+  source_view: V$ASM_DISKGROUP_STAT
+  label: Estado de diskgroups ASM desde la base
+evaluator:
+  type: asm
+  metric: asm_diskgroup_state_db_view
+  acceptable_diskgroup_states_policy: asm_acceptable_diskgroup_states
+applicability:
+  requires_feature: asm
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
+  requires:
+    database_connection: true
+remediation:
+  summary: Detectar estados anómalos en diskgroups usados por la base.
+  actions:
+    - Revisar la evidencia desde la perspectiva de la base evaluada y confirmar los diskgroups realmente usados.
+    - No borrar archivos manualmente de ASM ni modificar discos sin procedimiento DBA/Grid/Storage aprobado.
+    - Para falta de espacio, evaluar ampliar el diskgroup, agregar discos o liberar espacio con procedimientos soportados y validados.
+    - Para estados anómalos, coordinar revisión con DBA, Grid Infrastructure y Storage según corresponda.
+  validation:
+    - Ejecutar nuevamente OraHealthCheck y confirmar que el check ASM queda dentro de umbrales o documentado.
+    - Validar en vistas dinámicas permitidas que el estado y la capacidad reflejan el cambio aplicado.
+  owner: Mixed
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, asm, feature-aware, conexion_base]

@@ -15,6 +15,7 @@ enabled_groups:
   - operational_readiness
   - performance
   - capacity
+  - asm
 standards:
   - oracle_19c
   - development

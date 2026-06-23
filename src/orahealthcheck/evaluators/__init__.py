@@ -1,4 +1,5 @@
 from .alert_log import AlertLogEvaluator
+from .asm import AsmEvaluator
 from .empty_result_pass import EmptyResultPassEvaluator
 from .expected_value import ExpectedValueEvaluator
 from .not_empty_fail import NotEmptyFailEvaluator
@@ -19,6 +20,7 @@ from .storage import StorageEvaluator
 
 EVALUATORS = {
     "alert_log_family": AlertLogEvaluator(),
+    "asm": AsmEvaluator(),
     "threshold": ThresholdEvaluator(),
     "expected_value": ExpectedValueEvaluator(),
     "empty_result_pass": EmptyResultPassEvaluator(),

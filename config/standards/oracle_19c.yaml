@@ -105,3 +105,11 @@ policies:
   capacity_top_segments_limit: 20
   capacity_segment_large_warning_mb: 10240
   capacity_segment_large_fail_mb: 51200
+  asm_diskgroup_free_warning_pct: 20
+  asm_diskgroup_free_fail_pct: 10
+  asm_diskgroup_free_critical_pct: 5
+  asm_diskgroup_usable_file_warning_pct: 15
+  asm_diskgroup_usable_file_fail_pct: 10
+  asm_diskgroup_usable_file_critical_pct: 5
+  asm_acceptable_diskgroup_states: [CONNECTED, MOUNTED]
+  asm_disk_problem_statuses: [OFFLINE, FORCING, DROPPING, CLOSED, CLOSING, UNKNOWN, CANDIDATE, FORMER, CONFLICT]

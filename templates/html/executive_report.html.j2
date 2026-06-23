@@ -69,7 +69,7 @@
     <h2>Hallazgos Principales</h2>
     {% if findings %}
     <div class="table-wrap"><table>
-      <thead><tr><th>Estado</th><th>Grupo</th><th>Validación</th><th>Mensaje</th><th>Impacto / Severidad</th><th>Acción recomendada</th></tr></thead>
+      <thead><tr><th>Estado</th><th>Grupo</th><th>Validación</th><th>Mensaje</th><th>Severidad configurada</th><th>Acción recomendada</th></tr></thead>
       <tbody>{% for result in findings %}<tr><td>{{ badge(result.status.value) }}</td><td>{{ result.group_id | group_label }}<br><small>{{ result.group_id }}</small></td><td><div class="finding-title">{{ result.title | check_title }}</div><small>{{ result.check_id }}</small></td><td>{{ (result.message or result.error or result.skipped_reason) | friendly_message }}</td><td class="severity">{{ result.failure_severity | status_label }}</td><td>{{ result.remediation.summary or 'Revisar la evidencia de la validación y confirmar el impacto operativo.' }}</td></tr>{% endfor %}</tbody>
     </table></div>
     {% else %}<div class="positive">No hay hallazgos principales para reportar. El target está en estado saludable según el perfil ejecutado.</div>{% endif %}

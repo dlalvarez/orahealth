@@ -13,7 +13,7 @@ from orahealthcheck.utils.masking import mask_secrets
 STATUS_ORDER = {"CRITICAL": 0, "ERROR": 1, "FAIL": 2, "WARNING": 3, "INFO": 4, "PASS": 5, "SKIPPED": 6}
 ACTION_STATUSES = {"FAIL", "CRITICAL", "WARNING", "ERROR"}
 ALL_STATUSES = ("PASS", "INFO", "WARNING", "FAIL", "CRITICAL", "ERROR", "SKIPPED")
-OWNER_ORDER = ("DBA", "OS", "Seguridad", "Aplicación", "Otro")
+OWNER_ORDER = ("DBA", "OS", "Seguridad", "Aplicación", "Storage", "Mixto", "Otro")
 
 STATUS_LABELS = {
     "PASS": "Correcto",
@@ -75,6 +75,7 @@ FEATURE_LABELS = {
     "diagnostic_pack": "Diagnostic Pack",
     "awr": "AWR",
     "sysdba": "Conexión SYSDBA",
+    "asm": "ASM",
 }
 
 FEATURE_STATUS_LABELS = {
@@ -349,12 +350,15 @@ class HTMLReporter:
 
     def _group_corrective_actions(self, findings: list[Result]) -> dict[str, list[Result]]:
         grouped: dict[str, list[Result]] = {owner: [] for owner in OWNER_ORDER}
+        owner_labels = {
+            "Security": "Seguridad",
+            "Application": "Aplicación",
+            "App": "Aplicación",
+            "Mixed": "Mixto",
+        }
         for result in findings:
-            owner = str(result.remediation.get("owner") or "Otro")
-            if owner == "Security":
-                owner = "Seguridad"
-            if owner == "Application":
-                owner = "Aplicación"
+            raw_owner = str(result.remediation.get("owner") or "Otro")
+            owner = owner_labels.get(raw_owner, raw_owner)
             if owner not in grouped:
                 owner = "Otro"
             grouped[owner].append(result)
@@ -436,7 +440,7 @@ class HTMLReporter:
                 body.append(f"<div class='card'><span>{label}</span><strong>{value}</strong></div>")
             body.append("</div></section><section><h2>Hallazgos Principales</h2>")
             if findings:
-                body.append("<div class='table-wrap'><table><tr><th>Estado</th><th>Grupo</th><th>Validación</th><th>Mensaje</th><th>Severidad</th><th>Acción recomendada</th></tr>")
+                body.append("<div class='table-wrap'><table><tr><th>Estado</th><th>Grupo</th><th>Validación</th><th>Mensaje</th><th>Severidad configurada</th><th>Acción recomendada</th></tr>")
                 for result in findings:
                     msg = self._friendly_message(result.message or result.error or result.skipped_reason)
                     body.append(f"<tr><td>{badge(result.status.value)}</td><td>{esc(self._group_label(result.group_id))}<br><small>{esc(result.group_id)}</small></td><td>{esc(self._check_title(result.title))}<br><small>{esc(result.check_id)}</small></td><td>{esc(msg)}</td><td>{esc(self._status_label(result.failure_severity))}</td><td>{esc(result.remediation.get('summary') or 'Revisar evidencia.')}</td></tr>")
@@ -468,7 +472,7 @@ class HTMLReporter:
                 if group_summary:
                     body.append(f"<div class='card'><p><strong>Estado:</strong> No aplicable para este target</p><p><strong>group_id:</strong> {esc(group_summary.get('group_id'))}</p><p><strong>Feature requerida:</strong> {esc(group_summary.get('required_feature'))}</p><p><strong>Razón:</strong> {esc(self._friendly_message(group_summary.get('reason')))}</p><p><strong>Validaciones omitidas:</strong> {esc(group_summary.get('skipped_count'))}</p><p><strong>Detalle completo:</strong> Ver evidence_report.html</p></div>")
                     continue
-                body.append("<div class='table-wrap'><table><tr><th>check_id</th><th>Título</th><th>Grupo</th><th>Estado</th><th>Severidad</th><th>Mensaje</th><th>skipped_reason</th><th>error</th><th>duration_ms</th></tr>")
+                body.append("<div class='table-wrap'><table><tr><th>check_id</th><th>Título</th><th>Grupo</th><th>Estado</th><th>Severidad configurada</th><th>Mensaje</th><th>skipped_reason</th><th>error</th><th>duration_ms</th></tr>")
                 for result in group_results:
                     body.append(f"<tr><td>{esc(result.check_id)}</td><td>{esc(self._check_title(result.title))}</td><td>{esc(self._group_label(result.group_id))}</td><td>{badge(result.status.value)}</td><td>{esc(self._status_label(result.failure_severity))}</td><td>{esc(self._friendly_message(result.message))}</td><td>{esc(self._friendly_message(result.skipped_reason))}</td><td>{esc(result.error or '')}</td><td>{esc(result.duration_ms)}</td></tr>")
                 body.append("</table></div>")
@@ -487,7 +491,7 @@ class HTMLReporter:
                 body.append(f"<h3>{esc(self._group_label(group_id))} <small>{esc(group_id)}</small> ({len(group_results)} validación(es))</h3>")
                 for result in group_results:
                     msg = self._friendly_message(result.message or result.skipped_reason or result.error)
-                    body.append(f"<details class='evidence-item'><summary>{badge(result.status.value)} <strong>{esc(result.check_id)}</strong> <span>{esc(self._check_title(result.title))}</span> <small>{esc(msg)}</small></summary><div class='evidence-meta'><div><span>Grupo</span><strong>{esc(self._group_label(result.group_id))}</strong></div><div><span>group_id</span><strong>{esc(result.group_id)}</strong></div><div><span>Severidad</span><strong>{esc(self._status_label(result.failure_severity))}</strong></div><div><span>Duración</span><strong>{esc(result.duration_ms)} ms</strong></div></div>")
+                    body.append(f"<details class='evidence-item'><summary>{badge(result.status.value)} <strong>{esc(result.check_id)}</strong> <span>{esc(self._check_title(result.title))}</span> <small>{esc(msg)}</small></summary><div class='evidence-meta'><div><span>Grupo</span><strong>{esc(self._group_label(result.group_id))}</strong></div><div><span>group_id</span><strong>{esc(result.group_id)}</strong></div><div><span>Severidad configurada</span><strong>{esc(self._status_label(result.failure_severity))}</strong></div><div><span>Duración</span><strong>{esc(result.duration_ms)} ms</strong></div></div>")
                     if result.skipped_reason:
                         body.append(f"<p><strong>skipped_reason:</strong> {esc(self._friendly_message(result.skipped_reason))}</p>")
                     if result.error:
@@ -509,7 +513,7 @@ class HTMLReporter:
                 for owner, owner_results in corrective_actions.items():
                     body.append(f"<h3>Responsable: {esc(owner)}</h3>")
                     for result in owner_results:
-                        body.append(f"<article><p>{badge(result.status.value)} <strong>Severidad:</strong> {esc(self._status_label(result.failure_severity))} <strong>Validación afectada:</strong> {esc(result.check_id)} <strong>Requiere ventana:</strong> {esc(result.remediation.get('requires_window', False))} <strong>Riesgo de indisponibilidad:</strong> {esc(result.remediation.get('outage_risk', 'desconocido'))}</p><h4>{esc(self._check_title(result.title))}</h4><p><strong>Resumen del problema:</strong> {esc(result.remediation.get('summary') or result.message or result.error)}</p><strong>Acciones recomendadas:</strong><ul>")
+                        body.append(f"<article><p>{badge(result.status.value)} <strong>Severidad configurada:</strong> {esc(self._status_label(result.failure_severity))} <strong>Validación afectada:</strong> {esc(result.check_id)} <strong>Requiere ventana:</strong> {esc(result.remediation.get('requires_window', False))} <strong>Riesgo de indisponibilidad:</strong> {esc(result.remediation.get('outage_risk', 'desconocido'))}</p><h4>{esc(self._check_title(result.title))}</h4><p><strong>Resumen del problema:</strong> {esc(result.remediation.get('summary') or result.message or result.error)}</p><strong>Acciones recomendadas:</strong><ul>")
                         actions = result.remediation.get("actions") or ["Revisar la evidencia y definir un plan de remediación con el responsable."]
                         for action in actions:
                             body.append(f"<li>{esc(action)}</li>")

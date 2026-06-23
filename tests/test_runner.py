@@ -1381,3 +1381,34 @@ def test_default_profile_users_excludes_sys_system_and_reports_application_users
     assert result["status"] == "WARNING"
     assert result["evidence"]["affected_count"] == 3
     assert {row["username"] for row in result["evidence"]["rows"]} == {"MONITOREO", "PROMETHEUS", "PRUEBA"}
+
+
+def test_asm_feature_owner_and_severity_labels_render_clearly(tmp_path):
+    from orahealthcheck.reports.html_reporter import HTMLReporter
+    from orahealthcheck.models import Inventory, Result, ResultStatus, Target
+
+    reporter = HTMLReporter(Path("templates/html"))
+    target = Target("asm_target", "ASM Target", "test", "standalone", "standalone_all")
+    inventory = Inventory("asm_target", "standalone", "test", features={"asm": {"detected": True, "status": "detected", "reason": "ASM detectado"}})
+    result = Result(
+        "asm_diskgroup_usage_db_view",
+        "asm",
+        ResultStatus.CRITICAL,
+        "Uso actual de diskgroups ASM desde la base",
+        failure_severity="WARNING",
+        message="Espacio libre mínimo ASM 0.0% bajo umbrales configurados",
+        evidence={"rows": [{"name": "DATA", "free_pct": 0, "usable_pct": 0}]},
+        remediation={"summary": "Riesgo de espacio ASM", "actions": ["Coordinar con DBA y almacenamiento"], "owner": "Mixed", "requires_window": False, "outage_risk": "medium"},
+    )
+
+    reporter.generate(tmp_path, target, inventory, [result], {"score": 0, "global_status": "CRITICAL"})
+    for report_name in ["executive_report.html", "technical_report.html", "corrective_actions.html", "evidence_report.html"]:
+        html = (tmp_path / report_name).read_text(encoding="utf-8")
+        assert "ASM" in html
+        assert "Asm" not in html
+        assert "Severidad configurada" in html
+    corrective_html = (tmp_path / "corrective_actions.html").read_text(encoding="utf-8")
+    assert "Responsable: Mixto" in corrective_html
+    assert "Responsable: Otro" not in corrective_html
+    assert "Severidad configurada:</strong> Advertencia" in corrective_html
+    assert "CRITICAL / Crítico" in corrective_html
