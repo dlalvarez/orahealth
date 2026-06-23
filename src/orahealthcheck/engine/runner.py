@@ -2374,11 +2374,43 @@ class CheckRunner:
 
     def _discover_asm_inventory(self, connector: Any, database: dict[str, Any]) -> dict[str, Any]:
         asm = self._default_asm_inventory(database)
-        rows = self._query_rows(connector, "archivos ASM usados por la base", """
-            select 'DATAFILE' as file_type, file# as file_id, name as file_name, null as tablespace_name from v$datafile
-            union all
-            select 'TEMPFILE' as file_type, file# as file_id, name as file_name, null as tablespace_name from v$tempfile
-            union all
+        datafile_rows = [
+            dict(row, file_type="DATAFILE")
+            for row in (database.get("storage", {}) if isinstance(database.get("storage"), dict) else {}).get("datafiles", [])
+            if isinstance(row, dict)
+        ]
+        if not datafile_rows:
+            datafile_rows, datafile_error = self._query_rows_with_error(connector, "datafiles ASM con tablespace", """
+                select 'DATAFILE' as file_type, file_id, file_name, tablespace_name
+                from dba_data_files
+                order by tablespace_name, file_id
+            """, log_warning=False)
+            if datafile_error:
+                datafile_rows = self._query_rows(connector, "datafiles ASM fallback", """
+                    select 'DATAFILE' as file_type, file# as file_id, name as file_name, null as tablespace_name
+                    from v$datafile
+                    order by file#
+                """)
+
+        tempfile_rows = [
+            dict(row, file_type="TEMPFILE")
+            for row in (database.get("storage", {}) if isinstance(database.get("storage"), dict) else {}).get("tempfiles", [])
+            if isinstance(row, dict)
+        ]
+        if not tempfile_rows:
+            tempfile_rows, tempfile_error = self._query_rows_with_error(connector, "tempfiles ASM con tablespace", """
+                select 'TEMPFILE' as file_type, file_id, file_name, tablespace_name
+                from dba_temp_files
+                order by tablespace_name, file_id
+            """, log_warning=False)
+            if tempfile_error:
+                tempfile_rows = self._query_rows(connector, "tempfiles ASM fallback", """
+                    select 'TEMPFILE' as file_type, file# as file_id, name as file_name, null as tablespace_name
+                    from v$tempfile
+                    order by file#
+                """)
+
+        rows = datafile_rows + tempfile_rows + self._query_rows(connector, "redo y controlfiles ASM usados por la base", """
             select 'REDO' as file_type, group# as file_id, member as file_name, null as tablespace_name from v$logfile
             union all
             select 'CONTROLFILE' as file_type, null as file_id, name as file_name, null as tablespace_name from v$controlfile

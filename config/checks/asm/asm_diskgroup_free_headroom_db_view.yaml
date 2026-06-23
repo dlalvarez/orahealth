@@ -24,12 +24,16 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Reportar margen efectivo con USABLE_FILE_MB o FREE_MB como respaldo.
+  summary: Uno o más diskgroups ASM utilizados por la base no tienen margen efectivo suficiente para crecimiento. El margen debe evaluarse preferentemente con USABLE_FILE_MB, porque refleja la capacidad realmente utilizable considerando la redundancia ASM; cuando este valor no está disponible, el check utiliza FREE_MB como respaldo y lo deja indicado en la evidencia.
   actions:
-    - Revisar la evidencia desde la perspectiva de la base evaluada y confirmar los diskgroups realmente usados.
-    - No borrar archivos manualmente de ASM ni modificar discos sin procedimiento DBA/Grid/Storage aprobado.
-    - Para falta de espacio, evaluar ampliar el diskgroup, agregar discos o liberar espacio con procedimientos soportados y validados.
-    - Para estados anómalos, coordinar revisión con DBA, Grid Infrastructure y Storage según corresponda.
+    - Revisar USABLE_FILE_MB, USABLE_PCT, FREE_MB y REQUIRED_MIRROR_FREE_MB del diskgroup afectado.
+    - Confirmar si el margen disponible soporta el crecimiento esperado de datafiles, tempfiles, redo logs, control files y FRA cuando aplique.
+    - Revisar los límites MAXSIZE y AUTOEXTEND de los archivos que residen en el diskgroup.
+    - Coordinar con DBA y almacenamiento una ampliación controlada del diskgroup cuando el margen sea insuficiente.
+    - Evitar basar la decisión únicamente en FREE_MB cuando ASM use redundancia NORMAL o HIGH.
+    - No eliminar archivos ni discos manualmente para recuperar espacio.
+    - Validar que cualquier expansión conserve la redundancia, failgroups y diseño soportado del diskgroup.
+    - Repetir el health check después de la acción.
   validation:
     - Ejecutar nuevamente OraHealthCheck y confirmar que el check ASM queda dentro de umbrales o documentado.
     - Validar en vistas dinámicas permitidas que el estado y la capacidad reflejan el cambio aplicado.

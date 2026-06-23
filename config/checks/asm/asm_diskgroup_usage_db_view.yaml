@@ -21,12 +21,16 @@ applies_to:
   requires:
     database_connection: true
 remediation:
-  summary: Evaluar capacidad actual de diskgroups ASM relevantes para la base.
+  summary: Uno o más diskgroups ASM utilizados por la base presentan espacio libre por debajo de los umbrales configurados. Si el diskgroup se queda sin espacio, pueden fallar la extensión de datafiles, la creación de archivos Oracle, las operaciones temporales, la generación de redo o procesos internos que requieran crecimiento.
   actions:
-    - Revisar la evidencia desde la perspectiva de la base evaluada y confirmar los diskgroups realmente usados.
-    - No borrar archivos manualmente de ASM ni modificar discos sin procedimiento DBA/Grid/Storage aprobado.
-    - Para falta de espacio, evaluar ampliar el diskgroup, agregar discos o liberar espacio con procedimientos soportados y validados.
-    - Para estados anómalos, coordinar revisión con DBA, Grid Infrastructure y Storage según corresponda.
+    - Identificar en la evidencia el diskgroup afectado y confirmar FREE_MB, FREE_PCT, USABLE_FILE_MB y USABLE_PCT.
+    - Validar con el equipo DBA y de almacenamiento el crecimiento actual y esperado de los archivos de la base.
+    - Revisar qué archivos Oracle consumen espacio dentro del diskgroup mediante procedimientos soportados.
+    - Evaluar ampliar el diskgroup agregando capacidad o discos según el diseño de almacenamiento aprobado.
+    - Evaluar liberar espacio únicamente mediante procedimientos Oracle soportados y después de validar que los archivos sean obsoletos o prescindibles.
+    - No eliminar manualmente archivos del diskgroup ni manipular discos ASM sin coordinación con DBA/Grid/Storage.
+    - Confirmar el estado de los discos y operaciones de rebalance antes y después de cualquier cambio.
+    - Volver a ejecutar OraHealthCheck después de la remediación.
   validation:
     - Ejecutar nuevamente OraHealthCheck y confirmar que el check ASM queda dentro de umbrales o documentado.
     - Validar en vistas dinámicas permitidas que el estado y la capacidad reflejan el cambio aplicado.
