@@ -7,6 +7,8 @@ class PatchingEvaluator:
     PROBLEM_STATUSES = {"WITH ERRORS", "FAILED", "ERROR", "FAILURE"}
     OK_STATUSES = {"SUCCESS", "SUCCESSFUL", "COMPLETED"}
     WARNING_STATUSES = {"", "IN PROGRESS", "UNKNOWN", "PENDING"}
+    REGISTRY_INFORMATIONAL_STATUSES = {"VALID", "OPTION OFF", "REMOVED"}
+    REGISTRY_WARNING_STATUSES = {"LOADED", "LOADING", "UPGRADING", "DOWNGRADING"}
 
     def evaluate(self, evidence: Any, config: dict[str, Any]) -> tuple[ResultStatus, str]:
         if not isinstance(evidence, dict):
@@ -36,13 +38,13 @@ class PatchingEvaluator:
             return ResultStatus.PASS, "No se detectaron errores en DBA_REGISTRY_SQLPATCH"
         if metric == "patching_registry_components_status":
             rows = self._rows(evidence, "components") or self._rows(evidence, "rows")
-            invalid = [r for r in rows if str(r.get("status") or "").upper() == "INVALID"]
-            nonvalid = [r for r in rows if str(r.get("status") or "").upper() not in {"VALID", "INVALID"}]
+            invalid = [r for r in rows if self._status(r) == "INVALID"]
+            warning = [r for r in rows if self._status(r) in self.REGISTRY_WARNING_STATUSES or self._status(r) not in self.REGISTRY_INFORMATIONAL_STATUSES | {"INVALID"}]
             if invalid:
                 return ResultStatus.FAIL, f"Se detectaron {len(invalid)} componentes de registry en estado INVALID"
-            if nonvalid:
-                return ResultStatus.WARNING, f"Se detectaron {len(nonvalid)} componentes de registry en estados que requieren revisión"
-            return ResultStatus.PASS, "Todos los componentes de registry observados están VALID"
+            if warning:
+                return ResultStatus.WARNING, f"Se detectaron {len(warning)} componentes de registry en estados intermedios o desconocidos que requieren revisión"
+            return ResultStatus.PASS, "Los componentes de registry no muestran estados problemáticos; OPTION OFF y REMOVED se reportan solo como evidencia"
         if metric == "patching_invalid_objects_prepatch":
             invalid = int(evidence.get("application_invalid_count") or evidence.get("invalid_count") or 0)
             fail = int(config.get("invalid_objects_fail", 20) or 20)

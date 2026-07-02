@@ -1778,7 +1778,7 @@ class CheckRunner:
         database = database if isinstance(database, dict) else {}
         sqlpatch = database.get("sqlpatch_rows") if isinstance(database.get("sqlpatch_rows"), list) else []
         if healthy_defaults and not sqlpatch:
-            sqlpatch = [{"patch_id": 0, "patch_uid": 0, "action": "APPLY", "status": "SUCCESS", "action_time": "2026-01-01", "description": "Inventario mock saludable", "source_version": database.get("version", "19.0.0.0.0"), "target_version": database.get("version", "19.0.0.0.0"), "bundle_series": None, "ru_logfile": None}]
+            sqlpatch = [{"patch_id": 0, "patch_uid": 0, "action": "APPLY", "status": "SUCCESS", "action_time": "2026-01-01", "description": "Inventario mock saludable", "source_version": database.get("version", "19.0.0.0.0"), "target_version": database.get("version", "19.0.0.0.0")}]
         components = database.get("registry_components") if isinstance(database.get("registry_components"), list) else []
         if healthy_defaults and not components:
             components = [{"comp_id": "CATALOG", "comp_name": "Oracle Database Catalog Views", "version": database.get("version", "19.0.0.0.0"), "status": "VALID", "modified": None}]
@@ -1800,7 +1800,7 @@ class CheckRunner:
         """, log_warning=False)
         patching["sqlpatch_rows"], sqlpatch_error = self._query_rows_with_error(connector, "inventario SQL patch", """
             select patch_id, patch_uid, action, status, action_time, description,
-                   source_version, target_version, bundle_series, logfile as ru_logfile
+                   source_version, target_version
             from dba_registry_sqlpatch
             order by action_time desc, patch_id
         """, log_warning=False)
@@ -1820,7 +1820,7 @@ class CheckRunner:
         errors = {k: v for k, v in {"product_components": pc_error, "sqlpatch_rows": sqlpatch_error, "registry_components": reg_error, "invalid_objects": inv_error}.items() if v}
         if str(inventory.get("cdb") or "NO").upper() == "YES":
             patching["pdb_sqlpatch_rows"], pdb_error = self._query_rows_with_error(connector, "SQL patch por PDB", """
-                select con_id, patch_id, patch_uid, action, status, action_time, description, source_version, target_version, bundle_series
+                select con_id, patch_id, patch_uid, action, status, action_time, description, source_version, target_version
                 from cdb_registry_sqlpatch
                 order by con_id, action_time desc, patch_id
             """, log_warning=False)
@@ -1844,7 +1844,19 @@ class CheckRunner:
             return evidence
         if metric == "patching_registry_components_status":
             rows = patching.get("registry_components") or []
-            evidence.update({"components": rows, "component_count": len(rows), "invalid_count": len([r for r in rows if str(r.get('status') or '').upper() == 'INVALID']), "collection_error": errors.get("registry_components")})
+            statuses = [str(r.get("status") or "").upper() for r in rows]
+            warning_statuses = {"LOADED", "LOADING", "UPGRADING", "DOWNGRADING"}
+            informational_statuses = {"OPTION OFF", "REMOVED"}
+            evidence.update({
+                "components": rows,
+                "component_count": len(rows),
+                "invalid_count": statuses.count("INVALID"),
+                "warning_count": len([s for s in statuses if s in warning_statuses or s not in {"VALID", "INVALID", *informational_statuses}]),
+                "informational_count": len([s for s in statuses if s in informational_statuses]),
+                "option_off_count": statuses.count("OPTION OFF"),
+                "removed_count": statuses.count("REMOVED"),
+                "collection_error": errors.get("registry_components"),
+            })
             return evidence
         if metric == "patching_invalid_objects_prepatch":
             rows = patching.get("invalid_objects") or []

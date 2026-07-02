@@ -100,3 +100,71 @@ def test_patching_runner_evidence_for_non_cdb_skips_pdb_check():
     inv = Inventory("t1", "standalone", "dev", database={"cdb": "NO", "patching": runner._default_patching_inventory({}, healthy_defaults=True)}, features={"multitenant": {"detected": False, "status": "not_detected", "reason": "No CDB"}})
     result = runner._run_check(config["checks"]["patching_pdb_sqlpatch_status"], config["targets"]["example_standalone"], inv)
     assert result.status == ResultStatus.SKIPPED
+
+class _SqlpatchWithoutBundleSeriesConnector:
+    def __init__(self):
+        self.queries = []
+
+    def query(self, sql):
+        normalized = " ".join(sql.lower().split())
+        self.queries.append(normalized)
+        assert "bundle_series" not in normalized
+        if "from product_component_version" in normalized:
+            return [{"product": "Oracle Database", "version": "19.0.0.0.0", "status": "Production"}]
+        if "from dba_registry_sqlpatch" in normalized:
+            return [{"patch_id": 123, "patch_uid": 456, "action": "APPLY", "status": "SUCCESS", "action_time": "2026-01-01", "description": "RU de prueba", "source_version": "19.0.0.0.0", "target_version": "19.0.0.0.0"}]
+        if "from dba_registry" in normalized:
+            return [{"comp_id": "CATALOG", "comp_name": "Oracle Database Catalog Views", "version": "19.0.0.0.0", "status": "VALID", "modified": None}]
+        if "from dba_objects" in normalized:
+            return []
+        return []
+
+
+def test_patching_sqlpatch_collection_does_not_require_bundle_series():
+    config = ConfigLoader("config").load_all()
+    runner = CheckRunner(config)
+    connector = _SqlpatchWithoutBundleSeriesConnector()
+    discovered = runner._discover_patching_inventory(connector, {"cdb": "NO", "version": "19.0.0.0.0"})["patching"]
+    assert discovered["collection_errors"] == {}
+    assert discovered["sqlpatch_rows"][0]["patch_id"] == 123
+    assert all("bundle_series" not in query for query in connector.queries)
+
+    database = {"patching": discovered, "version": "19.0.0.0.0"}
+    status_evidence = runner._build_patching_evidence(config["checks"]["patching_registry_sqlpatch_status"], database)
+    errors_evidence = runner._build_patching_evidence(config["checks"]["patching_registry_sqlpatch_errors"], database)
+    consistency_evidence = runner._build_patching_evidence(config["checks"]["patching_datapatch_inventory_consistency"], database)
+    assert EVALUATORS["patching"].evaluate(status_evidence, config["checks"]["patching_registry_sqlpatch_status"].evaluator)[0] == ResultStatus.INFO
+    assert EVALUATORS["patching"].evaluate(errors_evidence, config["checks"]["patching_registry_sqlpatch_errors"].evaluator)[0] == ResultStatus.PASS
+    assert EVALUATORS["patching"].evaluate(consistency_evidence, config["checks"]["patching_datapatch_inventory_consistency"].evaluator)[0] == ResultStatus.PASS
+
+
+def test_patching_registry_components_option_off_removed_are_informational():
+    ev = EVALUATORS["patching"]
+    evidence = {
+        "metric": "patching_registry_components_status",
+        "components": [
+            {"comp_id": "CATALOG", "status": "VALID"},
+            {"comp_id": "CATPROC", "status": "VALID"},
+            {"comp_id": "RAC", "comp_name": "Oracle Real Application Clusters", "status": "OPTION OFF"},
+            {"comp_id": "OLD", "status": "REMOVED"},
+        ],
+    }
+    assert ev.evaluate(evidence, {"metric": "patching_registry_components_status"})[0] == ResultStatus.PASS
+
+
+def test_patching_registry_components_intermediate_state_warns():
+    ev = EVALUATORS["patching"]
+    assert ev.evaluate({"metric": "patching_registry_components_status", "components": [{"comp_id": "JAVAVM", "status": "LOADING"}]}, {"metric": "patching_registry_components_status"})[0] == ResultStatus.WARNING
+
+
+def test_patching_registry_component_evidence_counts_option_off():
+    config = ConfigLoader("config").load_all()
+    runner = CheckRunner(config)
+    database = {"patching": {"registry_components": [{"comp_id": "CATALOG", "status": "VALID"}, {"comp_id": "RAC", "status": "OPTION OFF"}], "collection_errors": {}}}
+    evidence = runner._build_patching_evidence(config["checks"]["patching_registry_components_status"], database)
+    assert evidence["component_count"] == 2
+    assert evidence["invalid_count"] == 0
+    assert evidence["warning_count"] == 0
+    assert evidence["informational_count"] == 1
+    assert evidence["option_off_count"] == 1
+    assert evidence["removed_count"] == 0
