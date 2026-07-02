@@ -7,6 +7,7 @@ from .oracle_config import OracleConfigEvaluator
 from .oracle_security import OracleSecurityEvaluator
 from .oracle_resources import OracleResourcesEvaluator
 from .performance import PerformanceEvaluator
+from .patching import PatchingEvaluator
 from .capacity import CapacityEvaluator
 from .dataguard import DataGuardEvaluator
 from .io_redo_archive import IoRedoArchiveEvaluator
@@ -30,6 +31,7 @@ EVALUATORS = {
     "oracle_security": OracleSecurityEvaluator(),
     "oracle_resources": OracleResourcesEvaluator(),
     "performance": PerformanceEvaluator(),
+    "patching": PatchingEvaluator(),
     "capacity": CapacityEvaluator(),
     "dataguard": DataGuardEvaluator(),
     "io_redo_archive": IoRedoArchiveEvaluator(),

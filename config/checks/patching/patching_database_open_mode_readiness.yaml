@@ -1,0 +1,28 @@
+check_id: patching_database_open_mode_readiness
+group_id: patching
+title: Modo de apertura para readiness de patching SQL
+description: Validación SQL-first de readiness de patching de base de datos Oracle. No aplica parches, no compara ambientes y no usa fuentes licenciadas.
+severity: WARNING
+collector:
+  type: patching
+  source_view: V$DATABASE / V$INSTANCE
+  label: Modo de apertura para readiness de patching SQL
+evaluator:
+  type: patching
+  metric: patching_database_open_mode_readiness
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY, MOUNTED]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la evidencia de patching con el equipo DBA antes de una ventana aprobada.
+  actions:
+    - Revisar las vistas de registry y SQL patch correspondientes al hallazgo.
+    - Confirmar el último ciclo de patching con el equipo DBA responsable.
+    - Validar componentes u objetos inválidos antes de la ventana y documentar excepciones.
+    - Ejecutar acciones correctivas solo bajo procedimiento oficial, ventana aprobada y respaldo o rollback definido.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, patching, readiness, sql-first]

@@ -1,0 +1,12 @@
+group_id: patching
+name: Patching readiness
+description: Readiness SQL-first de patching de base de datos Oracle sin aplicar parches ni comparar ambientes.
+checks:
+  - patching_database_version
+  - patching_registry_sqlpatch_status
+  - patching_registry_sqlpatch_errors
+  - patching_registry_components_status
+  - patching_invalid_objects_prepatch
+  - patching_datapatch_inventory_consistency
+  - patching_database_open_mode_readiness
+  - patching_pdb_sqlpatch_status

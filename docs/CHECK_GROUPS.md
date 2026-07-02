@@ -1716,3 +1716,30 @@ Pendiente:
 - Evidencia externa mediante herramientas operativas si se decide en fases futuras.
 
 
+
+---
+
+## Grupo: patching
+
+### Propósito
+
+Evaluar el estado observable de patching y readiness básico de una base de datos Oracle desde SQL, sin aplicar parches ni orquestar ventanas de mantenimiento.
+
+### Alcance Fase 6A
+
+El grupo `patching` incluye 8 checks reales:
+
+- `patching_database_version`: reporta versión observable de instancia, base y componentes.
+- `patching_registry_sqlpatch_status`: inventaria entradas de `DBA_REGISTRY_SQLPATCH`.
+- `patching_registry_sqlpatch_errors`: detecta estados problemáticos en SQL patch registry.
+- `patching_registry_components_status`: valida componentes registrados en `DBA_REGISTRY`.
+- `patching_invalid_objects_prepatch`: reporta objetos inválidos preexistentes relevantes para diferenciar hallazgos antes de una ventana.
+- `patching_datapatch_inventory_consistency`: evalúa consistencia observable del inventario SQL patch sin compararlo contra herramientas externas.
+- `patching_database_open_mode_readiness`: reporta si el modo de apertura permite evaluación SQL normal de patching.
+- `patching_pdb_sqlpatch_status`: en CDB, revisa evidencia SQL patch por PDB de forma feature-aware con `multitenant`.
+
+### Límites
+
+Esta fase no ejecuta `opatch`, `opatchauto`, `datapatch`, `dgmgrl` ni comandos externos. Tampoco usa AWR, ASH, `DBA_HIST%`, `X$` ni fuentes internas/licenciadas. No valida DRP, no homologa ambientes y no compara origen contra destino.
+
+Los checks de inventario informativo no deben generar acciones correctivas cuando quedan en `INFO`; los checks `SKIPPED` tampoco deben generar hallazgos ni acciones.
