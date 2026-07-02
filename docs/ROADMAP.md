@@ -894,3 +894,13 @@ Estado: implementada. Se crea el grupo `dataguard` con 8 checks reales para conf
 Estado: implementada. El grupo `dataguard` se amplía de 8 a 16 checks reales, manteniendo aplicabilidad `standby_configuration` para que bases sin standby queden omitidas sin hallazgos, acciones correctivas ni penalización. La fase agrega readiness SQL básico para Broker, FSFO, Observer, procesos gestionados, switchover, consistencia de protección y transporte redo hacia standby.
 
 Broker, FSFO y Observer se evalúan solo cuando hay evidencia SQL y aplicabilidad. Broker no habilitado y FSFO no habilitado no son fallos automáticos. No se invocan herramientas externas de Broker ni fuentes de packs diagnósticos; tampoco se usan AWR, ASH, DBA_HIST ni X$.
+
+---
+
+## Actualización roadmap - Fase 6A implementada
+
+Fase 6A implementa `patching` como readiness SQL-first de base de datos Oracle. El objetivo es reportar y evaluar evidencia observable de versión, registry SQL patch, errores SQL patch, componentes de registry, objetos inválidos prepatch, consistencia básica del inventario SQL patch, modo de apertura y estado SQL patch por PDB en CDB.
+
+Esta fase no aplica parches, no ejecuta `opatch`, `opatchauto`, `datapatch` ni otros comandos externos, no modifica Oracle Home/Grid Home, no valida DRP, no homologa ambientes y no compara origen contra destino. Tampoco usa AWR, ASH, `DBA_HIST%` ni `X$`.
+
+Decisión rectora: la línea DRP / `drp_precheck_compare` queda fuera de alcance de OraHealthCheck porque corresponde a validación u homologación de ambientes y no al health check de una base de datos. OraHealthCheck debe mantenerse como herramienta de salud/readiness de base de datos, no como OraParity ni como orquestador de parchado.

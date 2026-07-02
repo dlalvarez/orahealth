@@ -448,4 +448,4 @@ def test_standalone_all_profile_includes_rac_and_operational_readiness_without_c
     assert "dataguard" in standalone_all.enabled_groups
     assert "performance" in standalone_all.enabled_groups
     assert "capacity" in standalone_all.enabled_groups
-    assert "patching" not in standalone_all.enabled_groups
+    assert "patching" in standalone_all.enabled_groups

@@ -258,3 +258,20 @@ Implementada la primera cobertura real del grupo `dataguard` con 8 checks: detec
 Implementada la ampliación avanzada parcial del grupo `dataguard`: pasa de 8 a 16 checks reales. Se conservan los checks básicos de 5B.1 y se agregan validaciones feature-aware para Broker, FSFO, Observer, procesos Data Guard, readiness básico de switchover, consistencia de protección y servicios de transporte redo hacia standby.
 
 La cobertura continúa limitada estrictamente a configuraciones con bases standby reales. En bases sin standby, todos los checks `dataguard` quedan SKIPPED. Broker y FSFO son opcionales por defecto; no estar habilitados no genera FAIL automático. Las consultas usan vistas SQL estándar disponibles de forma defensiva y no usan AWR, ASH, DBA_HIST ni X$.
+
+## Actualización Fase 6A - Patching readiness de base de datos Oracle
+
+La Fase 6A queda implementada con el grupo `patching` y 8 checks reales SQL-first orientados al estado observable de patching y readiness básico de base de datos Oracle:
+
+- `patching_database_version`
+- `patching_registry_sqlpatch_status`
+- `patching_registry_sqlpatch_errors`
+- `patching_registry_components_status`
+- `patching_invalid_objects_prepatch`
+- `patching_datapatch_inventory_consistency`
+- `patching_database_open_mode_readiness`
+- `patching_pdb_sqlpatch_status`
+
+El grupo se integra en `standalone_all` y no se integra en `standalone_basic`. Esta fase no aplica parches, no modifica Oracle Home ni Grid Home, no ejecuta comandos externos de parchado, no valida DRP, no homologa ambientes y no compara origen contra destino. La evaluación usa vistas estándar SQL de base de datos, maneja vistas faltantes o privilegios insuficientes sin traceback y evita fuentes licenciadas o internas como AWR, ASH, `DBA_HIST%` y `X$`.
+
+La línea DRP / `drp_precheck_compare` queda fuera de alcance de OraHealthCheck porque corresponde a validación u homologación de ambientes y no al health check de una base de datos. Esa decisión evita confundir OraHealthCheck con OraParity o herramientas de homologación.

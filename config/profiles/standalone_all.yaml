@@ -17,6 +17,7 @@ enabled_groups:
   - capacity
   - asm
   - dataguard
+  - patching
 standards:
   - oracle_19c
   - development

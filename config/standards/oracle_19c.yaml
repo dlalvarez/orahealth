@@ -122,3 +122,6 @@ policies:
   dataguard_broker_required: false
   dataguard_fsfo_required: false
   dataguard_observer_required_when_fsfo_enabled: true
+  patching_invalid_objects_warning: 1
+  patching_invalid_objects_fail: 20
+  patching_sqlpatch_empty_inventory_status: INFO

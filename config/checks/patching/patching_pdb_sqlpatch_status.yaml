@@ -1,0 +1,30 @@
+check_id: patching_pdb_sqlpatch_status
+group_id: patching
+title: Estado SQL patch por PDB
+description: Validación SQL-first de readiness de patching de base de datos Oracle. No aplica parches, no compara ambientes y no usa fuentes licenciadas.
+severity: FAIL
+collector:
+  type: patching
+  source_view: CDB_REGISTRY_SQLPATCH / V$CONTAINERS / V$PDBS
+  label: Estado SQL patch por PDB
+evaluator:
+  type: patching
+  metric: patching_pdb_sqlpatch_status
+applicability:
+  requires_feature: multitenant
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY, MOUNTED]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la evidencia de patching con el equipo DBA antes de una ventana aprobada.
+  actions:
+    - Revisar las vistas de registry y SQL patch correspondientes al hallazgo.
+    - Confirmar el último ciclo de patching con el equipo DBA responsable.
+    - Validar componentes u objetos inválidos antes de la ventana y documentar excepciones.
+    - Ejecutar acciones correctivas solo bajo procedimiento oficial, ventana aprobada y respaldo o rollback definido.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, patching, readiness, sql-first]
