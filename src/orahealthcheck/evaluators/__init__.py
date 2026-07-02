@@ -8,6 +8,7 @@ from .oracle_security import OracleSecurityEvaluator
 from .oracle_resources import OracleResourcesEvaluator
 from .performance import PerformanceEvaluator
 from .capacity import CapacityEvaluator
+from .dataguard import DataGuardEvaluator
 from .io_redo_archive import IoRedoArchiveEvaluator
 from .multitenant import MultitenantEvaluator
 from .recoverability_drp import RecoverabilityDrpEvaluator
@@ -30,6 +31,7 @@ EVALUATORS = {
     "oracle_resources": OracleResourcesEvaluator(),
     "performance": PerformanceEvaluator(),
     "capacity": CapacityEvaluator(),
+    "dataguard": DataGuardEvaluator(),
     "io_redo_archive": IoRedoArchiveEvaluator(),
     "multitenant": MultitenantEvaluator(),
     "recoverability_drp": RecoverabilityDrpEvaluator(),

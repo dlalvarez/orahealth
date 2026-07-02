@@ -113,3 +113,9 @@ policies:
   asm_diskgroup_usable_file_critical_pct: 5
   asm_acceptable_diskgroup_states: [CONNECTED, MOUNTED]
   asm_disk_problem_statuses: [OFFLINE, FORCING, DROPPING, CLOSED, CLOSING, UNKNOWN, CANDIDATE, FORMER, CONFLICT]
+  dataguard_transport_lag_warning_seconds: 300
+  dataguard_transport_lag_fail_seconds: 900
+  dataguard_transport_lag_critical_seconds: 1800
+  dataguard_apply_lag_warning_seconds: 300
+  dataguard_apply_lag_fail_seconds: 900
+  dataguard_apply_lag_critical_seconds: 1800

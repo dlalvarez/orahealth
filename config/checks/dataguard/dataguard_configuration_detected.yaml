@@ -1,0 +1,30 @@
+check_id: dataguard_configuration_detected
+group_id: dataguard
+title: Detección de configuración Data Guard con standby
+description: Validación básica Data Guard aplicable únicamente cuando se detecta configuración con bases standby.
+severity: INFO
+collector:
+  type: dataguard
+  source_view: V$DATABASE/V$ARCHIVE_DEST/V$ARCHIVE_DEST_STATUS/V$DATAGUARD_STATS/V$ARCHIVE_GAP/V$STANDBY_LOG/V$LOG/V$THREAD/V$PARAMETER
+  label: Detección de configuración Data Guard con standby
+evaluator:
+  type: dataguard
+  metric: dataguard_configuration_detected
+applicability:
+  requires_feature: standby_configuration
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY, MOUNTED]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la configuración Data Guard relacionada con bases standby antes de realizar cambios.
+  actions:
+    - Revisar estado de destinos Data Guard y conectividad entre primary y standby.
+    - Revisar alert log de primary y standby, y confirmar disponibilidad de archived logs faltantes cuando aplique.
+    - Validar LOG_ARCHIVE_DEST_n, standby redo logs, MRP/RFS y parámetros relacionados con el DBA responsable.
+    - Ejecutar validación posterior al ajuste y documentar cualquier excepción operativa.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, dataguard, standby, feature-aware]

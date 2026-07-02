@@ -884,3 +884,7 @@ La implementación mantiene las restricciones de licenciamiento: no usa AWR, ASH
 ### Nota Fase 5A - ASM básico feature-aware desde conexión de base de datos
 
 Fase 5A implementa el grupo real `asm` con checks iniciales feature-aware ejecutados desde la misma conexión Oracle de la base evaluada. Esta fase no se conecta a la instancia ASM, no requiere SYSASM ni usuario Grid, y no usa asmcmd, crsctl ni srvctl. El alcance se limita a archivos ASM realmente usados por el target, diskgroups relevantes, capacidad/estado observable, discos visibles y rebalance desde vistas dinámicas permitidas. Si ASM no se detecta, los checks quedan `SKIPPED` sin hallazgos ni penalización. `standalone_all` incluye `asm` porque una base standalone puede usar ASM y ASM no implica RAC; la conexión dedicada ASM/Grid queda fuera de alcance para una fase avanzada futura.
+
+## Fase 5B.1 — Data Guard básico feature-aware
+
+Estado: implementada. Se crea el grupo `dataguard` con 8 checks reales para configuraciones Oracle Data Guard con bases standby. La aplicabilidad usa la feature `standby_configuration`; bases sin señales standby quedan SKIPPED sin hallazgos ni penalización. El alcance se limita a vistas SQL estándar no licenciadas y no usa AWR, ASH, DBA_HIST ni X$. Broker/DGMGRL, FSFO y Observer quedan fuera de alcance para una fase avanzada.

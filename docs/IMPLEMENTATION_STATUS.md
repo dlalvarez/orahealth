@@ -248,3 +248,7 @@ ASM se evalúa desde la conexión de base de datos del target. No se conecta a l
 | Grupo | Existe | Checks implementados | Estado | Principales checks implementados | Pendiente |
 | --- | --- | ---: | --- | --- | --- |
 | `asm` | Sí | 8 | INICIADA 5A | `asm_database_uses_asm`, `asm_database_files_on_asm`, `asm_diskgroup_inventory_db_view`, `asm_diskgroup_usage_db_view`, `asm_diskgroup_state_db_view`, `asm_diskgroup_free_headroom_db_view`, `asm_disk_status_db_view`, `asm_rebalance_operations_db_view` | ASM avanzado con conexión dedicada/Grid, OCR/voting, ASM alert log, failgroups avanzados, compatibilidad avanzada y análisis completo de discos/storage si aplica. |
+
+## Fase 5B.1 — Data Guard básico feature-aware
+
+Implementada la primera cobertura real del grupo `dataguard` con 8 checks: detección de configuración standby, rol de base, destinos archive standby, transport/apply lag básico, archive gap básico, standby redo logs y parámetros básicos. El grupo es feature-aware mediante `standby_configuration`, por lo que una base sin standby no genera hallazgos ni penalización. No se usa AWR/ASH/DBA_HIST/X$ ni Broker/DGMGRL; FSFO y Observer quedan pendientes para fases avanzadas.
