@@ -2597,37 +2597,43 @@ class CheckRunner:
 
     def _default_dataguard_inventory(self, database: dict[str, Any]) -> dict[str, Any]:
         existing = database.get("dataguard")
-        if isinstance(existing, dict):
-            return existing
+        existing_dg = existing if isinstance(existing, dict) else {}
         params = database.get("parameters", {}) if isinstance(database.get("parameters"), dict) else {}
-        role = str(database.get("role", database.get("database_role", "PRIMARY"))).upper()
+        role = str(existing_dg.get("database_role") or database.get("role", database.get("database_role", "PRIMARY"))).upper()
         signals: list[str] = []
-        if role in {"PHYSICAL STANDBY", "LOGICAL STANDBY", "SNAPSHOT STANDBY"}:
+        if role in {"PHYSICAL STANDBY", "LOGICAL STANDBY", "SNAPSHOT STANDBY", "FAR SYNC"}:
             signals.append(f"database_role={role}")
-        remote_destinations = database.get("remote_archive_destinations") or []
-        archive_destinations = database.get("archive_destinations") or []
+        if self._has_explicit_dg_config(params, database.get("db_unique_name")):
+            signals.append("parametro_log_archive_config_dg_config")
+        if self._has_remote_standby_archive_parameter(params):
+            signals.append("parametro_log_archive_dest_service")
+        remote_destinations = existing_dg.get("remote_archive_destinations") or database.get("remote_archive_destinations") or []
+        archive_destinations = existing_dg.get("archive_destinations") or database.get("archive_destinations") or []
         standby_dests = list(remote_destinations) + [r for r in archive_destinations if self._is_standby_archive_dest(r)]
         if standby_dests:
             signals.append("destinos_archive_standby")
-        for name in ("log_archive_config", "fal_server", "standby_file_management"):
-            value = self._parameter_value(params, name)
-            if value:
-                signals.append(f"parametro_{name}")
+        archive_gaps = existing_dg.get("archive_gaps") or database.get("archive_gaps") or []
+        if archive_gaps:
+            signals.append("v$archive_gap")
+        dataguard_stats = existing_dg.get("dataguard_stats") or database.get("dataguard_stats") or []
+        if signals and self._has_meaningful_dataguard_stats(dataguard_stats):
+            signals.append("v$dataguard_stats")
         return {
+            **existing_dg,
             "database_role": role,
-            "open_mode": database.get("open_mode"),
-            "protection_mode": database.get("protection_mode"),
-            "protection_level": database.get("protection_level"),
-            "switchover_status": database.get("switchover_status"),
+            "open_mode": existing_dg.get("open_mode") or database.get("open_mode"),
+            "protection_mode": existing_dg.get("protection_mode") or database.get("protection_mode"),
+            "protection_level": existing_dg.get("protection_level") or database.get("protection_level"),
+            "switchover_status": existing_dg.get("switchover_status") or database.get("switchover_status"),
             "standby_detected": bool(signals),
-            "signals": signals,
+            "signals": sorted(set(signals)),
             "archive_destinations": standby_dests,
-            "dataguard_stats": database.get("dataguard_stats") or [],
-            "archive_gaps": database.get("archive_gaps") or [],
-            "standby_logs": database.get("standby_logs") or [],
-            "online_logs": database.get("online_logs") or [],
-            "threads": database.get("threads") or [],
-            "parameters": params,
+            "dataguard_stats": dataguard_stats,
+            "archive_gaps": archive_gaps,
+            "standby_logs": existing_dg.get("standby_logs") or database.get("standby_logs") or [],
+            "online_logs": existing_dg.get("online_logs") or database.get("online_logs") or [],
+            "threads": existing_dg.get("threads") or database.get("threads") or [],
+            "parameters": existing_dg.get("parameters") or params,
         }
 
     def _discover_dataguard_inventory(self, connector: Any, database: dict[str, Any]) -> dict[str, Any]:
@@ -2645,8 +2651,7 @@ class CheckRunner:
                 "switchover_status": role_info.get("switchover_status"),
             })
         dest_rows, dest_error = self._query_rows_with_error(connector, "destinos Data Guard standby", """
-            select dest_id, status, target, destination, error, valid_now, type, database_mode,
-                   recovery_mode, db_unique_name, binding
+            select dest_id, status, target, destination, error
             from v$archive_dest
             where status <> 'INACTIVE'
         """, log_warning=False)
@@ -2672,20 +2677,7 @@ class CheckRunner:
             dg["standby_log_collection_error"] = srl_error
         dg["online_logs"], _ = self._query_rows_with_error(connector, "online redo logs Data Guard", "select group#, thread#, bytes, status from v$log", log_warning=False)
         dg["threads"], _ = self._query_rows_with_error(connector, "threads Data Guard", "select thread#, status, enabled from v$thread", log_warning=False)
-        role = str(dg.get("database_role") or "PRIMARY").upper()
-        signals = list(dg.get("signals") or [])
-        if role in {"PHYSICAL STANDBY", "LOGICAL STANDBY", "SNAPSHOT STANDBY"}:
-            signals.append(f"database_role={role}")
-        if dg.get("archive_destinations"):
-            signals.append("destinos_archive_standby")
-        if dg.get("dataguard_stats"):
-            signals.append("v$dataguard_stats")
-        for name in ("log_archive_config", "fal_server", "standby_file_management"):
-            if self._parameter_value(database.get("parameters", {}), name):
-                signals.append(f"parametro_{name}")
-        dg["signals"] = sorted(set(signals))
-        dg["standby_detected"] = bool(signals)
-        return {"dataguard": dg}
+        return {"dataguard": self._default_dataguard_inventory({**database, "dataguard": dg})}
 
     def _build_dataguard_evidence(self, check: Check, database: dict[str, Any]) -> dict[str, Any]:
         dg = self._default_dataguard_inventory(database)
@@ -2718,8 +2710,46 @@ class CheckRunner:
         return evidence
 
     def _is_standby_archive_dest(self, row: dict[str, Any]) -> bool:
-        text = " ".join(str(row.get(k) or "") for k in ("target", "destination", "type", "database_mode", "recovery_mode", "db_unique_name"))
-        return "STANDBY" in text.upper() or "SERVICE=" in text.upper()
+        status = str(row.get("status") or "").upper()
+        if status == "INACTIVE":
+            return False
+        target = str(row.get("target") or "").upper()
+        destination = str(row.get("destination") or "").upper()
+        if target in {"STANDBY", "REMOTE STANDBY"}:
+            return True
+        if "LOCATION=" in destination or "USE_DB_RECOVERY_FILE_DEST" in destination:
+            return False
+        if "SERVICE=" not in destination:
+            return False
+        return any(token in destination for token in ("DB_UNIQUE_NAME=", "VALID_FOR=", "ASYNC", "SYNC"))
+
+    def _has_explicit_dg_config(self, parameters: dict[str, Any], local_db_unique_name: Any = None) -> bool:
+        value = str(self._parameter_value(parameters, "log_archive_config") or "").strip().upper()
+        if "DG_CONFIG" not in value:
+            return False
+        match = re.search(r"DG_CONFIG\s*=\s*\(([^)]*)\)", value)
+        if not match:
+            return True
+        names = [item.strip().strip("'\"") for item in match.group(1).split(",") if item.strip()]
+        if len(names) >= 2:
+            return True
+        local = str(local_db_unique_name or "").strip().upper()
+        return bool(names and local and any(name.upper() != local for name in names))
+
+    def _has_remote_standby_archive_parameter(self, parameters: dict[str, Any]) -> bool:
+        for index in range(1, 32):
+            value = str(self._parameter_value(parameters, f"log_archive_dest_{index}") or "").upper()
+            if "SERVICE=" not in value:
+                continue
+            if "LOCATION=" in value or "USE_DB_RECOVERY_FILE_DEST" in value:
+                continue
+            if any(token in value for token in ("DB_UNIQUE_NAME=", "VALID_FOR=", "ASYNC", "SYNC")):
+                return True
+        return False
+
+    def _has_meaningful_dataguard_stats(self, rows: Any) -> bool:
+        metrics = {"transport lag", "apply lag", "apply finish time", "estimated startup time"}
+        return any(str(row.get("name") or "").strip().lower() in metrics and row.get("value") is not None for row in rows or [] if isinstance(row, dict))
 
     def _dataguard_parameter_warnings(self, dg: dict[str, Any]) -> list[str]:
         params = dg.get("parameters") if isinstance(dg.get("parameters"), dict) else {}

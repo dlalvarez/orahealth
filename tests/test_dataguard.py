@@ -73,3 +73,62 @@ def test_dataguard_evidence_builders_do_not_traceback_with_missing_views():
     for cid in DATAGUARD_CHECKS:
         evidence = runner._build_dataguard_evidence(config["checks"][cid], database)
         EVALUATORS["dataguard"].evaluate(evidence, config["checks"][cid].evaluator)
+
+
+def _param(value):
+    return {"value": value, "display_value": value}
+
+
+def test_dataguard_standby_file_management_alone_does_not_detect_or_execute_group():
+    config = ConfigLoader("config").load_all()
+    runner = CheckRunner(config)
+    database = {"role": "PRIMARY", "parameters": {"standby_file_management": _param("AUTO")}}
+    features = runner._detect_oracle_features_from_inventory(database)
+    assert features["standby_configuration"]["detected"] is False
+    assert "parametro_standby_file_management" not in features["standby_configuration"].get("signals", [])
+    inventory = Inventory("t1", "standalone", "dev", database=database, features=features)
+    results = [runner._run_check(config["checks"][cid], config["targets"]["example_standalone"], inventory) for cid in config["groups"]["dataguard"].checks]
+    assert {r.status for r in results} == {ResultStatus.SKIPPED}
+
+
+def test_dataguard_strong_feature_signals_only():
+    runner = CheckRunner({})
+    assert runner._detect_oracle_features_from_inventory({
+        "role": "PRIMARY",
+        "parameters": {"log_archive_config": _param("DG_CONFIG=(orcl,orclstby)")},
+    })["standby_configuration"]["detected"] is True
+    assert runner._detect_oracle_features_from_inventory({
+        "role": "PRIMARY",
+        "parameters": {"log_archive_dest_1": _param("LOCATION=USE_DB_RECOVERY_FILE_DEST")},
+    })["standby_configuration"]["detected"] is False
+    assert runner._detect_oracle_features_from_inventory({
+        "role": "PRIMARY",
+        "parameters": {"log_archive_dest_2": _param("SERVICE=orclstby ASYNC VALID_FOR=(ONLINE_LOGFILES,PRIMARY_ROLE) DB_UNIQUE_NAME=orclstby")},
+    })["standby_configuration"]["detected"] is True
+    assert runner._detect_oracle_features_from_inventory({"role": "PHYSICAL STANDBY"})["standby_configuration"]["detected"] is True
+
+
+class _DataGuardArchiveDestConnector:
+    def query(self, sql):
+        normalized = " ".join(sql.lower().split())
+        assert "recovery_mode" not in normalized
+        if "from v$database" in normalized:
+            return [{"database_role": "PRIMARY", "open_mode": "READ WRITE", "protection_mode": "MAXIMUM PERFORMANCE", "protection_level": "UNPROTECTED", "switchover_status": "NOT ALLOWED"}]
+        if "from v$archive_dest" in normalized:
+            return [{"dest_id": 2, "status": "ERROR", "target": "STANDBY", "destination": "SERVICE=orclstby", "error": "ORA-16057"}]
+        if "from v$archive_gap" in normalized:
+            return []
+        if "from v$dataguard_stats" in normalized:
+            return []
+        if "from v$standby_log" in normalized or "from v$log" in normalized or "from v$thread" in normalized:
+            return []
+        return []
+
+
+def test_dataguard_archive_dest_query_avoids_recovery_mode_and_preserves_error_destinations():
+    runner = CheckRunner({})
+    discovered = runner._discover_dataguard_inventory(_DataGuardArchiveDestConnector(), {"parameters": {}})["dataguard"]
+    assert discovered["standby_detected"] is True
+    assert discovered["archive_destinations"][0]["error"] == "ORA-16057"
+    ev = EVALUATORS["dataguard"]
+    assert ev.evaluate({"metric": "dataguard_archive_dest_status", "rows": discovered["archive_destinations"]}, {"metric": "dataguard_archive_dest_status"})[0] == ResultStatus.FAIL
