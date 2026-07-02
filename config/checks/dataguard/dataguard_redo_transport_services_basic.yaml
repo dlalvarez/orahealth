@@ -1,0 +1,30 @@
+check_id: dataguard_redo_transport_services_basic
+group_id: dataguard
+title: Servicios básicos de transporte redo Data Guard
+description: Evaluar destinos remotos standby habilitados y válidos, ignorando destinos locales.
+severity: CRITICAL
+collector:
+  type: dataguard
+  source_view: V$ARCHIVE_DEST/V$ARCHIVE_DEST_STATUS/V$DATAGUARD_STATUS
+  label: Servicios básicos de transporte redo Data Guard
+evaluator:
+  type: dataguard
+  metric: dataguard_redo_transport_services_basic
+applicability:
+  requires_feature: standby_configuration
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY, MOUNTED]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la evidencia Data Guard avanzada únicamente cuando exista configuración standby real.
+  actions:
+    - Validar primary y standby antes de aplicar cambios.
+    - Revisar lag, gaps, destinos remotos y mensajes del alert log en ambos lados.
+    - Confirmar servicios, conectividad y aplicación de redo con el procedimiento operativo aprobado.
+    - No ejecutar switchover ni failover sin procedimiento aprobado y ventana coordinada.
+  owner: Mixed
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, dataguard, standby, feature-aware]

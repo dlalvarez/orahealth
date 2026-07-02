@@ -1695,9 +1695,24 @@ ASM se evalúa desde la conexión Oracle de la base de datos evaluada. No se con
 
 ## dataguard
 
-- Estado: INICIADO 5B.1.
-- Checks implementados: 8.
-- Alcance actual: Data Guard básico feature-aware desde vistas SQL estándar para configuraciones con bases standby.
-- Aplicabilidad: requiere `standby_configuration`; bases sin standby quedan SKIPPED sin hallazgos ni penalización.
-- Fuera de alcance actual: Broker/DGMGRL, FSFO, Observer, validaciones avanzadas primary/standby y readiness completo de switchover/failover.
-- Restricciones: no usa AWR, ASH, DBA_HIST ni X$.
+Estado: AVANZADO PARCIAL 5B.2
+
+Checks implementados: 16
+
+Alcance actual:
+- Detección feature-aware de configuración con bases standby.
+- Rol, destinos archive, lag, gaps, SRL y parámetros básicos.
+- Broker readiness SQL básico.
+- FSFO/Observer readiness SQL básico.
+- Procesos Data Guard y readiness básico de switchover.
+- Consistencia de protección y servicios de transporte redo hacia standby.
+
+Broker no habilitado y FSFO no habilitado no se consideran fallo automático. Bases sin standby siguen quedando SKIPPED. No se invocan herramientas externas de Broker ni se usan AWR, ASH, DBA_HIST o X$.
+
+Pendiente:
+- Validaciones cruzadas primary/standby completas.
+- Comparación entre sitios.
+- Integración DRP precheck_compare.
+- Evidencia externa mediante herramientas operativas si se decide en fases futuras.
+
+

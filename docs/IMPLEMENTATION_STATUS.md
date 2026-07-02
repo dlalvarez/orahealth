@@ -252,3 +252,9 @@ ASM se evalúa desde la conexión de base de datos del target. No se conecta a l
 ## Fase 5B.1 — Data Guard básico feature-aware
 
 Implementada la primera cobertura real del grupo `dataguard` con 8 checks: detección de configuración standby, rol de base, destinos archive standby, transport/apply lag básico, archive gap básico, standby redo logs y parámetros básicos. El grupo es feature-aware mediante `standby_configuration`, por lo que una base sin standby no genera hallazgos ni penalización. No se usa AWR/ASH/DBA_HIST/X$ ni Broker/DGMGRL; FSFO y Observer quedan pendientes para fases avanzadas.
+
+## Fase 5B.2 — Data Guard avanzado y Broker readiness
+
+Implementada la ampliación avanzada parcial del grupo `dataguard`: pasa de 8 a 16 checks reales. Se conservan los checks básicos de 5B.1 y se agregan validaciones feature-aware para Broker, FSFO, Observer, procesos Data Guard, readiness básico de switchover, consistencia de protección y servicios de transporte redo hacia standby.
+
+La cobertura continúa limitada estrictamente a configuraciones con bases standby reales. En bases sin standby, todos los checks `dataguard` quedan SKIPPED. Broker y FSFO son opcionales por defecto; no estar habilitados no genera FAIL automático. Las consultas usan vistas SQL estándar disponibles de forma defensiva y no usan AWR, ASH, DBA_HIST ni X$.

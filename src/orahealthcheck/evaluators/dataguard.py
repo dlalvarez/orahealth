@@ -47,6 +47,74 @@ class DataGuardEvaluator:
             if warnings:
                 return ResultStatus.WARNING, f"Se detectaron {len(warnings)} recomendaciones de parámetros Data Guard básicos"
             return ResultStatus.PASS, "Los parámetros básicos Data Guard observados son coherentes"
+        if metric == "dataguard_broker_configuration_basic":
+            start = str(evidence.get("dg_broker_start") or "").upper()
+            rows = self._rows(evidence)
+            if start in {"TRUE", "ON", "1"} and rows:
+                return ResultStatus.INFO, "Broker Data Guard habilitado con configuración visible desde SQL"
+            if start in {"TRUE", "ON", "1"} and evidence.get("broker_config_available") is False:
+                return ResultStatus.WARNING, "dg_broker_start está habilitado pero no hay configuración Broker visible desde SQL"
+            if rows:
+                return ResultStatus.INFO, "Se observó evidencia SQL de Broker Data Guard"
+            return ResultStatus.INFO, "Broker Data Guard no habilitado o sin evidencia SQL visible; no es fallo automático"
+        if metric == "dataguard_broker_status_basic":
+            if not evidence.get("broker_available"):
+                return ResultStatus.SKIPPED, "Broker Data Guard no disponible o no habilitado desde la evidencia SQL"
+            status = self._problem_status_from_rows(self._rows(evidence))
+            if status:
+                return status[0], f"Broker Data Guard reporta mensajes problemáticos: {status[1]}"
+            return ResultStatus.PASS, "Broker Data Guard disponible sin errores visibles en la evidencia SQL"
+        if metric == "dataguard_fsfo_status_basic":
+            if not evidence.get("broker_available"):
+                return ResultStatus.SKIPPED, "Broker Data Guard no disponible para evaluar FSFO"
+            props = evidence.get("properties") if isinstance(evidence.get("properties"), dict) else {}
+            enabled = str(props.get("faststartfailover") or props.get("FastStartFailover") or "").upper() in {"TRUE", "YES", "ENABLED", "ON"}
+            if not enabled:
+                return ResultStatus.INFO, "FSFO no está habilitado o no aplica; no es fallo automático"
+            missing = [k for k in ("faststartfailovertarget", "faststartfailoverthreshold") if not props.get(k)]
+            if missing:
+                return ResultStatus.FAIL, "FSFO está habilitado pero faltan propiedades mínimas visibles"
+            return ResultStatus.PASS, "FSFO habilitado con propiedades mínimas visibles"
+        if metric == "dataguard_observer_status_basic":
+            if not evidence.get("fsfo_enabled"):
+                return ResultStatus.INFO, "Observer no aplica porque FSFO no está habilitado en la evidencia"
+            if evidence.get("observer_visible"):
+                return ResultStatus.PASS, "Observer visible para FSFO desde la evidencia SQL"
+            return ResultStatus.WARNING, "FSFO está habilitado pero no se observó observer activo o visible"
+        if metric == "dataguard_managed_standby_processes":
+            role = str(evidence.get("database_role") or "").upper()
+            rows = self._rows(evidence)
+            procs = {str(r.get("process") or "").upper() for r in rows}
+            if role == "PHYSICAL STANDBY":
+                has_mrp = any(p.startswith("MRP") for p in procs)
+                has_rfs = any(p.startswith("RFS") for p in procs)
+                if has_mrp and has_rfs:
+                    return ResultStatus.PASS, "Procesos MRP y RFS visibles en physical standby"
+                return ResultStatus.WARNING, "Physical standby sin procesos MRP/RFS completos visibles"
+            if role == "PRIMARY":
+                return (ResultStatus.PASS, "Procesos de transporte Data Guard visibles en primary") if rows else (ResultStatus.INFO, "Sin procesos gestionados visibles en primary; evidencia insuficiente")
+            return ResultStatus.INFO, f"Procesos Data Guard reportados de forma informativa para rol {role or 'desconocido'}"
+        if metric == "dataguard_switchover_readiness_basic":
+            sw = str(evidence.get("switchover_status") or "").upper()
+            if sw in {"TO STANDBY", "TO PRIMARY", "SESSIONS ACTIVE"} and not evidence.get("archive_gaps"):
+                return ResultStatus.PASS, f"Switchover status favorable o revisable: {sw}"
+            if sw in {"NOT ALLOWED", "RECOVERY NEEDED"}:
+                return ResultStatus.FAIL, f"Switchover status no favorable: {sw}"
+            if sw:
+                return ResultStatus.WARNING, f"Switchover status requiere revisión: {sw}"
+            return ResultStatus.INFO, "Evidencia insuficiente para evaluar readiness de switchover"
+        if metric == "dataguard_protection_consistency":
+            mode = str(evidence.get("protection_mode") or "").upper()
+            level = str(evidence.get("protection_level") or "").upper()
+            if not mode or not level:
+                return ResultStatus.INFO, "Evidencia insuficiente de modo o nivel de protección"
+            if mode == "MAXIMUM PERFORMANCE":
+                return ResultStatus.PASS, "Modo Maximum Performance observado sin penalización por sí solo"
+            if mode and level and mode != level:
+                return ResultStatus.WARNING, f"Nivel efectivo {level} menor o distinto al modo configurado {mode}"
+            return ResultStatus.PASS, "Modo y nivel de protección Data Guard coherentes"
+        if metric == "dataguard_redo_transport_services_basic":
+            return self.evaluate({**evidence, "metric": "dataguard_archive_dest_status"}, {"metric": "dataguard_archive_dest_status"})
         return ResultStatus.ERROR, f"Métrica Data Guard no soportada: {metric}"
 
     def _lag(self, e: dict[str, Any], c: dict[str, Any], kind: str) -> tuple[ResultStatus, str]:
@@ -86,3 +154,13 @@ class DataGuardEvaluator:
             return float(str(v).strip().replace(',', ''))
         except (TypeError, ValueError):
             return None
+
+    def _problem_status_from_rows(self, rows: list[dict[str, Any]]) -> tuple[ResultStatus, int] | None:
+        texts = " ".join(str(v).upper() for r in rows for v in r.values())
+        if any(t in texts for t in ("FATAL", "CRITICAL", "ORA-16795", "ORA-16810")):
+            return ResultStatus.CRITICAL, len(rows)
+        if "ERROR" in texts or "ORA-" in texts:
+            return ResultStatus.FAIL, len(rows)
+        if "WARNING" in texts or "WARN" in texts:
+            return ResultStatus.WARNING, len(rows)
+        return None

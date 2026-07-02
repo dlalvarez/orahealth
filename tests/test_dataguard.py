@@ -3,7 +3,7 @@ from orahealthcheck.engine.runner import CheckRunner
 from orahealthcheck.evaluators import EVALUATORS
 from orahealthcheck.models import Inventory, ResultStatus
 
-DATAGUARD_CHECKS = {
+DATAGUARD_5B1_CHECKS = {
     "dataguard_configuration_detected",
     "dataguard_database_role",
     "dataguard_archive_dest_status",
@@ -14,10 +14,24 @@ DATAGUARD_CHECKS = {
     "dataguard_parameters_basic",
 }
 
+DATAGUARD_5B2_CHECKS = {
+    "dataguard_broker_configuration_basic",
+    "dataguard_broker_status_basic",
+    "dataguard_fsfo_status_basic",
+    "dataguard_observer_status_basic",
+    "dataguard_managed_standby_processes",
+    "dataguard_switchover_readiness_basic",
+    "dataguard_protection_consistency",
+    "dataguard_redo_transport_services_basic",
+}
+DATAGUARD_CHECKS = DATAGUARD_5B1_CHECKS | DATAGUARD_5B2_CHECKS
+
 
 def test_dataguard_group_has_real_checks_and_profile_scope():
     config = ConfigLoader("config").load_all()
+    assert DATAGUARD_5B1_CHECKS <= set(config["groups"]["dataguard"].checks)
     assert set(config["groups"]["dataguard"].checks) == DATAGUARD_CHECKS
+    assert len(config["groups"]["dataguard"].checks) == 16
     assert "dataguard" in config["profiles"]["standalone_all"].enabled_groups
     assert "dataguard" not in config["profiles"]["standalone_basic"].enabled_groups
     for cid in DATAGUARD_CHECKS:
@@ -132,3 +146,53 @@ def test_dataguard_archive_dest_query_avoids_recovery_mode_and_preserves_error_d
     assert discovered["archive_destinations"][0]["error"] == "ORA-16057"
     ev = EVALUATORS["dataguard"]
     assert ev.evaluate({"metric": "dataguard_archive_dest_status", "rows": discovered["archive_destinations"]}, {"metric": "dataguard_archive_dest_status"})[0] == ResultStatus.FAIL
+
+
+def test_dataguard_advanced_broker_fsfo_observer_evaluations():
+    ev = EVALUATORS["dataguard"]
+    assert ev.evaluate({"metric": "dataguard_broker_configuration_basic", "dg_broker_start": "FALSE", "rows": []}, {"metric": "dataguard_broker_configuration_basic"})[0] == ResultStatus.INFO
+    assert ev.evaluate({"metric": "dataguard_broker_configuration_basic", "dg_broker_start": "TRUE", "broker_config_available": False, "rows": []}, {"metric": "dataguard_broker_configuration_basic"})[0] == ResultStatus.WARNING
+    assert ev.evaluate({"metric": "dataguard_broker_status_basic", "broker_available": False, "rows": []}, {"metric": "dataguard_broker_status_basic"})[0] == ResultStatus.SKIPPED
+    assert ev.evaluate({"metric": "dataguard_broker_status_basic", "broker_available": True, "rows": [{"severity": "ERROR", "message": "ORA-16766"}]}, {"metric": "dataguard_broker_status_basic"})[0] == ResultStatus.FAIL
+    assert ev.evaluate({"metric": "dataguard_fsfo_status_basic", "broker_available": True, "properties": {"faststartfailover": "FALSE"}}, {"metric": "dataguard_fsfo_status_basic"})[0] == ResultStatus.INFO
+    assert ev.evaluate({"metric": "dataguard_fsfo_status_basic", "broker_available": True, "properties": {"faststartfailover": "TRUE"}}, {"metric": "dataguard_fsfo_status_basic"})[0] == ResultStatus.FAIL
+    assert ev.evaluate({"metric": "dataguard_fsfo_status_basic", "broker_available": True, "properties": {"faststartfailover": "TRUE", "faststartfailovertarget": "stby", "faststartfailoverthreshold": "30"}}, {"metric": "dataguard_fsfo_status_basic"})[0] == ResultStatus.PASS
+    assert ev.evaluate({"metric": "dataguard_observer_status_basic", "fsfo_enabled": False}, {"metric": "dataguard_observer_status_basic"})[0] == ResultStatus.INFO
+    assert ev.evaluate({"metric": "dataguard_observer_status_basic", "fsfo_enabled": True, "observer_visible": False}, {"metric": "dataguard_observer_status_basic"})[0] == ResultStatus.WARNING
+
+
+def test_dataguard_advanced_process_switchover_protection_transport():
+    ev = EVALUATORS["dataguard"]
+    assert ev.evaluate({"metric": "dataguard_managed_standby_processes", "database_role": "PHYSICAL STANDBY", "rows": [{"process": "MRP0"}, {"process": "RFS"}]}, {"metric": "dataguard_managed_standby_processes"})[0] == ResultStatus.PASS
+    assert ev.evaluate({"metric": "dataguard_managed_standby_processes", "database_role": "PHYSICAL STANDBY", "rows": []}, {"metric": "dataguard_managed_standby_processes"})[0] == ResultStatus.WARNING
+    assert ev.evaluate({"metric": "dataguard_switchover_readiness_basic", "switchover_status": "TO STANDBY", "archive_gaps": []}, {"metric": "dataguard_switchover_readiness_basic"})[0] == ResultStatus.PASS
+    assert ev.evaluate({"metric": "dataguard_switchover_readiness_basic", "switchover_status": "NOT ALLOWED"}, {"metric": "dataguard_switchover_readiness_basic"})[0] == ResultStatus.FAIL
+    assert ev.evaluate({"metric": "dataguard_protection_consistency", "protection_mode": "MAXIMUM AVAILABILITY", "protection_level": "MAXIMUM PERFORMANCE"}, {"metric": "dataguard_protection_consistency"})[0] == ResultStatus.WARNING
+    assert ev.evaluate({"metric": "dataguard_protection_consistency", "protection_mode": "MAXIMUM PERFORMANCE", "protection_level": "MAXIMUM PERFORMANCE"}, {"metric": "dataguard_protection_consistency"})[0] == ResultStatus.PASS
+    assert ev.evaluate({"metric": "dataguard_redo_transport_services_basic", "rows": [{"status": "VALID", "target": "STANDBY"}]}, {"metric": "dataguard_redo_transport_services_basic"})[0] == ResultStatus.PASS
+    assert ev.evaluate({"metric": "dataguard_redo_transport_services_basic", "rows": [{"status": "ERROR", "target": "STANDBY", "error": "ORA-16057"}]}, {"metric": "dataguard_redo_transport_services_basic"})[0] == ResultStatus.FAIL
+
+
+class _DataGuardAdvancedConnector(_DataGuardArchiveDestConnector):
+    def query(self, sql):
+        normalized = " ".join(sql.lower().split())
+        if "from v$dg_broker_config" in normalized:
+            return [{"status": "SUCCESS"}]
+        if "from v$dg_broker_property" in normalized:
+            return [{"property_name": "FastStartFailover", "property_value": "TRUE"}, {"property_name": "FastStartFailoverTarget", "property_value": "stby"}, {"property_name": "FastStartFailoverThreshold", "property_value": "30"}]
+        if "from v$dataguard_status" in normalized:
+            return [{"message": "Observer active"}]
+        if "from v$managed_standby" in normalized:
+            return [{"process": "MRP0", "status": "APPLYING_LOG", "thread#": 1, "sequence#": 10}, {"process": "RFS", "status": "IDLE"}]
+        return super().query(sql)
+
+
+def test_dataguard_advanced_evidence_builders_with_broker_views():
+    runner = CheckRunner({})
+    config = ConfigLoader("config").load_all()
+    discovered = runner._discover_dataguard_inventory(_DataGuardAdvancedConnector(), {"parameters": {"dg_broker_start": _param("TRUE")}})["dataguard"]
+    assert discovered["broker_config"]
+    assert discovered["managed_standby"]
+    for cid in DATAGUARD_5B2_CHECKS:
+        evidence = runner._build_dataguard_evidence(config["checks"][cid], {"dataguard": discovered})
+        EVALUATORS["dataguard"].evaluate(evidence, config["checks"][cid].evaluator)

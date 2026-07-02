@@ -1,6 +1,6 @@
 group_id: dataguard
 name: Data Guard
-description: Data Guard básico feature-aware para configuraciones con bases standby.
+description: Data Guard avanzado parcial feature-aware para configuraciones con bases standby.
 checks:
   - dataguard_configuration_detected
   - dataguard_database_role
@@ -10,3 +10,11 @@ checks:
   - dataguard_archive_gap_basic
   - dataguard_standby_redo_logs_basic
   - dataguard_parameters_basic
+  - dataguard_redo_transport_services_basic
+  - dataguard_protection_consistency
+  - dataguard_switchover_readiness_basic
+  - dataguard_managed_standby_processes
+  - dataguard_observer_status_basic
+  - dataguard_fsfo_status_basic
+  - dataguard_broker_status_basic
+  - dataguard_broker_configuration_basic

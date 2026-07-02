@@ -1,0 +1,30 @@
+check_id: dataguard_managed_standby_processes
+group_id: dataguard
+title: Procesos gestionados Data Guard
+description: Evaluar procesos MRP, RFS, LNS, ARCH o DGRD visibles desde SQL según el rol.
+severity: FAIL
+collector:
+  type: dataguard
+  source_view: V$MANAGED_STANDBY
+  label: Procesos gestionados Data Guard
+evaluator:
+  type: dataguard
+  metric: dataguard_managed_standby_processes
+applicability:
+  requires_feature: standby_configuration
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY, MOUNTED]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la evidencia Data Guard avanzada únicamente cuando exista configuración standby real.
+  actions:
+    - Validar primary y standby antes de aplicar cambios.
+    - Revisar lag, gaps, destinos remotos y mensajes del alert log en ambos lados.
+    - Confirmar servicios, conectividad y aplicación de redo con el procedimiento operativo aprobado.
+    - No ejecutar switchover ni failover sin procedimiento aprobado y ventana coordinada.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, dataguard, standby, feature-aware]
