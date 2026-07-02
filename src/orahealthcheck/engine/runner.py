@@ -2634,6 +2634,14 @@ class CheckRunner:
             "online_logs": existing_dg.get("online_logs") or database.get("online_logs") or [],
             "threads": existing_dg.get("threads") or database.get("threads") or [],
             "parameters": existing_dg.get("parameters") or params,
+            "broker_config": existing_dg.get("broker_config") or database.get("broker_config") or [],
+            "broker_properties": existing_dg.get("broker_properties") or database.get("broker_properties") or [],
+            "dataguard_status": existing_dg.get("dataguard_status") or database.get("dataguard_status") or [],
+            "managed_standby": existing_dg.get("managed_standby") or database.get("managed_standby") or [],
+            "broker_config_collection_error": existing_dg.get("broker_config_collection_error"),
+            "broker_property_collection_error": existing_dg.get("broker_property_collection_error"),
+            "dataguard_status_collection_error": existing_dg.get("dataguard_status_collection_error"),
+            "managed_standby_collection_error": existing_dg.get("managed_standby_collection_error"),
         }
 
     def _discover_dataguard_inventory(self, connector: Any, database: dict[str, Any]) -> dict[str, Any]:
@@ -2677,6 +2685,18 @@ class CheckRunner:
             dg["standby_log_collection_error"] = srl_error
         dg["online_logs"], _ = self._query_rows_with_error(connector, "online redo logs Data Guard", "select group#, thread#, bytes, status from v$log", log_warning=False)
         dg["threads"], _ = self._query_rows_with_error(connector, "threads Data Guard", "select thread#, status, enabled from v$thread", log_warning=False)
+        dg["broker_config"], broker_error = self._query_rows_with_error(connector, "configuración Broker Data Guard", "select * from v$dg_broker_config", log_warning=False)
+        if broker_error:
+            dg["broker_config_collection_error"] = broker_error
+        dg["broker_properties"], property_error = self._query_rows_with_error(connector, "propiedades Broker Data Guard", "select * from v$dg_broker_property", log_warning=False)
+        if property_error:
+            dg["broker_property_collection_error"] = property_error
+        dg["dataguard_status"], status_error = self._query_rows_with_error(connector, "estado Data Guard", "select * from v$dataguard_status", log_warning=False)
+        if status_error:
+            dg["dataguard_status_collection_error"] = status_error
+        dg["managed_standby"], managed_error = self._query_rows_with_error(connector, "procesos managed standby", "select process, status, thread#, sequence# from v$managed_standby", log_warning=False)
+        if managed_error:
+            dg["managed_standby_collection_error"] = managed_error
         return {"dataguard": self._default_dataguard_inventory({**database, "dataguard": dg})}
 
     def _build_dataguard_evidence(self, check: Check, database: dict[str, Any]) -> dict[str, Any]:
@@ -2707,7 +2727,45 @@ class CheckRunner:
         elif cid == "dataguard_parameters_basic":
             evidence["parameters"] = dg.get("parameters") or {}
             evidence["warnings"] = self._dataguard_parameter_warnings(dg)
+        elif cid == "dataguard_broker_configuration_basic":
+            evidence.update({"dg_broker_start": self._parameter_value(dg.get("parameters") or {}, "dg_broker_start"), "broker_config_available": not bool(dg.get("broker_config_collection_error")), "broker_rows": dg.get("broker_config") or [], "rows": dg.get("broker_config") or [], "scope_note": "Evaluación SQL básica; no se ejecutan herramientas externas."})
+        elif cid == "dataguard_broker_status_basic":
+            rows = list(dg.get("broker_config") or []) + list(dg.get("dataguard_status") or [])
+            evidence.update({"broker_available": bool(dg.get("broker_config")) or str(self._parameter_value(dg.get("parameters") or {}, "dg_broker_start") or "").upper() in {"TRUE", "ON", "1"}, "rows": rows})
+            if dg.get("broker_config_collection_error") and dg.get("dataguard_status_collection_error"): evidence["collection_error"] = dg.get("broker_config_collection_error")
+        elif cid == "dataguard_fsfo_status_basic":
+            evidence.update({"broker_available": bool(dg.get("broker_config")) or str(self._parameter_value(dg.get("parameters") or {}, "dg_broker_start") or "").upper() in {"TRUE", "ON", "1"}, "properties": self._dataguard_broker_properties(dg)})
+            if dg.get("broker_property_collection_error") and not evidence["properties"]: evidence["collection_error"] = dg.get("broker_property_collection_error")
+        elif cid == "dataguard_observer_status_basic":
+            props = self._dataguard_broker_properties(dg)
+            status_rows = dg.get("dataguard_status") or []
+            text = " ".join(str(v).upper() for r in status_rows for v in r.values())
+            fsfo = str(props.get("faststartfailover") or "").upper() in {"TRUE", "YES", "ENABLED", "ON"}
+            evidence.update({"fsfo_enabled": fsfo, "observer_visible": "OBSERVER" in text and not any(t in text for t in ("NO OBSERVER", "OBSERVER NOT", "ORA-")), "properties": props, "rows": status_rows})
+        elif cid == "dataguard_managed_standby_processes":
+            evidence.update({"database_role": dg.get("database_role"), "rows": dg.get("managed_standby") or [], "processes": dg.get("managed_standby") or [], "expected_processes_note": "Los procesos esperados dependen del rol y de la versión."})
+            if dg.get("managed_standby_collection_error"): evidence["collection_error"] = dg.get("managed_standby_collection_error")
+        elif cid == "dataguard_switchover_readiness_basic":
+            evidence.update({k: dg.get(k) for k in ("database_role", "open_mode", "protection_mode", "protection_level", "switchover_status")})
+            evidence.update({"archive_gaps": dg.get("archive_gaps") or [], "dataguard_stats": dg.get("dataguard_stats") or [], "archive_destinations": dg.get("archive_destinations") or []})
+        elif cid == "dataguard_protection_consistency":
+            evidence.update({k: dg.get(k) for k in ("database_role", "protection_mode", "protection_level")})
+            evidence["rows"] = dg.get("archive_destinations") or []
+        elif cid == "dataguard_redo_transport_services_basic":
+            evidence["rows"] = dg.get("archive_destinations") or []
+            if dg.get("archive_dest_collection_error"): evidence["collection_error"] = dg.get("archive_dest_collection_error")
         return evidence
+
+    def _dataguard_broker_properties(self, dg: dict[str, Any]) -> dict[str, Any]:
+        props: dict[str, Any] = {}
+        for row in dg.get("broker_properties") or []:
+            if not isinstance(row, dict):
+                continue
+            name = row.get("property_name") or row.get("name") or row.get("property")
+            value = row.get("property_value") or row.get("value")
+            if name is not None:
+                props[str(name).replace("_", "").lower()] = value
+        return props
 
     def _is_standby_archive_dest(self, row: dict[str, Any]) -> bool:
         status = str(row.get("status") or "").upper()

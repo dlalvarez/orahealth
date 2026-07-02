@@ -888,3 +888,9 @@ Fase 5A implementa el grupo real `asm` con checks iniciales feature-aware ejecut
 ## Fase 5B.1 — Data Guard básico feature-aware
 
 Estado: implementada. Se crea el grupo `dataguard` con 8 checks reales para configuraciones Oracle Data Guard con bases standby. La aplicabilidad usa la feature `standby_configuration`; bases sin señales standby quedan SKIPPED sin hallazgos ni penalización. El alcance se limita a vistas SQL estándar no licenciadas y no usa AWR, ASH, DBA_HIST ni X$. Broker/DGMGRL, FSFO y Observer quedan fuera de alcance para una fase avanzada.
+
+### Fase 5B.2 — Data Guard avanzado y Broker readiness
+
+Estado: implementada. El grupo `dataguard` se amplía de 8 a 16 checks reales, manteniendo aplicabilidad `standby_configuration` para que bases sin standby queden omitidas sin hallazgos, acciones correctivas ni penalización. La fase agrega readiness SQL básico para Broker, FSFO, Observer, procesos gestionados, switchover, consistencia de protección y transporte redo hacia standby.
+
+Broker, FSFO y Observer se evalúan solo cuando hay evidencia SQL y aplicabilidad. Broker no habilitado y FSFO no habilitado no son fallos automáticos. No se invocan herramientas externas de Broker ni fuentes de packs diagnósticos; tampoco se usan AWR, ASH, DBA_HIST ni X$.

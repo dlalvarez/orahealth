@@ -1,0 +1,30 @@
+check_id: dataguard_protection_consistency
+group_id: dataguard
+title: Consistencia de modo y nivel de protección Data Guard
+description: Evaluar coherencia entre modo de protección, nivel efectivo y destinos standby visibles.
+severity: FAIL
+collector:
+  type: dataguard
+  source_view: V$DATABASE/V$ARCHIVE_DEST_STATUS/V$ARCHIVE_DEST
+  label: Consistencia de modo y nivel de protección Data Guard
+evaluator:
+  type: dataguard
+  metric: dataguard_protection_consistency
+applicability:
+  requires_feature: standby_configuration
+applies_to:
+  architectures: [standalone, rac, dataguard, rac_dataguard]
+  open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY, MOUNTED]
+  requires:
+    database_connection: true
+remediation:
+  summary: Revisar la evidencia Data Guard avanzada únicamente cuando exista configuración standby real.
+  actions:
+    - Validar primary y standby antes de aplicar cambios.
+    - Revisar lag, gaps, destinos remotos y mensajes del alert log en ambos lados.
+    - Confirmar servicios, conectividad y aplicación de redo con el procedimiento operativo aprobado.
+    - No ejecutar switchover ni failover sin procedimiento aprobado y ventana coordinada.
+  owner: DBA
+  requires_window: false
+  outage_risk: medium
+tags: [oracle, dataguard, standby, feature-aware]
