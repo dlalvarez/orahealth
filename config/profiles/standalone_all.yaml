@@ -16,6 +16,7 @@ enabled_groups:
   - performance
   - capacity
   - asm
+  - dataguard
 standards:
   - oracle_19c
   - development

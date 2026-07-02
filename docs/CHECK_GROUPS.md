@@ -1692,3 +1692,12 @@ Desde Fase 5A el grupo `asm` existe con 8 checks reales y aplicabilidad feature-
 - `asm_rebalance_operations_db_view`
 
 ASM se evalúa desde la conexión Oracle de la base de datos evaluada. No se conecta a la instancia ASM, no requiere SYSASM/Grid y no usa asmcmd, crsctl ni srvctl. La evaluación se centra en archivos ASM propios de la base, diskgroups relevantes, capacidad y estado observables desde la conexión actual, discos visibles y rebalance. Si no se detectan archivos de base sobre ASM, los checks quedan `SKIPPED` como no aplicables, sin hallazgos ni penalización. `standalone_all` incluye `asm` porque una base standalone puede residir sobre ASM; ASM no implica RAC. La conexión dedicada ASM/Grid queda reservada para una fase avanzada futura.
+
+## dataguard
+
+- Estado: INICIADO 5B.1.
+- Checks implementados: 8.
+- Alcance actual: Data Guard básico feature-aware desde vistas SQL estándar para configuraciones con bases standby.
+- Aplicabilidad: requiere `standby_configuration`; bases sin standby quedan SKIPPED sin hallazgos ni penalización.
+- Fuera de alcance actual: Broker/DGMGRL, FSFO, Observer, validaciones avanzadas primary/standby y readiness completo de switchover/failover.
+- Restricciones: no usa AWR, ASH, DBA_HIST ni X$.
