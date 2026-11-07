@@ -7,6 +7,9 @@ app:
   max_parallel_checks: 5
   default_command_timeout_seconds: 60
   default_sql_timeout_seconds: 60
+  # Porcentaje mínimo de validaciones aplicables que deben evaluarse con evidencia
+  # confiable. Por debajo, el estado global es ERROR (evaluación no concluyente).
+  min_evidence_coverage_pct: 80
 reports:
   generate_executive: true
   generate_technical: true

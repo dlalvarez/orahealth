@@ -171,3 +171,7 @@ def test_declared_views_have_valid_names(example_config):
 def test_core_views_are_always_probed(example_config):
     runner = CheckRunner(example_config)
     assert set(CORE_VIEWS) <= set(runner._views_to_probe([]))
+
+
+def test_min_coverage_is_configurable_in_app_settings(example_config):
+    assert example_config["settings"]["app"]["min_evidence_coverage_pct"] == 80
