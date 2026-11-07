@@ -8,6 +8,13 @@ def _version(value: str) -> tuple[int, ...] | None:
         return None
 
 
+def _has_os_connection(target: Target) -> bool:
+    os_cfg = target.operating_system or {}
+    if os_cfg.get("connections") or os_cfg.get("use_local_discovery"):
+        return True
+    return any(isinstance(host, dict) and host.get("connection_profile") for host in os_cfg.get("hosts") or [])
+
+
 class ApplicabilityEngine:
     def evaluate(self, check: Check, target: Target, inventory: Inventory) -> tuple[bool, str | None]:
         feature_applicability = check.applicability or {}
@@ -37,7 +44,7 @@ class ApplicabilityEngine:
         requires = applies.get("requires") or {}
         if requires.get("database_connection") and not target.database.get("primary_connection"):
             return False, "Se requiere conexión a base de datos"
-        if requires.get("os_connection") and not target.operating_system.get("connections"):
+        if requires.get("os_connection") and not _has_os_connection(target):
             return False, "Se requiere conexión al sistema operativo"
         for feature in ("awr", "diagnostic_pack", "sysdba"):
             if requires.get(feature) and not inventory.features.get(feature):

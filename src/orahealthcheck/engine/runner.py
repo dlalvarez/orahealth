@@ -9,7 +9,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from orahealthcheck.connectors import LocalConnector, OracleConnector, SSHConnector
+from orahealthcheck.connectors import LocalConnector, OracleConnector, build_os_connector
 from orahealthcheck.engine.applicability import ApplicabilityEngine
 from orahealthcheck.engine.scoring import summarize
 from orahealthcheck.evaluators import EVALUATORS
@@ -39,10 +39,68 @@ ORACLE_INTERNAL_SCHEMAS = {
 
 
 class CheckRunner:
-    def __init__(self, config: dict[str, Any], oracle_connector_factory: Any = OracleConnector) -> None:
+    def __init__(
+        self,
+        config: dict[str, Any],
+        oracle_connector_factory: Any = OracleConnector,
+        os_connector_factory: Any = None,
+    ) -> None:
         self.config = config
         self.applicability = ApplicabilityEngine()
         self.oracle_connector_factory = oracle_connector_factory
+        # Se resuelve en tiempo de ejecución para permitir que las pruebas reemplacen
+        # ``build_os_connector`` del módulo sin tocar cada instancia.
+        self._os_connector_factory_override = os_connector_factory
+        self._os_connector_cache: dict[str, Any] = {}
+
+    @property
+    def os_connector_factory(self) -> Any:
+        return self._os_connector_factory_override or build_os_connector
+
+    def _os_connection_ids(self, target: Target) -> list[str]:
+        """Conexiones OS declaradas por el target (lista ``connections`` o ``hosts``)."""
+        os_cfg = target.operating_system or {}
+        ids = [str(item) for item in (os_cfg.get("connections") or []) if item]
+        for host in os_cfg.get("hosts") or []:
+            if isinstance(host, dict) and host.get("connection_profile"):
+                ids.append(str(host["connection_profile"]))
+        return ids
+
+    def _os_connector(self, target: Target) -> Any | None:
+        """Conector del primer host OS del target; ``None`` si no hay conexión OS.
+
+        ``use_local_discovery`` se conserva por compatibilidad y equivale a una
+        conexión local explícita.
+        """
+        if target.target_id in self._os_connector_cache:
+            return self._os_connector_cache[target.target_id]
+        connector = None
+        connection_ids = self._os_connection_ids(target)
+        if connection_ids:
+            profile = self.config.get("connections", {}).get("os_connections", {}).get(connection_ids[0])
+            if profile is None:
+                raise ValueError(f"El perfil de conexión OS '{connection_ids[0]}' no existe")
+            connector = self.os_connector_factory(profile)
+        elif target.operating_system.get("use_local_discovery", False):
+            connector = LocalConnector()
+        self._os_connector_cache[target.target_id] = connector
+        return connector
+
+    def _os_adapter(self, target: Target, platform: str) -> Any:
+        connector = self._os_connector(target)
+        if connector is None:
+            raise RuntimeError("El target no tiene conexión de sistema operativo configurada")
+        return AIXAdapter(connector) if platform == "aix" else LinuxAdapter(connector)
+
+    def _close_os_connectors(self) -> None:
+        for connector in self._os_connector_cache.values():
+            close = getattr(connector, "close", None)
+            if callable(close):
+                try:
+                    close()
+                except Exception as exc:  # cierre best-effort
+                    logging.warning("Error cerrando conexión OS: %s", exc)
+        self._os_connector_cache.clear()
 
     def run_target(self, target_id: str, profile_id: str | None = None) -> Path:
         run_start = time.monotonic()
@@ -56,10 +114,13 @@ class CheckRunner:
         logging.info("Target: %s (%s)", target.target_id, target.name)
         logging.info("Profile: %s", profile.profile_id)
         logging.info("Enabled groups: %s", ", ".join(profile.enabled_groups) or "none")
-        inventory = self._discover_inventory(target)
-        checks = self._resolve_checks(profile)
-        logging.info("Loaded checks (%s): %s", len(checks), ", ".join(check.check_id for check in checks) or "none")
-        results = [self._run_check(check, target, inventory) for check in checks]
+        try:
+            inventory = self._discover_inventory(target)
+            checks = self._resolve_checks(profile)
+            logging.info("Loaded checks (%s): %s", len(checks), ", ".join(check.check_id for check in checks) or "none")
+            results = [self._run_check(check, target, inventory) for check in checks]
+        finally:
+            self._close_os_connectors()
         summary = summarize(results)
         executed = [result.check_id for result in results if result.status != ResultStatus.SKIPPED]
         skipped = [result.check_id for result in results if result.status == ResultStatus.SKIPPED]
@@ -109,9 +170,15 @@ class CheckRunner:
             db["parameters"] = self._with_default_mock_parameters(db.get("parameters", {}))
         features = self._detect_oracle_features_from_inventory(db)
         os_data = {"platform": target.operating_system.get("platform", "linux")}
-        if target.operating_system.get("use_local_discovery", False):
-            adapter = LinuxAdapter(LocalConnector()) if os_data["platform"] == "linux" else AIXAdapter(LocalConnector())
-            os_data.update({"os_info": adapter.get_os_info(), "cpu": adapter.get_cpu_info(), "memory": adapter.get_memory_info()})
+        os_connection_ids = self._os_connection_ids(target)
+        os_data["connection"] = os_connection_ids[0] if os_connection_ids else ("local" if target.operating_system.get("use_local_discovery") else None)
+        if target.operating_system.get("use_local_discovery", False) or os_connection_ids:
+            try:
+                adapter = self._os_adapter(target, os_data["platform"])
+                os_data.update({"os_info": adapter.get_os_info(), "cpu": adapter.get_cpu_info(), "memory": adapter.get_memory_info()})
+            except Exception as exc:
+                logging.warning("No fue posible descubrir el inventario OS del target %s: %s", target.target_id, exc)
+                os_data["discovery_error"] = str(exc)
         return Inventory(target.target_id, target.expected_architecture, target.environment, db, os_data, {**features, **target.features})
 
 
@@ -335,11 +402,7 @@ class CheckRunner:
                 output = os_connector.run_command(command, timeout=60)
             except Exception as exc:
                 return self._alert_log_read_error(candidate_path, source, str(exc), diag_alert_error)
-            finally:
-                close = getattr(os_connector, "close", None)
-                if callable(close):
-                    close()
-            if int(output.get("exit_code", 1) or 0) != 0:
+            if output.get("exit_code") != 0:
                 detail = output.get("stderr") or output.get("stdout") or f"exit_code={output.get('exit_code')}"
                 return self._alert_log_read_error(candidate_path, source, str(detail).strip(), diag_alert_error)
             return {
@@ -362,15 +425,11 @@ class CheckRunner:
         }
 
     def _build_alert_log_os_connector(self, target: Target) -> Any | None:
-        if target.operating_system.get("use_local_discovery", False):
-            return LocalConnector()
-        connections = target.operating_system.get("connections", []) or []
-        if not connections:
+        try:
+            return self._os_connector(target)
+        except Exception as exc:
+            logging.warning("No fue posible construir la conexión OS para el alert log: %s", exc)
             return None
-        profile = self.config.get("connections", {}).get("os_connections", {}).get(connections[0])
-        if not profile:
-            return None
-        return SSHConnector(profile)
 
     def _alert_log_read_error(self, path: str, source: str, detail: str, diag_alert_error: str | None) -> dict[str, Any]:
         return {
@@ -2220,7 +2279,7 @@ class CheckRunner:
                 duration_ms=duration_ms,
             )
         try:
-            evidence = self._collect(check, inventory)
+            evidence = self._collect(check, inventory, target)
             evaluator_type = check.evaluator.get("type", "expected_value")
             evaluator_config = dict(check.evaluator)
             if evaluator_type == "threshold" and "field" not in evaluator_config and check.collector.get("field"):
@@ -2254,7 +2313,7 @@ class CheckRunner:
                 duration_ms=duration_ms,
             )
 
-    def _collect(self, check: Check, inventory: Inventory) -> Any:
+    def _collect(self, check: Check, inventory: Inventory, target: Target | None = None) -> Any:
         collector = check.collector
         ctype = collector.get("type", "inventory")
         if ctype == "alert_log_family":
@@ -2308,7 +2367,9 @@ class CheckRunner:
         if ctype == "static":
             return collector.get("value")
         if ctype == "os_adapter":
-            adapter = LinuxAdapter(LocalConnector()) if inventory.operating_system.get("platform") == "linux" else AIXAdapter(LocalConnector())
+            if target is None:
+                raise RuntimeError("El colector os_adapter requiere el target para resolver la conexión OS")
+            adapter = self._os_adapter(target, str(inventory.operating_system.get("platform", "linux")))
             return getattr(adapter, collector["method"])()
         raise ValueError(f"Tipo de colector no soportado: {ctype}")
 
