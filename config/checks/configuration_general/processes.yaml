@@ -14,6 +14,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: processes limita la cantidad de procesos Oracle y conexiones concurrentes; un valor insuficiente puede rechazar conexiones y afectar servicios de base de datos.
   actions:

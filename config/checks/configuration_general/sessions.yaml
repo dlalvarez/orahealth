@@ -14,6 +14,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: sessions define el límite de sesiones concurrentes y debe mantenerse coherente con processes para soportar la concurrencia esperada sin rechazos de conexión.
   actions:

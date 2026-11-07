@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: db_block_size es una característica estructural de la base de datos; normalmente no se cambia directamente en una base existente sin rediseño o migración controlada.
   actions:

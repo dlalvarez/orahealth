@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_data_files]
 remediation:
   summary: Hay datafiles autoextensibles próximos a su MAXSIZE y podrían impedir nuevas asignaciones.
   actions:

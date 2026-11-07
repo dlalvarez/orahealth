@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_tablespaces]
 remediation:
   summary: Revisar tablespaces legacy y planear migración a administración local cuando aplique.
   actions:

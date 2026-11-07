@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_users, dba_tablespaces]
 remediation:
   summary: Crear o identificar un tablespace temporal válido, ejecutar ALTER USER y validar que SYSTEM no se use para operaciones temporales.
   actions:

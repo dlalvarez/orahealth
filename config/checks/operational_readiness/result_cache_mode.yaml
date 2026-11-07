@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: result_cache_mode controla el uso del result cache; no existe un valor universal y debe alinearse con el estándar y el comportamiento de la aplicación.
   actions:

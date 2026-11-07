@@ -18,6 +18,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_tab_privs, dba_users]
 remediation:
   summary: Revisar necesidad de GRANT OPTION, revocar concesiones obsoletas y limitar redistribución de privilegios.
   actions:

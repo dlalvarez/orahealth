@@ -18,6 +18,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$logfile]
 remediation:
   summary: Tener un solo member por grupo redo aumenta el riesgo ante pérdida o corrupción de un archivo redo, con impacto potencial en disponibilidad y recuperación.
   actions:

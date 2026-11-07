@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: sql_trace habilitado globalmente puede generar overhead y archivos de traza excesivos; en producción debe usarse trazabilidad controlada y acotada.
   actions:

@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: audit_trail controla la auditoría tradicional de Oracle; una configuración no alineada impacta seguridad, cumplimiento, trazabilidad y consumo de almacenamiento.
   actions:

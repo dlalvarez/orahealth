@@ -17,6 +17,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$log]
 remediation:
   summary: Una cantidad insuficiente de grupos redo puede afectar la continuidad operacional, provocar switches frecuentes y reducir el margen de recuperación ante problemas de escritura o archivado.
   actions:

@@ -18,6 +18,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$parameter, dba_data_files, dba_free_space]
 remediation:
   summary: Revisar capacidad, ocupación aproximada y margen del UNDO activo.
   actions:

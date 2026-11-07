@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: optimizer_features_enable controla el comportamiento del optimizador Oracle; un valor distinto al esperado puede cambiar planes de ejecución y afectar el rendimiento de SQL críticos.
   actions:

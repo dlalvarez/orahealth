@@ -38,6 +38,25 @@ ORACLE_INTERNAL_SCHEMAS = {
 }
 
 
+# Vistas mínimas sin las cuales no es posible identificar la base (rol, open mode,
+# versión). Si no son accesibles, ningún check de base de datos es confiable.
+CORE_VIEWS = ("v$database", "v$instance")
+
+
+def required_views(check: Check) -> list[str]:
+    """Vistas declaradas en ``applies_to.requires.views`` del check (en minúsculas)."""
+    requires = (check.applies_to or {}).get("requires") or {}
+    views = requires.get("views") or []
+    if isinstance(views, str):
+        views = [views]
+    return [str(view).strip().lower() for view in views if str(view).strip()]
+
+
+def requires_database(check: Check) -> bool:
+    requires = (check.applies_to or {}).get("requires") or {}
+    return bool(requires.get("database_connection"))
+
+
 class CheckRunner:
     def __init__(
         self,
@@ -115,13 +134,20 @@ class CheckRunner:
         logging.info("Profile: %s", profile.profile_id)
         logging.info("Enabled groups: %s", ", ".join(profile.enabled_groups) or "none")
         try:
-            inventory = self._discover_inventory(target)
             checks = self._resolve_checks(profile)
+            inventory = self._discover_inventory(target, checks)
             logging.info("Loaded checks (%s): %s", len(checks), ", ".join(check.check_id for check in checks) or "none")
             results = [self._run_check(check, target, inventory) for check in checks]
         finally:
             self._close_os_connectors()
-        summary = summarize(results)
+        min_coverage = self.config.get("settings", {}).get("app", {}).get("min_evidence_coverage_pct", 80)
+        summary = summarize(results, min_coverage_pct=float(min_coverage))
+        summary["data_source"] = "simulado" if "mock_inventory" in target.database else "oracle"
+        summary["discovery_error_count"] = len(inventory.database.get("discovery_errors") or [])
+        summary["inaccessible_views"] = sorted(
+            view for view, access in (inventory.database.get("view_access") or {}).items()
+            if not access.get("accessible")
+        )
         executed = [result.check_id for result in results if result.status != ResultStatus.SKIPPED]
         skipped = [result.check_id for result in results if result.status == ResultStatus.SKIPPED]
         logging.info("Executed checks (%s): %s", len(executed), ", ".join(executed) or "none")
@@ -144,17 +170,23 @@ class CheckRunner:
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         root.addHandler(handler)
 
-    def _discover_inventory(self, target: Target) -> Inventory:
-        if "mock_inventory" in target.database:
+    def _discover_inventory(self, target: Target, checks: list[Check] | None = None) -> Inventory:
+        is_mock = "mock_inventory" in target.database
+        if is_mock:
             logging.info("Using mock database inventory for target %s", target.target_id)
             db = dict(target.database.get("mock_inventory", {}))
+            db.setdefault("data_source", "simulado")
+            # Identidad por defecto SOLO para inventarios simulados (demo/pruebas).
+            db.setdefault("status", "OPEN")
+            db.setdefault("open_mode", "READ WRITE")
+            db.setdefault("role", "PRIMARY")
+            db.setdefault("version", "19.0")
         else:
             logging.info("Using OracleConnector for database inventory on target %s", target.target_id)
-            db = self._discover_oracle_inventory(target)
-        db.setdefault("status", "OPEN")
-        db.setdefault("open_mode", "READ WRITE")
-        db.setdefault("role", "PRIMARY")
-        db.setdefault("version", "19.0")
+            db = self._discover_oracle_inventory(target, self._views_to_probe(checks))
+            db.setdefault("data_source", "oracle")
+            # Para bases reales nunca se inventa la identidad: si V$DATABASE/V$INSTANCE
+            # no se pudieron leer, los checks quedan en ERROR por la compuerta de evidencia.
         db.setdefault("oracle_resources", self._default_oracle_resources_inventory(db.get("parameters", {}), healthy_defaults="mock_inventory" in target.database))
         db.setdefault("io_redo_archive", self._default_io_redo_archive_inventory(db, db.get("parameters", {})))
         db.setdefault("recoverability_drp", self._default_recoverability_drp_inventory(db.get("parameters", {}), healthy_defaults="mock_inventory" in target.database))
@@ -204,15 +236,43 @@ class CheckRunner:
         }
         return {**normalized_defaults, **existing}
 
-    def _discover_oracle_inventory(self, target: Target) -> dict[str, Any]:
+    def _views_to_probe(self, checks: list[Check] | None) -> list[str]:
+        views: dict[str, None] = dict.fromkeys(CORE_VIEWS)
+        for check in checks or []:
+            for view in required_views(check):
+                views[view] = None
+        return list(views)
+
+    def _probe_view_access(self, connector: Any, views: list[str]) -> dict[str, dict[str, Any]]:
+        """Verifica acceso de lectura a cada vista sin traer filas (``where 1 = 0``)."""
+        access: dict[str, dict[str, Any]] = {}
+        for view in views:
+            if not all(ch.isalnum() or ch in "_$" for ch in view):
+                access[view] = {"accessible": False, "error": "Nombre de vista inválido en la configuración"}
+                continue
+            try:
+                connector.query(f"select 1 from {view} where 1 = 0")
+                access[view] = {"accessible": True, "error": None}
+            except Exception as exc:
+                logging.warning("Sin acceso a %s: %s", view, exc)
+                access[view] = {"accessible": False, "error": str(exc)}
+        return access
+
+    def _discover_oracle_inventory(self, target: Target, probe_views: list[str] | None = None) -> dict[str, Any]:
         connection_id = target.database.get("primary_connection")
         if not connection_id:
             return {}
         profile = self.config["connections"]["db_connections"].get(connection_id)
-        connector = self.oracle_connector_factory(profile)
+        self._query_failures = []
         try:
+            connector = self.oracle_connector_factory(profile)
             connector.connect()
+        except Exception as exc:
+            logging.error("No fue posible conectar a la base de datos (%s): %s", connection_id, exc)
+            return {"connection_error": str(exc), "data_source": "oracle"}
+        try:
             inventory: dict[str, Any] = {}
+            inventory["view_access"] = self._probe_view_access(connector, probe_views or list(CORE_VIEWS))
             inventory.update(self._query_one(connector, "database status", """
                 select
                   name as db_name,
@@ -329,9 +389,13 @@ class CheckRunner:
             inventory.update(self._discover_multitenant_inventory(connector, inventory.get("cdb")))
             inventory["alert_log"] = self._discover_alert_log_inventory(connector, target, inventory)
             inventory.update(self._discover_oracle_feature_signals(connector))
+            inventory["discovery_errors"] = list(self._query_failures)
             return inventory
         finally:
-            connector.close()
+            try:
+                connector.close()
+            except Exception as exc:  # cierre best-effort
+                logging.warning("Error cerrando conexión Oracle: %s", exc)
 
     def _default_alert_log_inventory(self, database: dict[str, Any]) -> dict[str, Any]:
         excerpt = database.get("alert_log_excerpt")
@@ -878,6 +942,9 @@ class CheckRunner:
 
     def _query_schema_rows(self, connector: Any, label: str, sql: str, fallback_sql: str | None = None) -> list[dict[str, Any]]:
         rows, error = self._query_rows_with_error(connector, label, sql, log_warning=False)
+        if error and not fallback_sql:
+            logging.warning("Oracle inventory query failed for %s: %s", label, error)
+            self._record_query_failure(label, error)
         if error and fallback_sql:
             logging.info("Retrying Oracle schema object query without ORACLE_MAINTAINED for %s", label)
             rows = self._query_rows(connector, f"{label} sin columna oracle_maintained", fallback_sql.format(internal_schemas=self._sql_in_list(ORACLE_INTERNAL_SCHEMAS)))
@@ -2177,6 +2244,12 @@ class CheckRunner:
             return None
         return data.get("display_value", data.get("value"))
 
+    def _record_query_failure(self, label: str, exc: Any) -> None:
+        failures = getattr(self, "_query_failures", None)
+        if failures is None:
+            failures = self._query_failures = []
+        failures.append({"query": label, "error": str(exc)})
+
     def _query_one(self, connector: Any, label: str, sql: str) -> dict[str, Any]:
         rows = self._query_rows(connector, label, sql)
         return rows[0] if rows else {}
@@ -2190,7 +2263,10 @@ class CheckRunner:
             rows = connector.query(sql)
         except Exception as exc:
             if log_warning:
+                # log_warning=False se usa en consultas de sondeo con fallback; solo se
+                # registran como fallo las consultas definitivas.
                 logging.warning("Oracle inventory query failed for %s: %s", label, exc)
+                self._record_query_failure(label, exc)
             return [], str(exc)
         return [
             {key: self._normalize_inventory_value(value) for key, value in dict(row).items()}
@@ -2234,10 +2310,62 @@ class CheckRunner:
                 if field_name.endswith("_policy") and policy_name in policies:
                     section[field_name.removesuffix("_policy")] = policies[policy_name]
 
+    def _evidence_gate(self, check: Check, inventory: Inventory, stage: str) -> str | None:
+        """Motivo por el que el check no tiene evidencia confiable, o ``None``.
+
+        ``stage='pre'`` valida conexión y vistas núcleo (antes de aplicabilidad, porque
+        la aplicabilidad depende del rol/open mode leídos de esas vistas).
+        ``stage='post'`` valida las vistas propias del check (después de aplicabilidad,
+        para que un check no aplicable quede SKIPPED aunque su vista no sea accesible).
+        """
+        if not requires_database(check) or inventory.database.get("data_source") == "simulado":
+            return None
+        db = inventory.database
+        access = db.get("view_access")
+        if stage == "pre":
+            if db.get("connection_error"):
+                return f"No fue posible conectar a la base de datos: {db['connection_error']}"
+            if access is None:
+                return None  # inventario construido sin preflight (compatibilidad)
+            blocked = [view for view in CORE_VIEWS if not access.get(view, {}).get("accessible", False)]
+            if blocked:
+                details = "; ".join(f"{view.upper()}: {access.get(view, {}).get('error') or 'no verificada'}" for view in blocked)
+                return f"No es posible identificar la base de datos por falta de acceso a vistas núcleo ({details})"
+            return None
+        if access is None:
+            return None
+        blocked = [view for view in required_views(check) if view in access and not access[view].get("accessible")]
+        if blocked:
+            details = "; ".join(f"{view.upper()}: {access[view].get('error')}" for view in blocked)
+            return f"Sin acceso de lectura a vistas requeridas ({details}). Otorgue el privilegio y reejecute."
+        return None
+
+    def _evidence_error_result(self, check: Check, reason: str, start: float) -> Result:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        logging.error("Check %s sin evidencia confiable: %s", check.check_id, reason)
+        return Result(
+            check_id=check.check_id,
+            group_id=check.group_id,
+            status=ResultStatus.ERROR,
+            title=check.title,
+            failure_severity=check.failure_severity,
+            message="No se obtuvo evidencia confiable; el check no se evaluó",
+            evidence={"required_views": required_views(check)},
+            error=reason,
+            duration_ms=duration_ms,
+        )
+
     def _run_check(self, check: Check, target: Target, inventory: Inventory) -> Result:
         start = time.monotonic()
         logging.info("Check %s started", check.check_id)
+        gate_reason = self._evidence_gate(check, inventory, "pre")
+        if gate_reason:
+            return self._evidence_error_result(check, gate_reason, start)
         applicable, reason = self.applicability.evaluate(check, target, inventory)
+        if applicable:
+            gate_reason = self._evidence_gate(check, inventory, "post")
+            if gate_reason:
+                return self._evidence_error_result(check, gate_reason, start)
         if check.check_id in ("fra_usage", "fra_usage_pct") and inventory.database.get("fra_configured") is False:
             duration_ms = int((time.monotonic() - start) * 1000)
             message = inventory.database.get("fra_message", "FRA no está configurada")

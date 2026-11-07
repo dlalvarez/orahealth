@@ -18,6 +18,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$resource_limit]
 remediation:
   summary: Revisar el peor margen actual frente a sessions, processes y transactions.
   actions:

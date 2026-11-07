@@ -14,6 +14,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$database]
 remediation:
   summary: La base de datos no está operando en modo ARCHIVELOG; esto limita la recuperación punto en el tiempo y debilita la estrategia de backup/recovery ante fallas o pérdida de datos.
   actions:

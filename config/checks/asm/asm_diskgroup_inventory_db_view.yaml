@@ -17,6 +17,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$asm_diskgroup_stat]
 remediation:
   summary: Inventariar diskgroups ASM visibles y relevantes desde la conexión actual.
   actions:

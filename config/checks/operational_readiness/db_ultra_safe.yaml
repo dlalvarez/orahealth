@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: db_ultra_safe ajusta controles internos de protección y no debe imponerse universalmente sin evaluar estándar, versión y criticidad del ambiente.
   actions:

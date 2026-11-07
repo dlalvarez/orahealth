@@ -17,6 +17,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_temp_files]
 remediation:
   summary: El uso activo de TEMP por segmentos temporales de sesiones es alto y puede afectar consultas, ordenamientos, hash joins o procesos paralelos.
   actions:

@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_tab_statistics, dba_users]
 remediation:
   summary: Las estadísticas desactualizadas pueden causar estimaciones incorrectas del optimizador y planes de ejecución ineficientes.
   actions:

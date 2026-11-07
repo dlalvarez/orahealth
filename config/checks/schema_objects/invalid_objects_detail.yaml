@@ -18,6 +18,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_objects, dba_users]
 remediation:
   summary: Los objetos inválidos pueden producir errores de ejecución en paquetes, vistas, disparadores, procedimientos o dependencias de aplicación.
   actions:

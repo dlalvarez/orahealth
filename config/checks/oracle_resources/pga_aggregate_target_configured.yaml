@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: PGA insuficiente o no configurada puede afectar sorts, hash joins, procesos paralelos y consumo de memoria por sesión.
   actions:

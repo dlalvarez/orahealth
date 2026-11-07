@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: La papelera de reciclaje puede conservar objetos eliminados y consumir espacio, pero también permite recuperación lógica rápida ante borrados accidentales.
   actions:

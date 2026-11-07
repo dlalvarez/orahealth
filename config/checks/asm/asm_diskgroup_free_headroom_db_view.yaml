@@ -23,6 +23,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$asm_diskgroup_stat]
 remediation:
   summary: Uno o más diskgroups ASM utilizados por la base no tienen margen efectivo suficiente para crecimiento. El margen debe evaluarse preferentemente con USABLE_FILE_MB, porque refleja la capacidad realmente utilizable considerando la redundancia ASM; cuando este valor no está disponible, el check utiliza FREE_MB como respaldo y lo deja indicado en la evidencia.
   actions:

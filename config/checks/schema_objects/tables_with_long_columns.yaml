@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_tab_columns]
 remediation:
   summary: Evaluar migración a CLOB, BLOB u otro tipo moderno, validando compatibilidad de la aplicación.
   actions:

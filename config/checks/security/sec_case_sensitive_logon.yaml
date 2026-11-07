@@ -16,6 +16,7 @@ applies_to:
     max: "11.2"
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: En versiones donde aplica, sec_case_sensitive_logon debe mantener autenticación sensible a mayúsculas y minúsculas.
   actions:

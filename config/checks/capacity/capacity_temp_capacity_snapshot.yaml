@@ -18,6 +18,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_temp_files, v$temp_space_header]
 remediation:
   summary: Revisar capacidad, uso actual y margen de TEMP sin duplicar validaciones puntuales de storage.
   actions:

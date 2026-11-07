@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: timed_statistics controla la recolección de estadísticas de tiempo; en versiones modernas suele ser útil para diagnóstico básico y debe revisarse contra el estándar vigente.
   actions:

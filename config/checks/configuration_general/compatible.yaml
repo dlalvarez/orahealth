@@ -13,6 +13,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: El parámetro compatible define el nivel de compatibilidad funcional de la base; un valor no alineado puede limitar características disponibles o habilitar comportamientos de versión con impacto operativo.
   actions:

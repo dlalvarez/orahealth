@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [gv$cluster_interconnects]
 remediation:
   summary: Revisar la configuración RAC indicada por la evidencia cuando la validación aplique y reporte una condición anómala.
   actions:

@@ -18,6 +18,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$asm_diskgroup_stat]
 remediation:
   summary: Detectar estados anómalos en diskgroups usados por la base.
   actions:

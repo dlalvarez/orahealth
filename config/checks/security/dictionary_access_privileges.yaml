@@ -18,6 +18,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_sys_privs, dba_role_privs]
 remediation:
   summary: Validar necesidad de acceso al diccionario, revocar permisos no justificados y usar roles mínimos.
   actions:

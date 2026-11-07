@@ -17,6 +17,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_indexes, dba_ind_columns]
 remediation:
   summary: Revisar selectividad y uso del índice antes de mantener o rediseñar el acceso.
   actions:

@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_synonyms, dba_objects, dba_users]
 remediation:
   summary: Los sinónimos locales apuntando a objetos inexistentes pueden causar errores de resolución en consultas, paquetes o despliegues incompletos.
   actions:

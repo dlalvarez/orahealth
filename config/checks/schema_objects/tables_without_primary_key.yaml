@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_tables, dba_constraints]
 remediation:
   summary: Evaluar si la tabla requiere llave primaria y crearla cuando corresponda.
   actions:

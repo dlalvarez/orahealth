@@ -17,6 +17,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$session, dba_users]
 remediation:
   summary: Un exceso de sesiones inactivas puede consumir procesos, sesiones y memoria, especialmente por pools mal configurados.
   actions:

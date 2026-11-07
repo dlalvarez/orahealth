@@ -27,6 +27,7 @@
       <div class="hero-item"><span>Fecha/hora de ejecución</span><strong>{{ generated_at }}</strong></div>
     </div>
   </header>
+  {% if summary.evidence_notices %}<section class="section" style="border-left:5px solid #b45309;background:#fffbeb"><h2>Avisos de confiabilidad</h2><ul>{% for notice in summary.evidence_notices %}<li>{{ notice }}</li>{% endfor %}</ul></section>{% endif %}
 
   <section class="section">
     <h2>Información del target</h2>
@@ -45,9 +46,9 @@
 
   <section class="section">
     <h2>Resumen Ejecutivo</h2>
-    <p class="hint">El puntaje inicia en 100 y disminuye cuando se encuentran Advertencia, Fallo, Crítico o Error. El estado global resalta el mayor riesgo operativo observado.</p>
+    <p class="hint">El puntaje inicia en 100 y disminuye cuando se encuentran Advertencia, Fallo o Crítico. Los errores técnicos no son hallazgos de salud: reducen la cobertura de evidencia. Si la cobertura es insuficiente, el estado global es Error (evaluación no concluyente).</p>
     <div class="cards">
-      <div class="card score-card"><div class="label">Puntaje de Salud</div><div class="value">{{ summary.score }}</div></div>
+      <div class="card score-card"><div class="label">Puntaje de Salud</div><div class="value">{{ summary.score_display }}</div></div><div class="card"><div class="label">Cobertura de evidencia</div><div class="value">{{ summary.coverage_display }}</div></div>
       <div class="card"><div class="label">Estado Global</div><div class="value" style="font-size:1.2rem">{{ badge(summary.global_status) }}</div></div>
       <div class="card"><div class="label">Total de validaciones</div><div class="value">{{ summary.total_checks }}</div></div>
       <div class="card"><div class="label">Correcto</div><div class="value">{{ summary.PASS }}</div></div>
