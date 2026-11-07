@@ -36,6 +36,33 @@ from orahealthcheck.engine.requirements import CORE_VIEWS, required_views, requi
 
 
 
+# Sección de descubrimiento Oracle que alimenta cada tipo de collector. Solo se
+# descubren las secciones que necesitan los checks del perfil ejecutado.
+COLLECTOR_SECTIONS = {
+    "oracle_storage": "storage",
+    "oracle_security": "security",
+    "oracle_schema_objects": "schema_objects",
+    "oracle_resources": "oracle_resources",
+    "performance": "performance",
+    "capacity": "capacity",
+    "io_redo_archive": "io_redo_archive",
+    "recoverability_drp": "recoverability_drp",
+    "rac": "rac",
+    "patching": "patching",
+    "asm": "asm",
+    "dataguard": "dataguard",
+    "multitenant": "multitenant",
+    "alert_log_family": "alert_log",
+}
+SECTION_DEPENDENCIES = {
+    "capacity": ("storage", "oracle_resources"),
+    "patching": ("multitenant",),
+}
+# Secciones livianas (solo vistas V$) que alimentan el inventario de características
+# Oracle mostrado en todos los reportes; se descubren siempre.
+ALWAYS_SECTIONS = ("asm", "dataguard", "multitenant")
+
+
 class CheckRunner(AlertLogMixin, FeaturesMixin, SchemaObjectsMixin, SecurityMixin, StorageMixin, OracleResourcesMixin, PerformanceMixin, IoRedoArchiveMixin, RacMixin, PatchingMixin, MultitenantMixin, RecoverabilityDrpMixin, CapacityMixin, AsmMixin, DataguardMixin):
     def __init__(
         self,
@@ -162,7 +189,7 @@ class CheckRunner(AlertLogMixin, FeaturesMixin, SchemaObjectsMixin, SecurityMixi
             db.setdefault("version", "19.0")
         else:
             logging.info("Using OracleConnector for database inventory on target %s", target.target_id)
-            db = self._discover_oracle_inventory(target, self._views_to_probe(checks))
+            db = self._discover_oracle_inventory(target, self._views_to_probe(checks), self._sections_for(checks))
             db.setdefault("data_source", "oracle")
             # Para bases reales nunca se inventa la identidad: si V$DATABASE/V$INSTANCE
             # no se pudieron leer, los checks quedan en ERROR por la compuerta de evidencia.
@@ -214,7 +241,29 @@ class CheckRunner(AlertLogMixin, FeaturesMixin, SchemaObjectsMixin, SecurityMixi
         }
         return {**normalized_defaults, **existing}
 
-    def _discover_oracle_inventory(self, target: Target, probe_views: list[str] | None = None) -> dict[str, Any]:
+    def _sections_for(self, checks: list[Check] | None) -> set[str] | None:
+        """Secciones de descubrimiento requeridas por los checks; ``None`` = todas."""
+        if checks is None:
+            return None
+        sections = set(ALWAYS_SECTIONS)
+        for check in checks:
+            section = COLLECTOR_SECTIONS.get(str(check.collector.get("type", "")))
+            if section:
+                sections.add(section)
+        pending = list(sections)
+        while pending:
+            for dependency in SECTION_DEPENDENCIES.get(pending.pop(), ()):
+                if dependency not in sections:
+                    sections.add(dependency)
+                    pending.append(dependency)
+        return sections
+
+    def _discover_oracle_inventory(
+        self,
+        target: Target,
+        probe_views: list[str] | None = None,
+        sections: set[str] | None = None,
+    ) -> dict[str, Any]:
         connection_id = target.database.get("primary_connection")
         if not connection_id:
             return {}
@@ -330,20 +379,34 @@ class CheckRunner(AlertLogMixin, FeaturesMixin, SchemaObjectsMixin, SecurityMixi
                 from dba_objects
                 where status = 'INVALID'
             """))
-            inventory.update(self._discover_schema_objects_inventory(connector))
-            inventory.update(self._discover_storage_inventory(connector, inventory.get("parameters", {})))
-            inventory.update(self._discover_security_inventory(connector))
-            inventory.update(self._discover_oracle_resources_inventory(connector, inventory.get("parameters", {})))
-            inventory.update(self._discover_performance_inventory(connector))
-            inventory.update(self._discover_capacity_inventory(connector, inventory))
-            inventory.update(self._discover_asm_inventory(connector, inventory))
-            inventory.update(self._discover_dataguard_inventory(connector, inventory))
-            inventory.update(self._discover_patching_inventory(connector, inventory))
-            inventory.update(self._discover_io_redo_archive_inventory(connector, inventory.get("parameters", {}), inventory))
-            inventory.update(self._discover_recoverability_drp_inventory(connector, inventory.get("parameters", {})))
-            inventory.update(self._discover_rac_inventory(connector, inventory.get("parameters", {})))
-            inventory.update(self._discover_multitenant_inventory(connector, inventory.get("cdb")))
-            inventory["alert_log"] = self._discover_alert_log_inventory(connector, target, inventory)
+            params = lambda: inventory.get("parameters", {})  # noqa: E731
+            # El orden respeta dependencias: capacity usa storage y oracle_resources;
+            # patching usa multitenant; asm reutiliza los datafiles de storage si existen.
+            steps = (
+                ("schema_objects", lambda: inventory.update(self._discover_schema_objects_inventory(connector))),
+                ("storage", lambda: inventory.update(self._discover_storage_inventory(connector, params()))),
+                ("security", lambda: inventory.update(self._discover_security_inventory(connector))),
+                ("oracle_resources", lambda: inventory.update(self._discover_oracle_resources_inventory(connector, params()))),
+                ("performance", lambda: inventory.update(self._discover_performance_inventory(connector))),
+                ("capacity", lambda: inventory.update(self._discover_capacity_inventory(connector, inventory))),
+                ("asm", lambda: inventory.update(self._discover_asm_inventory(connector, inventory))),
+                ("dataguard", lambda: inventory.update(self._discover_dataguard_inventory(connector, inventory))),
+                ("multitenant", lambda: inventory.update(self._discover_multitenant_inventory(connector, inventory.get("cdb")))),
+                ("patching", lambda: inventory.update(self._discover_patching_inventory(connector, inventory))),
+                ("io_redo_archive", lambda: inventory.update(self._discover_io_redo_archive_inventory(connector, params(), inventory))),
+                ("recoverability_drp", lambda: inventory.update(self._discover_recoverability_drp_inventory(connector, params()))),
+                ("rac", lambda: inventory.update(self._discover_rac_inventory(connector, params()))),
+                ("alert_log", lambda: inventory.__setitem__("alert_log", self._discover_alert_log_inventory(connector, target, inventory))),
+            )
+            discovered: list[str] = []
+            for section, step in steps:
+                if sections is not None and section not in sections:
+                    continue
+                started = time.monotonic()
+                step()
+                discovered.append(section)
+                logging.info("Descubrimiento %s completado en %s ms", section, int((time.monotonic() - started) * 1000))
+            inventory["discovered_sections"] = discovered
             inventory.update(self._discover_oracle_feature_signals(connector))
             inventory["discovery_errors"] = list(self._query_failures)
             return inventory
