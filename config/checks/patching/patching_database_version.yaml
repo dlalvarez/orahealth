@@ -15,6 +15,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY, MOUNTED]
   requires:
     database_connection: true
+    views: [v$instance, v$database]
 remediation:
   summary: Revisar la evidencia de patching con el equipo DBA antes de una ventana aprobada.
   actions:

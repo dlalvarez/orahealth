@@ -15,6 +15,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_indexes, dba_users]
 remediation:
   summary: Un índice no utilizable puede degradar consultas, impedir operaciones DML si soporta restricciones o causar errores en procesos críticos.
   actions:

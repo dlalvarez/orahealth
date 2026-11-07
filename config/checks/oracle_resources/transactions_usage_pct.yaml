@@ -19,6 +19,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$resource_limit]
 remediation:
   summary: La presión sobre transacciones puede relacionarse con alta concurrencia, transacciones largas o configuración insuficiente.
   actions:

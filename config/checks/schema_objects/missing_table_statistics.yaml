@@ -17,6 +17,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_tab_statistics, dba_users]
 remediation:
   summary: Las tablas sin estadísticas obligan al optimizador a estimar con información incompleta y pueden producir planes inestables.
   actions:

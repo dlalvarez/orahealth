@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: plsql_debug habilitado globalmente puede dejar código compilado con información de depuración y no suele corresponder a una línea base operativa normal.
   actions:

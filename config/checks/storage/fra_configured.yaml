@@ -13,6 +13,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$recovery_file_dest, v$parameter]
 remediation:
   summary: La Fast Recovery Area no está configurada o no tiene tamaño asignado; según el estándar puede ser necesario habilitarla.
   actions:

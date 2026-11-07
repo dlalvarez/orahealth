@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$containers]
 remediation:
   summary: Revisar si el modo restringido de una PDB de aplicación corresponde a una ventana operativa o mantenimiento autorizado.
   actions:

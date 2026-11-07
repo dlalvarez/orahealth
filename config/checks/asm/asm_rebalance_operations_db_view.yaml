@@ -17,6 +17,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$asm_operation]
 remediation:
   summary: Reportar operaciones ASM de rebalance visibles desde la conexión de base.
   actions:

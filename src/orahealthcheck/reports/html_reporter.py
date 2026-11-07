@@ -337,7 +337,33 @@ class HTMLReporter:
         enriched = {status: int(summary.get(status, 0)) for status in ALL_STATUSES}
         enriched.update(summary)
         enriched["total_checks"] = len(results)
+        score = summary.get("score_display")
+        enriched["score_display"] = "N/D" if score is None else score
+        coverage = summary.get("coverage_pct")
+        enriched["coverage_display"] = f"{coverage:g}%" if isinstance(coverage, (int, float)) else "N/D"
+        enriched["evidence_notices"] = self._evidence_notices(summary)
         return enriched
+
+    def _evidence_notices(self, summary: dict[str, Any]) -> list[str]:
+        """Avisos de confiabilidad que deben verse antes que cualquier puntaje."""
+        notices: list[str] = []
+        if summary.get("data_source") == "simulado":
+            notices.append("Este reporte usa un inventario SIMULADO (mock_inventory). No refleja una base de datos real.")
+        if summary.get("global_status") == "ERROR":
+            notices.append(
+                f"Evaluación no concluyente: solo se pudo evaluar el {summary.get('coverage_pct')}% de las validaciones aplicables. "
+                "Los resultados no deben interpretarse como estado de salud de la base."
+            )
+        elif int(summary.get("ERROR", 0) or 0):
+            notices.append(
+                f"{summary.get('ERROR')} validación(es) no se pudieron evaluar por errores técnicos (cobertura de evidencia {summary.get('coverage_pct')}%). "
+                "Revise el reporte técnico."
+            )
+        views = summary.get("inaccessible_views") or []
+        if views:
+            shown = ", ".join(str(view).upper() for view in views)
+            notices.append(f"El usuario de conexión no tiene acceso de lectura a {len(views)} vista(s): {shown}.")
+        return notices
 
     def _sort_results(self, results: list[Result]) -> list[Result]:
         return sorted(results, key=lambda result: (STATUS_ORDER.get(result.status.value, 99), result.group_id, result.check_id))
@@ -436,7 +462,7 @@ class HTMLReporter:
         if output_name == "executive_report.html":
             body.append(features_section(compact=True))
             body.append("<section><h2>Resumen Ejecutivo</h2><p>El puntaje inicia en 100 y disminuye ante hallazgos de riesgo.</p><div class='grid'>")
-            for label, value in (("Puntaje de Salud", summary.get("score")), ("Estado Global", badge(str(summary.get("global_status")))), ("Total de validaciones", summary.get("total_checks")), ("PASS", summary.get("PASS")), ("WARNING", summary.get("WARNING")), ("FAIL", summary.get("FAIL")), ("ERROR", summary.get("ERROR")), ("SKIPPED", summary.get("SKIPPED"))):
+            for label, value in (("Puntaje de Salud", summary.get("score_display")), ("Estado Global", badge(str(summary.get("global_status")))), ("Total de validaciones", summary.get("total_checks")), ("PASS", summary.get("PASS")), ("WARNING", summary.get("WARNING")), ("FAIL", summary.get("FAIL")), ("ERROR", summary.get("ERROR")), ("SKIPPED", summary.get("SKIPPED"))):
                 body.append(f"<div class='card'><span>{label}</span><strong>{value}</strong></div>")
             body.append("</div></section><section><h2>Hallazgos Principales</h2>")
             if findings:
@@ -450,7 +476,7 @@ class HTMLReporter:
             body.append("</section>")
         elif output_name == "technical_report.html":
             body.append("<section><h2>Resumen Global</h2><div class='grid'>")
-            for label, value in (("Puntaje de Salud", summary.get("score")), ("Estado Global", badge(str(summary.get("global_status")))), ("Total de validaciones", summary.get("total_checks"))):
+            for label, value in (("Puntaje de Salud", summary.get("score_display")), ("Estado Global", badge(str(summary.get("global_status")))), ("Total de validaciones", summary.get("total_checks"))):
                 body.append(f"<div class='card'><span>{label}</span><strong>{value}</strong></div>")
             body.append("</div></section><section><h2>Inventario Técnico</h2><h3>Inventario de Base de Datos</h3><div class='grid'>")
             for item in database_inventory_items:
@@ -479,7 +505,7 @@ class HTMLReporter:
             body.append("</section>")
         elif output_name == "evidence_report.html":
             body.append("<section><h2>Resumen Global</h2><div class='grid'>")
-            for label, value in (("Puntaje de Salud", summary.get("score")), ("Estado Global", badge(str(summary.get("global_status")))), ("Total de validaciones", summary.get("total_checks")), ("PASS", summary.get("PASS")), ("INFO", summary.get("INFO")), ("WARNING", summary.get("WARNING")), ("FAIL", summary.get("FAIL")), ("CRITICAL", summary.get("CRITICAL")), ("ERROR", summary.get("ERROR")), ("SKIPPED", summary.get("SKIPPED"))):
+            for label, value in (("Puntaje de Salud", summary.get("score_display")), ("Estado Global", badge(str(summary.get("global_status")))), ("Total de validaciones", summary.get("total_checks")), ("PASS", summary.get("PASS")), ("INFO", summary.get("INFO")), ("WARNING", summary.get("WARNING")), ("FAIL", summary.get("FAIL")), ("CRITICAL", summary.get("CRITICAL")), ("ERROR", summary.get("ERROR")), ("SKIPPED", summary.get("SKIPPED"))):
                 body.append(f"<div class='card'><span>{label}</span><strong>{value}</strong></div>")
             body.append("</div></section><section><h2>Inventario Técnico</h2><h3>Inventario de Base de Datos</h3><div class='grid'>")
             for item in database_inventory_items:
@@ -506,7 +532,7 @@ class HTMLReporter:
         else:
             body.append(features_section(compact=True))
             body.append("<section><h2>Resumen de Estados</h2><div class='grid'>")
-            for label, value in (("Puntaje de Salud", summary.get("score")), ("Estado Global", badge(str(summary.get("global_status")))), ("WARNING", summary.get("WARNING")), ("FAIL", summary.get("FAIL")), ("CRITICAL", summary.get("CRITICAL")), ("ERROR", summary.get("ERROR"))):
+            for label, value in (("Puntaje de Salud", summary.get("score_display")), ("Estado Global", badge(str(summary.get("global_status")))), ("WARNING", summary.get("WARNING")), ("FAIL", summary.get("FAIL")), ("CRITICAL", summary.get("CRITICAL")), ("ERROR", summary.get("ERROR"))):
                 body.append(f"<div class='card'><span>{label}</span><strong>{value}</strong></div>")
             body.append("</div></section><section><h2>Acciones correctivas</h2>")
             if corrective_actions:

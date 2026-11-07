@@ -19,6 +19,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$resource_limit]
 remediation:
   summary: Agotar sesiones puede rechazar conexiones, provocar ORA-00018 y degradar la disponibilidad de aplicaciones.
   actions:

@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_role_privs, dba_users]
 remediation:
   summary: El rol DBA otorga privilegios amplios y debe limitarse a cuentas administrativas controladas; SYS y SYSTEM se tratan como cuentas administrativas Oracle esperadas.
   actions:

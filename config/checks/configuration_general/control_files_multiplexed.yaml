@@ -17,6 +17,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$controlfile]
 remediation:
   summary: Tener un único control file representa un riesgo de disponibilidad y recuperación, porque la pérdida de ese archivo puede impedir montar o recuperar la base.
   actions:

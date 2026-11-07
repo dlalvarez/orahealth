@@ -19,6 +19,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$resource_limit]
 remediation:
   summary: Alcanzar el límite de procesos puede rechazar conexiones, generar ORA-00020 y afectar la disponibilidad de la instancia.
   actions:

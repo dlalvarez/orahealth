@@ -18,6 +18,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$recovery_file_dest, v$archive_dest]
 remediation:
   summary: Revisar margen de FRA y estado básico de destinos archive; cualquier limpieza debe ejecutarse con RMAN o procedimiento aprobado.
   actions:

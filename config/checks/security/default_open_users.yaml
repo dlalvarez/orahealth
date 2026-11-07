@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_users]
 remediation:
   summary: Una o más cuentas default de Oracle están abiertas y aumentan la superficie de ataque.
   actions:

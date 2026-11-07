@@ -20,6 +20,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY, MOUNTED]
   requires:
     database_connection: true
+    views: [v$database, v$archive_dest, v$log, v$parameter]
 remediation:
   summary: Revisar la configuración Data Guard relacionada con bases standby antes de realizar cambios.
   actions:

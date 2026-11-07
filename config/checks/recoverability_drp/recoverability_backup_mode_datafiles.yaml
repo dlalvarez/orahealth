@@ -15,6 +15,7 @@ applies_to:
   open_modes: [READ WRITE]
   requires:
     database_connection: true
+    views: [v$backup]
 remediation:
   summary: Revisar la evidencia de recuperabilidad y preparación DRP para confirmar riesgos de restauración, continuidad o respaldo.
   actions:

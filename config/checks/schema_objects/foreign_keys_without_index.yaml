@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_constraints, dba_cons_columns, dba_ind_columns, dba_indexes]
 remediation:
   summary: Evaluar creación de índice sobre columnas de la llave foránea, validando impacto en DML y bloqueos.
   actions:

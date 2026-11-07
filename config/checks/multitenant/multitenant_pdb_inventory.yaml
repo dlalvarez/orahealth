@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$containers, v$pdbs]
 remediation:
   summary: Revisar el inventario de PDBs como evidencia operativa; este check no penaliza el puntaje por sí mismo.
   actions:

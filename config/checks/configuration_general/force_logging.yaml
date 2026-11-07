@@ -18,6 +18,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$database]
 remediation:
   summary: FORCE LOGGING ayuda a mejorar la recuperabilidad y consistencia ante operaciones que podrían usar NOLOGGING, replicación o configuraciones con bases standby cuando apliquen.
   actions:

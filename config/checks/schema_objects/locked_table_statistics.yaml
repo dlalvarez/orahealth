@@ -17,6 +17,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_tab_statistics, dba_users]
 remediation:
   summary: Las estadísticas bloqueadas pueden ser intencionales, pero impiden que la recolección automática refleje cambios de volumen o distribución.
   actions:

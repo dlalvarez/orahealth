@@ -17,6 +17,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$log_history]
 remediation:
   summary: Frecuencia reciente de cambios de redo log puede afectar recuperabilidad, capacidad, continuidad operativa o tiempos de respaldo si no se controla según el estándar.
   actions:

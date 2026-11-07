@@ -18,6 +18,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_sys_privs, dba_users, dba_roles]
 remediation:
   summary: Revisar necesidad de ADMIN OPTION, revocar y volver a conceder sin ADMIN OPTION cuando no corresponda.
   actions:

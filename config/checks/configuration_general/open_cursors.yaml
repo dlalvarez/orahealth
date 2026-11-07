@@ -14,6 +14,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: Un valor bajo de open_cursors puede provocar errores ORA-01000 y afectar sesiones de aplicación que requieren múltiples cursores abiertos.
   actions:

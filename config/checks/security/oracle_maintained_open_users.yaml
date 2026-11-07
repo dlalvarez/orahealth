@@ -18,6 +18,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_users]
 remediation:
   summary: Validar si la cuenta Oracle mantenida debe permanecer abierta; si no hay justificación, bloquearla y documentar la excepción.
   actions:

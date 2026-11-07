@@ -13,6 +13,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$instance]
 remediation:
   summary: La instancia de base de datos no reporta un estado operativo esperado; esto puede indicar indisponibilidad, recuperación pendiente o un arranque incompleto.
   actions:

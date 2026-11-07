@@ -15,6 +15,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_data_files, dba_free_space, dba_tablespaces]
 remediation:
   summary: Inventariar tamaño total, usado y libre actual de datafiles permanentes.
   actions:

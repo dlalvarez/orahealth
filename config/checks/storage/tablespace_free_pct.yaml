@@ -19,6 +19,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_data_files, dba_free_space]
 remediation:
   summary: El tablespace tiene porcentaje de espacio libre bajo; si no se corrige, puede provocar errores de asignación de segmentos y fallas de aplicación.
   actions:

@@ -15,6 +15,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_ind_partitions, dba_ind_subpartitions, dba_indexes]
 remediation:
   summary: Las particiones o subparticiones de índices no utilizables pueden afectar consultas particionadas, cargas y mantenimiento lógico de tablas grandes.
   actions:

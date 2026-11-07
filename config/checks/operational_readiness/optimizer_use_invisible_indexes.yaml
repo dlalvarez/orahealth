@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: optimizer_use_invisible_indexes habilitado globalmente puede hacer que el optimizador use índices invisibles fuera de una prueba controlada.
   actions:

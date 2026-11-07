@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: filesystemio_options influye en el uso de direct I/O y asynchronous I/O sobre filesystems; un valor no adecuado puede afectar rendimiento o comportamiento de I/O.
   actions:

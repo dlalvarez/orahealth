@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [dba_users]
 remediation:
   summary: Existen cuentas bloqueadas; este inventario permite confirmar cuentas Oracle-maintained, default o no utilizadas que permanecen cerradas según la política.
   actions:

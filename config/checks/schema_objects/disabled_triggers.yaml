@@ -16,6 +16,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY]
   requires:
     database_connection: true
+    views: [dba_triggers, dba_users]
 remediation:
   summary: Un disparador deshabilitado puede omitir auditoría, reglas de negocio, sincronización o lógica de integridad implementada en base de datos.
   actions:

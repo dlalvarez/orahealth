@@ -4,6 +4,16 @@ import pytest
 
 from orahealthcheck.config_loader import ConfigLoader, ConfigValidator
 from orahealthcheck.engine import CheckRunner
+from fakes import FakeOSConnector
+
+
+@pytest.fixture(autouse=True)
+def fake_os_connector(monkeypatch):
+    """Ninguna prueba debe ejecutar comandos reales en el host que corre la suite."""
+    monkeypatch.setattr(
+        "orahealthcheck.engine.runner.build_os_connector",
+        lambda profile: FakeOSConnector(profile=profile),
+    )
 
 
 @pytest.fixture

@@ -15,6 +15,7 @@ applies_to:
   architectures: [standalone, rac, dataguard, rac_dataguard]
   requires:
     database_connection: true
+    views: [v$parameter]
 remediation:
   summary: El parámetro plsql_code_type indica si el código PL/SQL se compila como INTERPRETED o NATIVE; no existe un valor universal obligatorio y debe evaluarse contra el estándar de la organización.
   actions:

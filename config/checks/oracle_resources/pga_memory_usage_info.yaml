@@ -15,6 +15,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$pgastat]
 remediation:
   summary: La presión de PGA puede afectar sorts y hash joins, provocar uso de TEMP y degradar rendimiento.
   actions:

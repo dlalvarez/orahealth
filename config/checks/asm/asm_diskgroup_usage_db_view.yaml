@@ -20,6 +20,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY]
   requires:
     database_connection: true
+    views: [v$asm_diskgroup_stat]
 remediation:
   summary: Uno o más diskgroups ASM utilizados por la base presentan espacio libre por debajo de los umbrales configurados. Si el diskgroup se queda sin espacio, pueden fallar la extensión de datafiles, la creación de archivos Oracle, las operaciones temporales, la generación de redo o procesos internos que requieran crecimiento.
   actions:

@@ -15,6 +15,7 @@ applies_to:
   database_roles: [PRIMARY]
   requires:
     database_connection: true
+    views: [v$database]
 remediation:
   summary: El modo de apertura de la base no coincide con el esperado para su rol; esto puede afectar escritura de aplicaciones, recuperación o operación de standby.
   actions:

@@ -17,6 +17,7 @@ applies_to:
   open_modes: [READ WRITE, READ ONLY, READ ONLY WITH APPLY, MOUNTED]
   requires:
     database_connection: true
+    views: [v$dg_broker_config, v$parameter]
 remediation:
   summary: Revisar la evidencia Data Guard avanzada únicamente cuando exista configuración standby real.
   actions:
