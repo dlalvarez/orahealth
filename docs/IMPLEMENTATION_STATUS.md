@@ -275,3 +275,22 @@ La Fase 6A queda implementada con el grupo `patching` y 8 checks reales SQL-firs
 El grupo se integra en `standalone_all` y no se integra en `standalone_basic`. Esta fase no aplica parches, no modifica Oracle Home ni Grid Home, no ejecuta comandos externos de parchado, no valida DRP, no homologa ambientes y no compara origen contra destino. La evaluación usa vistas estándar SQL de base de datos, maneja vistas faltantes o privilegios insuficientes sin traceback y evita fuentes licenciadas o internas como AWR, ASH, `DBA_HIST%` y `X$`.
 
 La línea DRP / `drp_precheck_compare` queda fuera de alcance de OraHealthCheck porque corresponde a validación u homologación de ambientes y no al health check de una base de datos. Esa decisión evita confundir OraHealthCheck con OraParity o herramientas de homologación.
+
+## Fase C1 - Integridad de evidencia (PR #37)
+
+Corrección transversal, no agrega checks. Antes, si una consulta de descubrimiento fallaba (por ejemplo ORA-01031), el check se evaluaba sobre una lista vacía y podía reportar PASS; con un usuario sin privilegios, `standalone_all` reportaba 51 PASS sin leer datos.
+
+- Cada check de base declara `applies_to.requires.views`; un preflight (`select 1 from <vista> where 1 = 0`) verifica el acceso.
+- Compuertas en orden: conexión → vistas núcleo (`V$DATABASE`, `V$INSTANCE`) → aplicabilidad → vistas del check. Sin acceso, el check queda `ERROR` con la vista y el error exactos.
+- Un fallo de conexión genera reporte con `ERROR` en lugar de abortar. Para bases reales no se inventan `status`, `open_mode`, `role` ni `version`.
+- `ERROR` no penaliza el puntaje de salud; reduce la cobertura de evidencia. Con cobertura menor a `min_evidence_coverage_pct` (80 por defecto, en `app_settings.yaml`) el estado global es `ERROR` (evaluación no concluyente).
+- Los reportes muestran avisos de confiabilidad: datos simulados, cobertura y vistas sin acceso (equivalentes a los grants faltantes).
+- Los checks OS usan la conexión del target (`build_os_connector`) en lugar de la máquina local.
+
+## Fase C2 - Modularización del motor y descubrimiento perezoso (PR #38)
+
+- `engine/runner.py` conserva solo la orquestación; el descubrimiento y la evidencia de cada grupo viven en `engine/discovery/<grupo>.py`.
+- Solo se ejecutan las secciones de descubrimiento que requieren los checks del perfil, más sus dependencias (`capacity` → `storage`, `oracle_resources`; `patching` → `multitenant`). `asm`, `dataguard` y `multitenant` se descubren siempre porque alimentan el inventario de características.
+- Consultas ejecutadas: `standalone_configuration` 112 → 38, `standalone_basic` 112 → 99, `standalone_all` sin cambio. Una prueba garantiza resultados idénticos al descubrimiento completo.
+
+Pendiente inmediato: C2b (collector `oracle_sql` genérico para checks declarados solo en YAML) y C3 (OS remoto completo). Ver `CLAUDE.md` para las reglas de trabajo vigentes.
