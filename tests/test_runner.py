@@ -1097,8 +1097,8 @@ def test_schema_object_fallback_does_not_log_warning_for_optional_oracle_maintai
 def test_schema_objects_queries_do_not_use_licensed_views_or_packs():
     forbidden = ["DBA_" + "HIST", "V$ACTIVE_SESSION_" + "HISTORY", "DBMS_WORKLOAD_" + "REPOSITORY", "DBA_" + "ADVISOR", "DBA_" + "SQLTUNE"]
     text = "\n".join(Path(path).read_text(encoding="utf-8") for path in [
-        "src/orahealthcheck/engine/runner.py",
-        *Path("config/checks/schema_objects").glob("*.yaml"),
+        *Path("src/orahealthcheck").rglob("*.py"),
+        *Path("config/checks").rglob("*.yaml"),
     ])
 
     for token in forbidden:
